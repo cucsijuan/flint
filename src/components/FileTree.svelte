@@ -15,8 +15,9 @@
     action()
   }
 
-  function toggle(node: TreeNode) {
-    if (node.kind === 'file') void workspace.openNote(node.path)
+  function toggle(node: TreeNode, event: MouseEvent) {
+    const newTab = event.ctrlKey || event.metaKey || event.button === 1
+    if (node.kind === 'file') workspace.openNote(node.path, { newTab })
     else if (expanded.has(node.path)) expanded.delete(node.path)
     else expanded.add(node.path)
   }
@@ -53,9 +54,10 @@
       {:else}
         <button
           class="row"
-          class:active={workspace.note?.path === node.path}
+          class:active={workspace.notePath === node.path}
           style:padding-left="{depth * 12 + 6}px"
-          onclick={() => toggle(node)}
+          onclick={(event) => toggle(node, event)}
+          onauxclick={(event) => event.button === 1 && toggle(node, event)}
           ondblclick={() => (workspace.renaming = node.path)}
           oncontextmenu={() => (target = node)}
         >

@@ -27,14 +27,23 @@
     <ul>
       {#each workspace.searchResults as result (result.path)}
         <li>
-          <button class="note" onclick={() => workspace.openNote(result.path)}>
+          <button
+            class="note"
+            onclick={(event) =>
+              workspace.openNote(result.path, { newTab: event.ctrlKey || event.metaKey })}
+          >
             {noteTitle(result.path)}
             <small>{parentOf(result.path)}</small>
           </button>
           {#each result.lines as match (match.line)}
             <button
               class="line"
-              onclick={() => workspace.openNoteAt(result.path, { line: match.line })}
+              onclick={(event) =>
+                workspace.openNoteAt(
+                  result.path,
+                  { line: match.line },
+                  { newTab: event.ctrlKey || event.metaKey },
+                )}
             >
               {#each match.segments as segment, index (index)}
                 <span class:highlight={segment.highlight}>{segment.text}</span>

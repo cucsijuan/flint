@@ -188,8 +188,8 @@ class PluginHost {
         onChange: (listener) => track(vaultChanged.on(listener)),
       },
       workspace: {
-        activeNote: () => workspace.note?.path ?? null,
-        openNote: (path) => workspace.openNote(path),
+        activeNote: () => workspace.notePath,
+        openNote: async (path) => workspace.openNote(path),
         onNoteOpen: (listener) => track(noteOpened.on(listener)),
       },
       ui: {

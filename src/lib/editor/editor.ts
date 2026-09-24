@@ -3,7 +3,15 @@ import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
 import { languages } from '@codemirror/language-data'
 import { searchKeymap } from '@codemirror/search'
-import { Annotation, Compartment, EditorState, type Extension } from '@codemirror/state'
+import {
+  Annotation,
+  type ChangeSet,
+  Compartment,
+  EditorState,
+  type Extension,
+  Prec,
+  Transaction,
+} from '@codemirror/state'
 import { EditorView, keymap } from '@codemirror/view'
 import { tags } from '@lezer/highlight'
 import { minimalSetup } from 'codemirror'
@@ -31,12 +39,9 @@ const markdownStyle = HighlightStyle.define([
   { tag: tags.labelName, class: 'cm-hashtag' },
 ])
 
-const APP_HOTKEYS = new Set(['Mod-g'])
-const editorSearchKeymap = searchKeymap.filter((binding) => !APP_HOTKEYS.has(binding.key ?? ''))
-
 const mode = new Compartment()
 const pluginExtensions = new Compartment()
-const externalChange = Annotation.define<boolean>()
+const remoteChange = Annotation.define<boolean>()
 
 const modeExtension = (editorMode: EditorMode): Extension =>
   editorMode === 'live' ? livePreview : []
@@ -44,7 +49,8 @@ const modeExtension = (editorMode: EditorMode): Extension =>
 export interface EditorOptions {
   doc: string
   mode: EditorMode
-  onChange: (doc: string) => void
+  onChange: (changes: ChangeSet, doc: string) => void
+  onKeydown: (event: KeyboardEvent) => boolean
   resolveLinks: LinkResolver
   navigation: Navigation
   completion: CompletionSources
@@ -55,6 +61,7 @@ export function createEditorState({
   doc,
   mode: editorMode,
   onChange,
+  onKeydown,
   resolveLinks,
   navigation: handlers,
   completion: sources,
@@ -63,8 +70,9 @@ export function createEditorState({
   return EditorState.create({
     doc,
     extensions: [
+      Prec.highest(EditorView.domEventHandlers({ keydown: onKeydown })),
       minimalSetup,
-      keymap.of([indentWithTab, ...editorSearchKeymap]),
+      keymap.of([indentWithTab, ...searchKeymap]),
       markdown({
         base: markdownLanguage,
         codeLanguages: languages,
@@ -78,8 +86,8 @@ export function createEditorState({
       mode.of(modeExtension(editorMode)),
       pluginExtensions.of(plugins),
       EditorView.updateListener.of((update) => {
-        const isUserEdit = !update.transactions.some((tr) => tr.annotation(externalChange))
-        if (update.docChanged && isUserEdit) onChange(update.state.doc.toString())
+        const isLocalEdit = !update.transactions.some((tr) => tr.annotation(remoteChange))
+        if (update.docChanged && isLocalEdit) onChange(update.changes, update.state.doc.toString())
       }),
     ],
   })
@@ -91,15 +99,20 @@ export const setPluginExtensions = (view: EditorView, plugins: Extension[]) =>
 export const setMode = (view: EditorView, editorMode: EditorMode) =>
   view.dispatch({ effects: mode.reconfigure(modeExtension(editorMode)) })
 
+const remote = [remoteChange.of(true), Transaction.addToHistory.of(false)]
+
 export function replaceDoc(view: EditorView, doc: string) {
   const { state } = view
   const anchor = Math.min(state.selection.main.anchor, doc.length)
   view.dispatch({
     changes: { from: 0, to: state.doc.length, insert: doc },
     selection: { anchor },
-    annotations: externalChange.of(true),
+    annotations: remote,
   })
 }
+
+export const applyChanges = (view: EditorView, changes: ChangeSet) =>
+  view.dispatch({ changes, annotations: remote })
 
 const HEADING_LINE = /^#{1,6}\s+(.*?)\s*#*\s*$/
 

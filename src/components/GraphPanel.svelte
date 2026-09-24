@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { X } from '@lucide/svelte'
   import { filterGraph } from '../lib/graph'
   import type { GraphNode } from '../lib/vault'
   import { workspace } from '../lib/workspace.svelte'
@@ -11,7 +10,7 @@
   const graph = $derived(filterGraph(workspace.graph, workspace.graphFilters, scope))
 
   function open(node: GraphNode) {
-    if (node.kind === 'note') void workspace.openNote(node.id)
+    if (node.kind === 'note') workspace.openNote(node.id)
     else if (node.kind === 'tag') workspace.openSearch(`tag:${node.label}`)
     else void workspace.openLink(node.label)
   }
@@ -20,11 +19,6 @@
 <section>
   <header>
     <GraphFilters />
-    {#if !scope}
-      <button class="icon" title="Close graph" onclick={() => (workspace.view = 'editor')}>
-        <X size={16} />
-      </button>
-    {/if}
   </header>
   {#if scope}
     <label class="depth">
@@ -34,7 +28,7 @@
     </label>
   {/if}
   <div class="canvas">
-    <GraphView {graph} focus={scope?.center ?? workspace.note?.path} onOpen={open} />
+    <GraphView {graph} focus={scope?.center ?? workspace.notePath ?? undefined} onOpen={open} />
   </div>
 </section>
 

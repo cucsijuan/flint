@@ -25,8 +25,8 @@
       {/each}
     </Tabs.List>
     <Tabs.Content class="tab-content" value="backlinks">
-      {#if workspace.note}
-        <BacklinksPanel path={workspace.note.path} />
+      {#if workspace.notePath}
+        <BacklinksPanel path={workspace.notePath} />
       {:else}
         <p class="empty">No note is open.</p>
       {/if}
@@ -36,8 +36,8 @@
       <Tabs.Content class="tab-content" value={tab.key}><PluginTab {tab} /></Tabs.Content>
     {/each}
     <Tabs.Content class="tab-content" value="graph">
-      {#if workspace.note}
-        <GraphPanel scope={{ center: workspace.note.path, depth: workspace.localGraphDepth }} />
+      {#if workspace.notePath}
+        <GraphPanel scope={{ center: workspace.notePath, depth: workspace.localGraphDepth }} />
       {:else}
         <p class="empty">No note is open.</p>
       {/if}

@@ -92,6 +92,10 @@ export interface PluginListing {
   error: string | null
 }
 
+export const readConfig = (name: string) => invoke<string | null>('read_config', { name })
+export const writeConfig = (name: string, contents: string) =>
+  invoke('write_config', { name, contents })
+
 export const listPlugins = () => invoke<PluginListing[]>('list_plugins')
 export const readPluginFile = (folder: string, file: 'main.js' | 'styles.css') =>
   invoke<string | null>('read_plugin_file', { folder, file })

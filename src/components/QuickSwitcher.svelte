@@ -12,7 +12,7 @@
   detail={(target: LinkTarget) =>
     target.alias ? `→ ${noteTitle(target.path)}` : parentOf(target.path)}
   placeholder="Find or create a note…"
-  hint="↵ open · Shift+↵ create"
-  onChoose={(target: LinkTarget) => workspace.openNote(target.path)}
+  hint="↵ open · Ctrl+↵ open in new tab · Shift+↵ create"
+  onChoose={(target: LinkTarget, options) => workspace.openNote(target.path, options)}
   onSubmitQuery={(query) => workspace.openOrCreateNote(query)}
 />

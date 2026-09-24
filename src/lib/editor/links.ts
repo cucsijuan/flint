@@ -78,7 +78,7 @@ function linkResolution(resolve: LinkResolver) {
 }
 
 export interface Navigation {
-  openLink: (destination: string) => void
+  openLink: (destination: string, options: { newTab: boolean }) => void
   openTag: (tag: string) => void
 }
 
@@ -106,15 +106,17 @@ function renderedTarget(element: HTMLElement): Target | null {
 function clicks({ openLink, openTag }: Navigation) {
   return EditorView.domEventHandlers({
     mousedown(event, view) {
-      if (event.button !== 0) return false
+      const isMiddle = event.button === 1
+      const hasModifier = event.ctrlKey || event.metaKey
+      if (event.button !== 0 && !isMiddle) return false
       let target = renderedTarget(event.target as HTMLElement)
-      if (!target && (event.ctrlKey || event.metaKey)) {
+      if (!target && (hasModifier || isMiddle)) {
         const position = view.posAtCoords(event)
         if (position !== null) target = targetAt(view, position)
       }
       if (!target) return false
       event.preventDefault()
-      if ('link' in target) openLink(target.link)
+      if ('link' in target) openLink(target.link, { newTab: hasModifier || isMiddle })
       else openTag(target.tag)
       return true
     },

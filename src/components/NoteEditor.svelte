@@ -1,66 +1,75 @@
 <script lang="ts">
   import { EditorView } from '@codemirror/view'
-  import { BookOpen, Code, PanelRight } from '@lucide/svelte'
+  import { ArrowLeft, ArrowRight, BookOpen, Code, PanelRight } from '@lucide/svelte'
   import { onMount } from 'svelte'
+  import { commands } from '../lib/commands.svelte'
+  import { documents } from '../lib/documents'
+  import { setActiveView } from '../lib/editor/active'
   import {
     createEditorState,
-    replaceDoc,
     scrollToHeading,
     scrollToLine,
     setMode,
     setPluginExtensions,
   } from '../lib/editor/editor'
-  import { setActiveView } from '../lib/editor/active'
-  import { pluginHost } from '../lib/plugins/host.svelte'
   import { refreshLinks } from '../lib/editor/links'
+  import { goBack, goForward, type Tab } from '../lib/layout'
   import { noteTitle } from '../lib/paths'
-  import { workspace, type OpenNote } from '../lib/workspace.svelte'
+  import { pluginHost } from '../lib/plugins/host.svelte'
+  import { workspace } from '../lib/workspace.svelte'
 
-  let { note }: { note: OpenNote } = $props()
+  let { tab, path, isActive }: { tab: Tab; path: string; isActive: boolean } = $props()
 
   let container: HTMLDivElement
-  let view: EditorView | undefined
-  let shownRevision = -1
-
-  const stateFor = (doc: string) =>
-    createEditorState({
-      doc,
-      mode: workspace.mode,
-      onChange: (contents) => workspace.edit(contents),
-      resolveLinks: (targets) => workspace.resolveLinks(targets),
-      navigation: {
-        openLink: (destination) => void workspace.openLink(destination),
-        openTag: (tag) => workspace.openSearch(`tag:#${tag}`),
-      },
-      completion: {
-        targets: () => workspace.linkTargets,
-        headings: (target) => workspace.headingsFor(target),
-        tags: () => workspace.tags,
-      },
-      plugins: pluginHost.editorExtensions,
-    })
+  let view = $state.raw<EditorView>()
 
   onMount(() => {
-    view = new EditorView({ state: stateFor(note.contents), parent: container })
-    setActiveView(view)
-    shownRevision = note.revision
-    view.focus()
+    let isMounted = true
+    let editor: EditorView | undefined
+    void documents
+      .load(path)
+      .then((doc) => {
+        if (!isMounted) return
+        editor = new EditorView({
+          parent: container,
+          state: createEditorState({
+            doc,
+            mode: workspace.mode,
+            onChange: (changes, contents) =>
+              editor && documents.edit(path, editor, changes, contents),
+            onKeydown: (event) => commands.handleKeydown(event),
+            resolveLinks: (targets) => workspace.resolveLinks(targets, path),
+            navigation: {
+              openLink: (destination, options) =>
+                void workspace.openLink(destination, path, options),
+              openTag: (tag) => workspace.openSearch(`tag:#${tag}`),
+            },
+            completion: {
+              targets: () => workspace.linkTargets,
+              headings: (target) => workspace.headingsFor(target, path),
+              tags: () => workspace.tags,
+            },
+            plugins: pluginHost.editorExtensions,
+          }),
+        })
+        documents.attach(path, editor)
+        view = editor
+      })
+      .catch((error: unknown) => workspace.notify(String(error)))
     return () => {
-      setActiveView(null)
-      view?.destroy()
+      isMounted = false
+      if (!editor) return
+      documents.detach(path, editor)
+      if (isActive) setActiveView(null)
+      editor.destroy()
     }
   })
 
   $effect(() => {
-    const { revision, isNewPath, contents } = note
-    if (!view || revision === shownRevision) return
-    shownRevision = revision
-    if (isNewPath) {
-      view.setState(stateFor(contents))
-      view.focus()
-    } else {
-      replaceDoc(view, contents)
-    }
+    if (!view || !isActive) return
+    setActiveView(view)
+    view.requestMeasure()
+    view.focus()
   })
 
   $effect(() => {
@@ -77,7 +86,7 @@
 
   $effect(() => {
     const jump = workspace.jump
-    if (!view || !jump) return
+    if (!view || jump?.tabId !== tab.id) return
     if (jump.heading) scrollToHeading(view, jump.heading)
     else if (jump.line) scrollToLine(view, jump.line)
     workspace.jump = null
@@ -86,7 +95,25 @@
 
 <section class="note">
   <header>
-    <h1>{noteTitle(note.path)}</h1>
+    <div class="actions">
+      <button
+        class="icon"
+        title="Go back (Alt+←)"
+        disabled={tab.back.length === 0}
+        onclick={() => workspace.updateLayout(goBack)}
+      >
+        <ArrowLeft size={16} />
+      </button>
+      <button
+        class="icon"
+        title="Go forward (Alt+→)"
+        disabled={tab.forward.length === 0}
+        onclick={() => workspace.updateLayout(goForward)}
+      >
+        <ArrowRight size={16} />
+      </button>
+    </div>
+    <h1>{noteTitle(path)}</h1>
     <div class="actions">
       <button
         class="icon"
@@ -120,16 +147,18 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    padding: 6px 12px;
+    padding: 4px 8px;
     border-bottom: 1px solid var(--border);
   }
 
   h1 {
+    flex: 1;
     margin: 0;
+    overflow: hidden;
+    color: var(--text-muted);
     font-size: 13px;
     font-weight: 500;
-    color: var(--text-muted);
-    overflow: hidden;
+    text-align: center;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -137,6 +166,11 @@
   .actions {
     display: flex;
     gap: 2px;
+  }
+
+  .icon:disabled {
+    opacity: 0.35;
+    cursor: default;
   }
 
   .on {

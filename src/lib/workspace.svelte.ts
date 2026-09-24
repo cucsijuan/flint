@@ -1,45 +1,38 @@
 import { ask, open } from '@tauri-apps/plugin-dialog'
-import {
-  NOTE_EXTENSION,
-  basename,
-  isWithin,
-  join,
-  parentOf,
-  replacePrefix,
-  uniqueName,
-} from './paths'
-import { getSetting, setSetting, type EditorMode, type LinkUpdate } from './settings'
+import { documents } from './documents'
 import { noteOpened, vaultChanged } from './events'
 import type { GraphFilters } from './graph'
+import * as layouts from './layout'
+import { NOTE_EXTENSION, basename, join, parentOf, uniqueName } from './paths'
+import { getSetting, setSetting, type EditorMode, type LinkUpdate } from './settings'
 import { buildTree } from './tree'
 import * as vault from './vault'
 
-const SAVE_DELAY_MS = 400
 const SEARCH_DELAY_MS = 200
+const LAYOUT_SAVE_DELAY_MS = 500
 const NOTICE_MS = 5000
+const LAYOUT_CONFIG = 'workspace'
 
 export type LeftTab = 'files' | 'search'
 export type RightTab = 'backlinks' | 'tags' | 'graph' | (string & {})
-export type MainView = 'editor' | 'graph'
 
 export interface Jump {
+  tabId: string
   heading?: string
   line?: number
-  id: number
 }
 
-export interface OpenNote {
-  path: string
-  contents: string
-  revision: number
-  isNewPath: boolean
+export interface OpenOptions {
+  newTab?: boolean
 }
 
 class Workspace {
   info = $state<vault.VaultInfo | null>(null)
   entries = $state<vault.Entry[]>([])
   tree = $derived(buildTree(this.entries))
-  note = $state<OpenNote | null>(null)
+  layout = $state.raw<layouts.Layout>(layouts.createLayout())
+  activeTab = $derived(layouts.activeTab(this.layout))
+  notePath = $derived(this.activeTab.view.kind === 'note' ? this.activeTab.view.path : null)
   mode = $state<EditorMode>('live')
   renaming = $state<string | null>(null)
   notice = $state<string | null>(null)
@@ -59,7 +52,6 @@ class Workspace {
   searchResults = $state<vault.SearchResult[]>([])
   searchError = $state<string | null>(null)
   searchFocus = $state(0)
-  view = $state<MainView>('editor')
   graph = $state<vault.Graph>({ nodes: [], links: [] })
   graphFilters = $state<GraphFilters>({
     showTags: false,
@@ -69,13 +61,14 @@ class Workspace {
   })
   localGraphDepth = $state(1)
 
-  #contents = ''
-  #saveTimer: ReturnType<typeof setTimeout> | undefined
   #isWatching = false
   #noticeTimer: ReturnType<typeof setTimeout> | undefined
-  #revision = 0
-  #jumpId = 0
   #searchTimer: ReturnType<typeof setTimeout> | undefined
+  #layoutTimer: ReturnType<typeof setTimeout> | undefined
+
+  constructor() {
+    documents.onError = (error) => this.notify(String(error))
+  }
 
   async restore() {
     this.mode = (await getSetting('editorMode')) ?? 'live'
@@ -95,8 +88,8 @@ class Workspace {
     await this.#run(async () => {
       await this.flush()
       this.info = await vault.openVault(path)
-      this.#closeNote()
       await this.#refresh()
+      this.#setLayout(await this.#storedLayout(), { save: false })
       await setSetting('lastVault', path)
       if (!this.#isWatching) {
         this.#isWatching = true
@@ -105,27 +98,54 @@ class Workspace {
     })
   }
 
-  async openNote(path: string) {
-    this.view = 'editor'
-    if (this.note?.path === path) return
+  flush() {
+    return documents.flush()
+  }
+
+  updateLayout(update: (layout: layouts.Layout) => layouts.Layout) {
+    this.#setLayout(update(this.layout))
+  }
+
+  saveLayoutSoon() {
+    clearTimeout(this.#layoutTimer)
+    this.#layoutTimer = setTimeout(() => {
+      if (this.info) void vault.writeConfig(LAYOUT_CONFIG, JSON.stringify(this.layout))
+    }, LAYOUT_SAVE_DELAY_MS)
+  }
+
+  openNote(path: string, { newTab = false }: OpenOptions = {}) {
+    const view: layouts.TabView = { kind: 'note', path }
+    this.updateLayout((layout) =>
+      newTab ? layouts.addTab(layout, view) : layouts.navigate(layout, view),
+    )
+  }
+
+  openNoteAt(path: string, target: Omit<Jump, 'tabId'>, options?: OpenOptions) {
+    this.openNote(path, options)
+    this.jump = { ...target, tabId: this.activeTab.id }
+  }
+
+  openGraph() {
+    const existing = layouts
+      .groups(this.layout.root)
+      .flatMap((group) => group.tabs.map((tab) => ({ group, tab })))
+      .find(({ tab }) => tab.view.kind === 'graph')
+    this.updateLayout((layout) =>
+      existing
+        ? layouts.activate(layout, existing.group.id, existing.tab.id)
+        : layouts.addTab(layout, { kind: 'graph' }),
+    )
+  }
+
+  async openOrCreateNote(name: string, options?: OpenOptions) {
+    const path = name.toLowerCase().endsWith(NOTE_EXTENSION) ? name : name + NOTE_EXTENSION
     await this.#run(async () => {
-      await this.flush()
-      this.#show(path, await vault.readNote(path))
+      if (!this.entries.some((entry) => entry.path === path)) {
+        await vault.createNote(path)
+        await this.#refresh()
+      }
+      this.openNote(path, options)
     })
-  }
-
-  edit(contents: string) {
-    this.#contents = contents
-    clearTimeout(this.#saveTimer)
-    this.#saveTimer = setTimeout(() => this.flush(), SAVE_DELAY_MS)
-  }
-
-  async flush() {
-    const note = this.note
-    if (this.#saveTimer === undefined || !note) return
-    clearTimeout(this.#saveTimer)
-    this.#saveTimer = undefined
-    await this.#run(() => vault.writeNote(note.path, this.#contents))
   }
 
   toggleMode() {
@@ -159,22 +179,6 @@ class Workspace {
     this.#searchTimer = setTimeout(() => void this.#runSearch(), SEARCH_DELAY_MS)
   }
 
-  async openNoteAt(path: string, target: Omit<Jump, 'id'>) {
-    await this.openNote(path)
-    this.jump = { ...target, id: ++this.#jumpId }
-  }
-
-  async openOrCreateNote(name: string) {
-    const path = name.toLowerCase().endsWith(NOTE_EXTENSION) ? name : name + NOTE_EXTENSION
-    await this.#run(async () => {
-      if (!this.entries.some((entry) => entry.path === path)) {
-        await vault.createNote(path)
-        await this.#refresh()
-      }
-      await this.openNote(path)
-    })
-  }
-
   setCheckForUpdates(isEnabled: boolean) {
     this.checkForUpdates = isEnabled
     void setSetting('checkForUpdates', isEnabled)
@@ -185,28 +189,28 @@ class Workspace {
     void setSetting('linkUpdate', value)
   }
 
-  resolveLinks(targets: string[]) {
-    return vault.resolveLinks(this.note?.path ?? '', targets)
+  resolveLinks(targets: string[], source = this.notePath ?? '') {
+    return vault.resolveLinks(source, targets)
   }
 
-  async headingsFor(target: string) {
-    const [path] = target ? await this.resolveLinks([target]) : [this.note?.path ?? null]
+  async headingsFor(target: string, source = this.notePath ?? '') {
+    const [path] = target ? await this.resolveLinks([target], source) : [source || null]
     return path ? vault.noteHeadings(path) : []
   }
 
-  async openLink(destination: string) {
+  async openLink(destination: string, source = this.notePath ?? '', options?: OpenOptions) {
     const hash = destination.indexOf('#')
     const target = hash === -1 ? destination : destination.slice(0, hash)
     const heading = hash === -1 ? '' : destination.slice(hash + 1)
     await this.#run(async () => {
-      let [path] = target ? await this.resolveLinks([target]) : [this.note?.path ?? null]
+      let [path] = target ? await this.resolveLinks([target], source) : [source || null]
       if (!path) {
         path = target.toLowerCase().endsWith(NOTE_EXTENSION) ? target : target + NOTE_EXTENSION
         await vault.createNote(path)
         await this.#refresh()
       }
-      if (heading) await this.openNoteAt(path, { heading })
-      else await this.openNote(path)
+      if (heading) this.openNoteAt(path, { heading }, options)
+      else this.openNote(path, options)
     })
   }
 
@@ -215,7 +219,8 @@ class Workspace {
     await this.#run(async () => {
       await vault.createNote(path)
       await this.#refresh()
-      await this.openNote(path)
+      this.openNote(path)
+      this.leftTab = 'files'
       this.renaming = path
     })
   }
@@ -242,9 +247,8 @@ class Workspace {
       const linkCount = await vault.incomingLinkCount(path)
       const updateLinks = linkCount > 0 && (await this.#shouldUpdateLinks(linkCount))
       const updated = await vault.renameEntry(path, target, updateLinks)
-      if (this.note && isWithin(this.note.path, path)) {
-        this.note.path = replacePrefix(this.note.path, path, target)
-      }
+      documents.rename(path, target)
+      this.updateLayout((layout) => layouts.renamePaths(layout, path, target))
       await this.#refresh()
       if (updated) this.notify(`Updated ${updated} ${updated === 1 ? 'link' : 'links'}.`)
     })
@@ -268,25 +272,39 @@ class Workspace {
     await this.#run(async () => {
       await this.flush()
       await vault.trashEntry(path)
-      if (this.note && isWithin(this.note.path, path)) this.#closeNote()
+      documents.forget(path)
+      this.updateLayout((layout) => layouts.closePaths(layout, path))
       await this.#refresh()
     })
   }
 
+  notify(message: string) {
+    this.notice = message
+    clearTimeout(this.#noticeTimer)
+    this.#noticeTimer = setTimeout(() => (this.notice = null), NOTICE_MS)
+  }
+
+  #setLayout(next: layouts.Layout, { save = true } = {}) {
+    const previousPath = this.notePath
+    this.layout = next
+    if (this.notePath !== previousPath) noteOpened.emit(this.notePath)
+    if (save) this.saveLayoutSoon()
+  }
+
+  async #storedLayout() {
+    try {
+      const stored: unknown = JSON.parse((await vault.readConfig(LAYOUT_CONFIG)) ?? 'null')
+      if (!layouts.isLayout(stored)) return layouts.createLayout()
+      const existing = new Set(this.entries.map((entry) => entry.path))
+      const missing = [...layouts.openPaths(stored)].filter((path) => !existing.has(path))
+      return missing.reduce(layouts.closePaths, stored)
+    } catch {
+      return layouts.createLayout()
+    }
+  }
+
   #takenPaths() {
     return new Set(this.entries.map((entry) => entry.path))
-  }
-
-  #closeNote() {
-    this.note = null
-    noteOpened.emit(null)
-  }
-
-  #show(path: string, contents: string) {
-    this.#contents = contents
-    const isNewPath = path !== this.note?.path
-    this.note = { path, contents, revision: ++this.#revision, isNewPath }
-    if (isNewPath) noteOpened.emit(path)
   }
 
   async #refresh() {
@@ -313,14 +331,15 @@ class Workspace {
     vaultChanged.emit(paths)
     await this.#run(async () => {
       await this.#refresh()
-      const path = this.note?.path
-      if (!path || !paths.includes(path) || this.#saveTimer !== undefined) return
-      if (!this.entries.some((entry) => entry.path === path)) {
-        this.#closeNote()
-        return
+      const existing = new Set(this.entries.map((entry) => entry.path))
+      for (const path of paths) {
+        if (!documents.isOpen(path)) continue
+        if (existing.has(path)) await documents.reload(path)
+        else {
+          documents.forget(path)
+          this.updateLayout((layout) => layouts.closePaths(layout, path))
+        }
       }
-      const contents = await vault.readNote(path)
-      if (contents !== this.#contents) this.#show(path, contents)
     })
   }
 
@@ -330,12 +349,6 @@ class Workspace {
     } catch (error) {
       this.notify(String(error))
     }
-  }
-
-  notify(message: string) {
-    this.notice = message
-    clearTimeout(this.#noticeTimer)
-    this.#noticeTimer = setTimeout(() => (this.notice = null), NOTICE_MS)
   }
 }
 

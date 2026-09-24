@@ -1,4 +1,5 @@
 mod commands;
+mod config;
 mod error;
 mod index;
 mod markdown;
@@ -36,6 +37,8 @@ pub fn run() {
             commands::search,
             commands::tags,
             commands::graph,
+            commands::read_config,
+            commands::write_config,
             commands::list_plugins,
             commands::read_plugin_file,
             commands::read_plugin_data,

@@ -40,12 +40,13 @@ class CommandRegistry {
   }
 
   handleKeydown(event: KeyboardEvent) {
-    if (event.defaultPrevented) return
+    if (event.defaultPrevented) return false
     const hotkey = hotkeyOf(event)
     const command = this.available().find((candidate) => candidate.hotkey === hotkey)
-    if (!command) return
+    if (!command) return false
     event.preventDefault()
     void command.run()
+    return true
   }
 }
 

@@ -36,7 +36,11 @@
     <ul>
       {#each bySource as [source, links] (source)}
         <li>
-          <button class="source" onclick={() => workspace.openNote(source)}>
+          <button
+            class="source"
+            onclick={(event) =>
+              workspace.openNote(source, { newTab: event.ctrlKey || event.metaKey })}
+          >
             {noteTitle(source)}
           </button>
           {#each links as link (link.line)}

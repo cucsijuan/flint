@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex, RwLock};
 use serde::Serialize;
 use tauri::{AppHandle, State};
 
+use crate::config;
 use crate::error::{Error, Result};
 use crate::index::{Backlink, Graph, Index, LinkTarget, TagCount};
 use crate::markdown::Heading;
@@ -201,4 +202,14 @@ pub fn enabled_plugins(state: State<AppState>) -> Result<Vec<String>> {
 #[tauri::command(async)]
 pub fn set_enabled_plugins(state: State<AppState>, enabled: Vec<String>) -> Result<()> {
     plugins::set_enabled(&state.vault()?, enabled)
+}
+
+#[tauri::command(async)]
+pub fn read_config(state: State<AppState>, name: String) -> Result<Option<String>> {
+    config::read(&state.vault()?, &name)
+}
+
+#[tauri::command(async)]
+pub fn write_config(state: State<AppState>, name: String, contents: String) -> Result<()> {
+    config::write(&state.vault()?, &name, &contents)
 }

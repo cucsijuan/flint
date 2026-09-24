@@ -11,7 +11,7 @@
     detail?: (item: T) => string
     placeholder: string
     hint?: string
-    onChoose: (item: T) => unknown
+    onChoose: (item: T, options: { newTab: boolean }) => unknown
     onSubmitQuery?: (query: string) => unknown
   }
 
@@ -27,6 +27,7 @@
   }: Props = $props()
 
   let query = $state('')
+  let wantsNewTab = false
 
   const results = $derived(
     query
@@ -52,10 +53,15 @@
 
   function choose(item: T) {
     open = false
-    void onChoose(item)
+    void onChoose(item, { newTab: wantsNewTab })
+  }
+
+  function rememberModifier(event: KeyboardEvent | MouseEvent) {
+    wantsNewTab = event.ctrlKey || event.metaKey
   }
 
   function onKeydown(event: KeyboardEvent) {
+    rememberModifier(event)
     if (event.key === 'Enter' && event.shiftKey && onSubmitQuery && query.trim()) {
       event.preventDefault()
       open = false
@@ -72,7 +78,12 @@
   <Dialog.Portal>
     <Dialog.Overlay class="overlay" />
     <Dialog.Content class="picker" aria-label={placeholder}>
-      <Command.Root shouldFilter={false} loop onkeydown={onKeydown}>
+      <Command.Root
+        shouldFilter={false}
+        loop
+        onkeydown={onKeydown}
+        onpointerdown={rememberModifier}
+      >
         <Command.Input class="picker-input" {placeholder} bind:value={query} />
         <Command.List class="picker-list">
           <Command.Empty class="picker-empty">No matches.</Command.Empty>

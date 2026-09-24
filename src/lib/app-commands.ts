@@ -1,9 +1,10 @@
 import { commands } from './commands.svelte'
+import * as layouts from './layout'
 import { checkForUpdates } from './updates'
 import { workspace } from './workspace.svelte'
 
 const hasVault = () => workspace.info !== null
-const hasNote = () => workspace.note !== null
+const hasNote = () => workspace.notePath !== null
 
 export function registerAppCommands() {
   commands.register(
@@ -32,7 +33,75 @@ export function registerAppCommands() {
       name: 'Open graph view',
       hotkey: 'Mod+G',
       isAvailable: hasVault,
-      run: () => (workspace.view = 'graph'),
+      run: () => workspace.openGraph(),
+    },
+    {
+      id: 'new-tab',
+      name: 'New tab',
+      hotkey: 'Mod+T',
+      isAvailable: hasVault,
+      run: () => workspace.updateLayout((layout) => layouts.addTab(layout)),
+    },
+    {
+      id: 'close-tab',
+      name: 'Close current tab',
+      hotkey: 'Mod+W',
+      isAvailable: hasVault,
+      run: () =>
+        workspace.updateLayout((layout) =>
+          layouts.closeTab(layout, layout.activeGroupId, workspace.activeTab.id),
+        ),
+    },
+    {
+      id: 'close-other-tabs',
+      name: 'Close other tabs',
+      isAvailable: hasVault,
+      run: () =>
+        workspace.updateLayout((layout) =>
+          layouts.closeOtherTabs(layout, layout.activeGroupId, workspace.activeTab.id),
+        ),
+    },
+    {
+      id: 'next-tab',
+      name: 'Go to next tab',
+      hotkey: 'Mod+Tab',
+      isAvailable: hasVault,
+      run: () => workspace.updateLayout((layout) => layouts.cycleTab(layout, 1)),
+    },
+    {
+      id: 'previous-tab',
+      name: 'Go to previous tab',
+      hotkey: 'Mod+Shift+Tab',
+      isAvailable: hasVault,
+      run: () => workspace.updateLayout((layout) => layouts.cycleTab(layout, -1)),
+    },
+    {
+      id: 'split-right',
+      name: 'Split right',
+      isAvailable: hasVault,
+      run: () =>
+        workspace.updateLayout((layout) => layouts.split(layout, layout.activeGroupId, 'right')),
+    },
+    {
+      id: 'split-down',
+      name: 'Split down',
+      isAvailable: hasVault,
+      run: () =>
+        workspace.updateLayout((layout) => layouts.split(layout, layout.activeGroupId, 'bottom')),
+    },
+    {
+      id: 'go-back',
+      name: 'Navigate back',
+      hotkey: 'Alt+ArrowLeft',
+      isAvailable: hasVault,
+      run: () => workspace.updateLayout(layouts.goBack),
+    },
+    {
+      id: 'go-forward',
+      name: 'Navigate forward',
+      hotkey: 'Alt+ArrowRight',
+      isAvailable: hasVault,
+      run: () => workspace.updateLayout(layouts.goForward),
     },
     {
       id: 'show-local-graph',
@@ -65,14 +134,14 @@ export function registerAppCommands() {
       isAvailable: hasNote,
       run: () => {
         workspace.leftTab = 'files'
-        workspace.renaming = workspace.note?.path ?? null
+        workspace.renaming = workspace.notePath
       },
     },
     {
       id: 'delete-note',
       name: 'Delete current note',
       isAvailable: hasNote,
-      run: () => workspace.note && workspace.trash(workspace.note.path),
+      run: () => workspace.notePath && workspace.trash(workspace.notePath),
     },
     {
       id: 'toggle-source-mode',

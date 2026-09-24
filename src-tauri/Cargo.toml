@@ -1,6 +1,6 @@
 [package]
 name = "flint"
-version = "0.2.0"
+version = "0.3.0"
 description = "An open-source, local-first Markdown knowledge base"
 license = "AGPL-3.0-or-later"
 repository = "https://github.com/cucsijuan/flint"

@@ -11,15 +11,10 @@ describe('tabs and panes', () => {
 
   it('opens notes in new tabs with Ctrl+click and closes them with Ctrl+W', async () => {
     await $('button.row*=Welcome').click()
-    await browser.performActions([
-      {
-        type: 'key',
-        id: 'keyboard',
-        actions: [{ type: 'keyDown', value: Key.Ctrl }],
-      },
-    ])
-    await $('button.row*=Ideas').click()
-    await browser.releaseActions()
+    await browser.execute(
+      (row) => row.dispatchEvent(new MouseEvent('click', { bubbles: true, ctrlKey: true })),
+      await $('button.row*=Ideas'),
+    )
     await browser.waitUntil(async () => (await tabTitles()).join() === 'Welcome,Ideas')
 
     await pressShortcut('w')
@@ -44,7 +39,7 @@ describe('tabs and panes', () => {
   })
 
   it('navigates back and forward within a tab', async () => {
-    await $('.group.active .cm-live-link=Roadmap').click()
+    await $('.group.active').$('.cm-live-link=Roadmap').click()
     await expectText('.group.active .view:not([hidden]) .note h1', 'Roadmap')
     await browser.keys([Key.Alt, Key.ArrowLeft])
     await expectText('.group.active .view:not([hidden]) .note h1', 'Welcome')

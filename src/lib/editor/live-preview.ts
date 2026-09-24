@@ -172,6 +172,14 @@ export function previewDecorations(
           if (node.to > shown.to) decorations.push(hide.range(shown.to, node.to))
           break
         }
+        case 'Hashtag':
+          decorations.push(
+            Decoration.mark({
+              class: 'cm-live-tag',
+              attributes: { 'data-tag': doc.sliceString(node.from + 1, node.to) },
+            }).range(node.from, node.to),
+          )
+          break
         case 'Blockquote':
           eachLine(node, quoteLine)
           break

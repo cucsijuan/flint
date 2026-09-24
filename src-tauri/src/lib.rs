@@ -2,6 +2,7 @@ mod commands;
 mod error;
 mod index;
 mod markdown;
+mod search;
 mod vault;
 mod watcher;
 
@@ -28,6 +29,8 @@ pub fn run() {
             commands::note_headings,
             commands::backlinks,
             commands::incoming_link_count,
+            commands::search,
+            commands::tags,
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

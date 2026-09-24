@@ -7,7 +7,7 @@ interface Settings {
   lastVault: string
   editorMode: EditorMode
   linkUpdate: LinkUpdate
-  showBacklinks: boolean
+  showRightPanel: boolean
 }
 
 const store = new LazyStore('settings.json')

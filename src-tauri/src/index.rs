@@ -1,10 +1,11 @@
 use std::cmp::Reverse;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use serde::Serialize;
 
 use crate::error::Result;
 use crate::markdown::{Heading, WikiLink, summarize};
+use crate::search::{Note, Query, SearchResult};
 use crate::vault::{EntryKind, Vault, is_within, parent_of};
 
 const NOTE_EXTENSION: &str = ".md";
@@ -18,8 +19,11 @@ struct IndexedLink {
 
 #[derive(Debug, Clone, Default)]
 struct IndexedNote {
+    text: String,
     links: Vec<IndexedLink>,
     headings: Vec<Heading>,
+    tags: Vec<String>,
+    aliases: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -34,6 +38,13 @@ pub struct Backlink {
 pub struct LinkTarget {
     pub path: String,
     pub link_text: String,
+    pub alias: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct TagCount {
+    pub tag: String,
+    pub count: usize,
 }
 
 #[derive(Debug, Default)]
@@ -79,8 +90,11 @@ impl Index {
         self.notes.insert(
             path,
             IndexedNote {
+                text: text.to_owned(),
                 links,
                 headings: summary.headings,
+                tags: summary.tags,
+                aliases: summary.aliases,
             },
         );
     }
@@ -95,11 +109,30 @@ impl Index {
         }
         let suffix = format!("/{wanted}");
         let source_folder = parent_of(source);
-        self.notes
+        let closest = |paths: Vec<&String>| {
+            paths
+                .into_iter()
+                .min_by_key(|path| (Reverse(parent_of(path) == source_folder), path.len(), *path))
+                .cloned()
+        };
+        let by_name = self
+            .notes
             .keys()
             .filter(|path| note_key(path).ends_with(&suffix))
-            .min_by_key(|path| (Reverse(parent_of(path) == source_folder), path.len(), *path))
-            .cloned()
+            .collect();
+        closest(by_name).or_else(|| {
+            let by_alias = self
+                .notes
+                .iter()
+                .filter(|(_, note)| {
+                    note.aliases
+                        .iter()
+                        .any(|alias| alias.to_lowercase() == wanted)
+                })
+                .map(|(path, _)| path)
+                .collect();
+            closest(by_alias)
+        })
     }
 
     pub fn link_text(&self, path: &str) -> String {
@@ -120,12 +153,62 @@ impl Index {
 
     pub fn link_targets(&self) -> Vec<LinkTarget> {
         self.notes
-            .keys()
-            .map(|path| LinkTarget {
-                path: path.clone(),
-                link_text: self.link_text(path),
+            .iter()
+            .flat_map(|(path, note)| {
+                let link_text = self.link_text(path);
+                let aliases = note.aliases.iter().cloned().map(Some);
+                std::iter::once(None)
+                    .chain(aliases)
+                    .map(move |alias| LinkTarget {
+                        path: path.clone(),
+                        link_text: link_text.clone(),
+                        alias,
+                    })
             })
             .collect()
+    }
+
+    pub fn tags(&self) -> Vec<TagCount> {
+        let mut counts: BTreeMap<String, (String, usize)> = BTreeMap::new();
+        for note in self.notes.values() {
+            let mut seen = HashSet::new();
+            for tag in &note.tags {
+                for (end, _) in tag
+                    .match_indices('/')
+                    .chain(std::iter::once((tag.len(), "")))
+                {
+                    let tag = &tag[..end];
+                    if seen.insert(tag.to_lowercase()) {
+                        counts
+                            .entry(tag.to_lowercase())
+                            .or_insert_with(|| (tag.to_owned(), 0))
+                            .1 += 1;
+                    }
+                }
+            }
+        }
+        counts
+            .into_values()
+            .map(|(tag, count)| TagCount { tag, count })
+            .collect()
+    }
+
+    pub fn search(&self, query: &str) -> Result<Vec<SearchResult>> {
+        let query = Query::parse(query)?;
+        if query.is_empty() {
+            return Ok(Vec::new());
+        }
+        Ok(self
+            .notes
+            .iter()
+            .filter_map(|(path, note)| {
+                query.search(&Note {
+                    path,
+                    text: &note.text,
+                    tags: &note.tags,
+                })
+            })
+            .collect())
     }
 
     pub fn headings(&self, path: &str) -> Vec<Heading> {
@@ -267,6 +350,52 @@ mod tests {
         );
         assert_eq!(index.resolve("x.md", "Missing"), None);
         assert_eq!(index.resolve("Note.md", "").as_deref(), Some("Note.md"));
+    }
+
+    #[test]
+    fn resolves_frontmatter_aliases_after_names() {
+        let index = index_of(&[
+            ("Long Name.md", "---\naliases: [Short]\n---\n"),
+            ("Short.md", ""),
+            ("Other.md", "---\naliases: Nick\n---\n"),
+        ]);
+        assert_eq!(index.resolve("x.md", "short").as_deref(), Some("Short.md"));
+        assert_eq!(index.resolve("x.md", "nick").as_deref(), Some("Other.md"));
+        let aliases: Vec<_> = index
+            .link_targets()
+            .into_iter()
+            .filter_map(|target| Some((target.path, target.alias?)))
+            .collect();
+        assert_eq!(
+            aliases,
+            [
+                ("Long Name.md".to_owned(), "Short".to_owned()),
+                ("Other.md".to_owned(), "Nick".to_owned())
+            ]
+        );
+    }
+
+    #[test]
+    fn counts_notes_per_tag_including_parents() {
+        let index = index_of(&[
+            ("a.md", "#project/flint #Project"),
+            ("b.md", "#project/other"),
+            ("c.md", "#solo"),
+        ]);
+        let counts: Vec<_> = index
+            .tags()
+            .into_iter()
+            .map(|tag| (tag.tag, tag.count))
+            .collect();
+        assert_eq!(
+            counts,
+            [
+                ("project".to_owned(), 2),
+                ("project/flint".to_owned(), 1),
+                ("project/other".to_owned(), 1),
+                ("solo".to_owned(), 1)
+            ]
+        );
     }
 
     #[test]

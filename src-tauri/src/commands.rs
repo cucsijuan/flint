@@ -4,8 +4,9 @@ use serde::Serialize;
 use tauri::{AppHandle, State};
 
 use crate::error::{Error, Result};
-use crate::index::{Backlink, Index, LinkTarget};
+use crate::index::{Backlink, Index, LinkTarget, TagCount};
 use crate::markdown::Heading;
+use crate::search::SearchResult;
 use crate::vault::{Entry, Vault};
 use crate::watcher::{VaultWatcher, watch};
 
@@ -140,4 +141,14 @@ pub fn backlinks(state: State<AppState>, path: String) -> Result<Vec<Backlink>> 
 #[tauri::command(async)]
 pub fn incoming_link_count(state: State<AppState>, path: String) -> Result<usize> {
     state.read_index(|index| index.incoming_link_count(&path))
+}
+
+#[tauri::command(async)]
+pub fn search(state: State<AppState>, query: String) -> Result<Vec<SearchResult>> {
+    state.read_index(|index| index.search(&query))?
+}
+
+#[tauri::command(async)]
+pub fn tags(state: State<AppState>) -> Result<Vec<TagCount>> {
+    state.read_index(Index::tags)
 }

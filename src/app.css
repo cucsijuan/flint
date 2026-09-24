@@ -229,3 +229,57 @@ button.primary {
   color: var(--text-faint);
   font-style: normal !important;
 }
+
+.panel-tabs {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.tab-list {
+  display: flex;
+  gap: 2px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 26px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.tab:hover {
+  background: var(--hover);
+}
+
+.tab[data-state='active'] {
+  background: var(--selected);
+  color: var(--text);
+}
+
+.tab-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.cm-hashtag,
+.cm-live-tag {
+  color: var(--accent);
+}
+
+.cm-live-tag {
+  padding: 0 4px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  cursor: pointer;
+}

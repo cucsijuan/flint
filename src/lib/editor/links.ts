@@ -77,37 +77,52 @@ function linkResolution(resolve: LinkResolver) {
   )
 }
 
-function linkAt(view: EditorView, position: number) {
+export interface Navigation {
+  openLink: (destination: string) => void
+  openTag: (tag: string) => void
+}
+
+type Target = { link: string } | { tag: string }
+
+function targetAt(view: EditorView, position: number): Target | null {
   for (
     let node = syntaxTree(view.state).resolveInner(position, 1);
     node.parent;
     node = node.parent
   ) {
-    if (node.name === 'WikiLink') return wikiLinkParts(view.state, node).destination
+    if (node.name === 'WikiLink') return { link: wikiLinkParts(view.state, node).destination }
+    if (node.name === 'Hashtag') return { tag: view.state.sliceDoc(node.from + 1, node.to) }
   }
   return null
 }
 
-function linkClicks(open: (destination: string) => void) {
+function renderedTarget(element: HTMLElement): Target | null {
+  const { link, tag } = element.closest<HTMLElement>('[data-link], [data-tag]')?.dataset ?? {}
+  if (link !== undefined) return { link }
+  if (tag !== undefined) return { tag }
+  return null
+}
+
+function clicks({ openLink, openTag }: Navigation) {
   return EditorView.domEventHandlers({
     mousedown(event, view) {
       if (event.button !== 0) return false
-      const rendered = (event.target as HTMLElement).closest<HTMLElement>('[data-link]')
-      let destination = rendered?.dataset.link ?? null
-      if (destination === null && (event.ctrlKey || event.metaKey)) {
+      let target = renderedTarget(event.target as HTMLElement)
+      if (!target && (event.ctrlKey || event.metaKey)) {
         const position = view.posAtCoords(event)
-        if (position !== null) destination = linkAt(view, position)
+        if (position !== null) target = targetAt(view, position)
       }
-      if (destination === null) return false
+      if (!target) return false
       event.preventDefault()
-      open(destination)
+      if ('link' in target) openLink(target.link)
+      else openTag(target.tag)
       return true
     },
   })
 }
 
-export const wikiLinks = (resolve: LinkResolver, open: (destination: string) => void) => [
+export const navigation = (resolve: LinkResolver, handlers: Navigation) => [
   resolvedLinks,
   linkResolution(resolve),
-  linkClicks(open),
+  clicks(handlers),
 ]

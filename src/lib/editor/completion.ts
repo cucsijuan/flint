@@ -6,14 +6,16 @@ import {
 } from '@codemirror/autocomplete'
 import type { EditorView } from '@codemirror/view'
 import { noteTitle, parentOf } from '../paths'
-import type { Heading, LinkTarget } from '../vault'
+import type { Heading, LinkTarget, TagCount } from '../vault'
 
-export interface LinkCompletionSources {
+export interface CompletionSources {
   targets: () => LinkTarget[]
   headings: (target: string) => Promise<Heading[]>
+  tags: () => TagCount[]
 }
 
 const OPEN_LINK = /\[\[([^[\]|\n]*)$/
+const OPEN_TAG = /(?:^|\s)#[\p{L}\p{N}_/-]*$/u
 
 function insertLink(text: string) {
   return (view: EditorView, _completion: Completion, from: number, to: number) => {
@@ -26,9 +28,22 @@ function insertLink(text: string) {
   }
 }
 
+function completeTag(
+  context: CompletionContext,
+  sources: CompletionSources,
+): CompletionResult | null {
+  const match = context.matchBefore(OPEN_TAG)
+  if (!match) return null
+  return {
+    from: match.from + match.text.indexOf('#') + 1,
+    options: sources.tags().map(({ tag, count }) => ({ label: tag, detail: String(count) })),
+    validFor: /^[\p{L}\p{N}_/-]*$/u,
+  }
+}
+
 async function completeLink(
   context: CompletionContext,
-  sources: LinkCompletionSources,
+  sources: CompletionSources,
 ): Promise<CompletionResult | null> {
   const match = context.matchBefore(OPEN_LINK)
   if (!match) return null
@@ -39,11 +54,15 @@ async function completeLink(
   if (hash === -1) {
     return {
       from,
-      options: sources.targets().map(({ path, linkText }) => ({
-        label: noteTitle(path),
-        detail: parentOf(path),
-        apply: insertLink(linkText),
-      })),
+      options: sources.targets().map(({ path, linkText, alias }) =>
+        alias
+          ? {
+              label: alias,
+              detail: `→ ${noteTitle(path)}`,
+              apply: insertLink(`${linkText}|${alias}`),
+            }
+          : { label: noteTitle(path), detail: parentOf(path), apply: insertLink(linkText) },
+      ),
     }
   }
 
@@ -59,8 +78,11 @@ async function completeLink(
   }
 }
 
-export const linkCompletion = (sources: LinkCompletionSources) =>
+export const completion = (sources: CompletionSources) =>
   autocompletion({
-    override: [(context) => completeLink(context, sources)],
+    override: [
+      (context) => completeLink(context, sources),
+      (context) => completeTag(context, sources),
+    ],
     icons: false,
   })

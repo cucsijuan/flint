@@ -13,7 +13,17 @@ import { buildTree } from './tree'
 import * as vault from './vault'
 
 const SAVE_DELAY_MS = 400
+const SEARCH_DELAY_MS = 200
 const NOTICE_MS = 5000
+
+export type LeftTab = 'files' | 'search'
+export type RightTab = 'backlinks' | 'tags'
+
+export interface Jump {
+  heading?: string
+  line?: number
+  id: number
+}
 
 export interface OpenNote {
   path: string
@@ -32,20 +42,31 @@ class Workspace {
   notice = $state<string | null>(null)
   linkTargets = $state<vault.LinkTarget[]>([])
   indexVersion = $state(0)
-  headingJump = $state<{ heading: string; id: number } | null>(null)
-  showBacklinks = $state(true)
+  tags = $state<vault.TagCount[]>([])
+  jump = $state<Jump | null>(null)
+  leftTab = $state<LeftTab>('files')
+  rightTab = $state<RightTab>('backlinks')
+  showRightPanel = $state(true)
   linkUpdate = $state<LinkUpdate>('ask')
   isSettingsOpen = $state(false)
+  isQuickSwitcherOpen = $state(false)
+  isCommandPaletteOpen = $state(false)
+  searchQuery = $state('')
+  searchResults = $state<vault.SearchResult[]>([])
+  searchError = $state<string | null>(null)
+  searchFocus = $state(0)
 
   #contents = ''
   #saveTimer: ReturnType<typeof setTimeout> | undefined
   #isWatching = false
   #noticeTimer: ReturnType<typeof setTimeout> | undefined
   #revision = 0
+  #jumpId = 0
+  #searchTimer: ReturnType<typeof setTimeout> | undefined
 
   async restore() {
     this.mode = (await getSetting('editorMode')) ?? 'live'
-    this.showBacklinks = (await getSetting('showBacklinks')) ?? true
+    this.showRightPanel = (await getSetting('showRightPanel')) ?? true
     this.linkUpdate = (await getSetting('linkUpdate')) ?? 'ask'
     const lastVault = await getSetting('lastVault')
     if (lastVault) await this.openVault(lastVault)
@@ -97,9 +118,46 @@ class Workspace {
     void setSetting('editorMode', this.mode)
   }
 
-  toggleBacklinks() {
-    this.showBacklinks = !this.showBacklinks
-    void setSetting('showBacklinks', this.showBacklinks)
+  toggleRightPanel() {
+    this.setRightPanel(!this.showRightPanel)
+  }
+
+  showRightTab(tab: RightTab) {
+    this.rightTab = tab
+    this.setRightPanel(true)
+  }
+
+  setRightPanel(isVisible: boolean) {
+    this.showRightPanel = isVisible
+    void setSetting('showRightPanel', isVisible)
+  }
+
+  openSearch(query?: string) {
+    this.leftTab = 'search'
+    this.searchFocus++
+    if (query !== undefined) this.search(query)
+  }
+
+  search(query: string) {
+    this.searchQuery = query
+    clearTimeout(this.#searchTimer)
+    this.#searchTimer = setTimeout(() => void this.#runSearch(), SEARCH_DELAY_MS)
+  }
+
+  async openNoteAt(path: string, target: Omit<Jump, 'id'>) {
+    await this.openNote(path)
+    this.jump = { ...target, id: ++this.#jumpId }
+  }
+
+  async openOrCreateNote(name: string) {
+    const path = name.toLowerCase().endsWith(NOTE_EXTENSION) ? name : name + NOTE_EXTENSION
+    await this.#run(async () => {
+      if (!this.entries.some((entry) => entry.path === path)) {
+        await vault.createNote(path)
+        await this.#refresh()
+      }
+      await this.openNote(path)
+    })
   }
 
   setLinkUpdate(value: LinkUpdate) {
@@ -127,8 +185,8 @@ class Workspace {
         await vault.createNote(path)
         await this.#refresh()
       }
-      await this.openNote(path)
-      if (heading) this.headingJump = { heading, id: (this.headingJump?.id ?? 0) + 1 }
+      if (heading) await this.openNoteAt(path, { heading })
+      else await this.openNote(path)
     })
   }
 
@@ -205,11 +263,22 @@ class Workspace {
   }
 
   async #refresh() {
-    ;[this.entries, this.linkTargets] = await Promise.all([
+    ;[this.entries, this.linkTargets, this.tags] = await Promise.all([
       vault.listEntries(),
       vault.linkTargets(),
+      vault.tags(),
     ])
     this.indexVersion++
+    if (this.searchQuery) await this.#runSearch()
+  }
+
+  async #runSearch() {
+    try {
+      this.searchResults = await vault.search(this.searchQuery)
+      this.searchError = null
+    } catch (error) {
+      this.searchError = String(error)
+    }
   }
 
   async #onExternalChange(paths: string[]) {

@@ -20,6 +20,7 @@ log = "0.4"
 notify = "8.2.0"
 notify-debouncer-full = "0.7.0"
 pulldown-cmark = { version = "0.13.4", default-features = false }
+regex = "1.13.1"
 serde = { version = "1.0.229", features = ["derive"] }
 tauri = { version = "2.11.6", features = [] }
 tauri-plugin-dialog = "2.7.3"
@@ -29,3 +30,4 @@ tauri-plugin-window-state = "2.4.1"
 tempfile = "3.27.0"
 thiserror = "2.0.21"
 trash = "5.2.9"
+yaml-rust2 = "0.13.0"

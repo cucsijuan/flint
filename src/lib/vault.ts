@@ -27,6 +27,17 @@ export const trashEntry = (path: string) => invoke('trash_entry', { path })
 export interface LinkTarget {
   path: string
   linkText: string
+  alias: string | null
+}
+
+export interface TagCount {
+  tag: string
+  count: number
+}
+
+export interface SearchResult {
+  path: string
+  lines: { line: number; segments: { text: string; highlight: boolean }[] }[]
 }
 
 export interface Heading {
@@ -46,6 +57,9 @@ export const resolveLinks = (source: string, targets: string[]) =>
 export const noteHeadings = (path: string) => invoke<Heading[]>('note_headings', { path })
 export const backlinks = (path: string) => invoke<Backlink[]>('backlinks', { path })
 export const incomingLinkCount = (path: string) => invoke<number>('incoming_link_count', { path })
+
+export const search = (query: string) => invoke<SearchResult[]>('search', { query })
+export const tags = () => invoke<TagCount[]>('tags')
 
 export const onVaultChanged = (handler: (paths: string[]) => void): Promise<UnlistenFn> =>
   listen<string[]>('vault-changed', (event) => handler(event.payload))

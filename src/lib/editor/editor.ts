@@ -8,8 +8,9 @@ import { EditorView, keymap } from '@codemirror/view'
 import { tags } from '@lezer/highlight'
 import { minimalSetup } from 'codemirror'
 import type { EditorMode } from '../settings'
-import { linkCompletion, type LinkCompletionSources } from './link-completion'
-import { type LinkResolver, wikiLinks } from './links'
+import { completion, type CompletionSources } from './completion'
+import { hashtagSyntax } from './hashtag'
+import { type LinkResolver, type Navigation, navigation } from './links'
 import { livePreview } from './live-preview'
 import { wikiLinkSyntax } from './wikilink'
 
@@ -27,6 +28,7 @@ const markdownStyle = HighlightStyle.define([
   { tag: [tags.link, tags.url], class: 'cm-md-link' },
   { tag: [tags.processingInstruction, tags.contentSeparator, tags.meta], class: 'cm-md-mark' },
   { tag: tags.quote, class: 'cm-md-quote' },
+  { tag: tags.labelName, class: 'cm-hashtag' },
 ])
 
 const mode = new Compartment()
@@ -39,43 +41,31 @@ export interface EditorOptions {
   doc: string
   mode: EditorMode
   onChange: (doc: string) => void
-  onToggleMode: () => void
   resolveLinks: LinkResolver
-  openLink: (destination: string) => void
-  completion: LinkCompletionSources
+  navigation: Navigation
+  completion: CompletionSources
 }
 
 export function createEditorState({
   doc,
   mode: editorMode,
   onChange,
-  onToggleMode,
   resolveLinks,
-  openLink,
-  completion,
+  navigation: handlers,
+  completion: sources,
 }: EditorOptions) {
   return EditorState.create({
     doc,
     extensions: [
       minimalSetup,
-      keymap.of([
-        indentWithTab,
-        ...searchKeymap,
-        {
-          key: 'Mod-e',
-          run: () => {
-            onToggleMode()
-            return true
-          },
-        },
-      ]),
+      keymap.of([indentWithTab, ...searchKeymap]),
       markdown({
         base: markdownLanguage,
         codeLanguages: languages,
-        extensions: wikiLinkSyntax,
+        extensions: [wikiLinkSyntax, hashtagSyntax],
       }),
-      wikiLinks(resolveLinks, openLink),
-      linkCompletion(completion),
+      navigation(resolveLinks, handlers),
+      completion(sources),
       syntaxHighlighting(markdownStyle),
       EditorView.lineWrapping,
       EditorView.contentAttributes.of({ spellcheck: 'true' }),
@@ -103,15 +93,20 @@ export function replaceDoc(view: EditorView, doc: string) {
 
 const HEADING_LINE = /^#{1,6}\s+(.*?)\s*#*\s*$/
 
+export function scrollToLine(view: EditorView, number: number) {
+  const line = view.state.doc.line(Math.min(Math.max(number, 1), view.state.doc.lines))
+  view.dispatch({
+    selection: { anchor: line.from },
+    effects: EditorView.scrollIntoView(line.from, { y: 'center' }),
+  })
+  view.focus()
+}
+
 export function scrollToHeading(view: EditorView, heading: string) {
   const wanted = heading.trim().toLowerCase()
   for (let number = 1; number <= view.state.doc.lines; number++) {
-    const line = view.state.doc.line(number)
-    if (HEADING_LINE.exec(line.text)?.[1].toLowerCase() === wanted) {
-      view.dispatch({
-        selection: { anchor: line.from },
-        effects: EditorView.scrollIntoView(line.from, { y: 'start', yMargin: 40 }),
-      })
+    if (HEADING_LINE.exec(view.state.doc.line(number).text)?.[1].toLowerCase() === wanted) {
+      scrollToLine(view, number)
       return
     }
   }

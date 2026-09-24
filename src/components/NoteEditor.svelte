@@ -2,7 +2,13 @@
   import { EditorView } from '@codemirror/view'
   import { BookOpen, Code, PanelRight } from '@lucide/svelte'
   import { onMount } from 'svelte'
-  import { createEditorState, replaceDoc, scrollToHeading, setMode } from '../lib/editor/editor'
+  import {
+    createEditorState,
+    replaceDoc,
+    scrollToHeading,
+    scrollToLine,
+    setMode,
+  } from '../lib/editor/editor'
   import { refreshLinks } from '../lib/editor/links'
   import { noteTitle } from '../lib/paths'
   import { workspace, type OpenNote } from '../lib/workspace.svelte'
@@ -18,12 +24,15 @@
       doc,
       mode: workspace.mode,
       onChange: (contents) => workspace.edit(contents),
-      onToggleMode: () => workspace.toggleMode(),
       resolveLinks: (targets) => workspace.resolveLinks(targets),
-      openLink: (destination) => void workspace.openLink(destination),
+      navigation: {
+        openLink: (destination) => void workspace.openLink(destination),
+        openTag: (tag) => workspace.openSearch(`tag:#${tag}`),
+      },
       completion: {
         targets: () => workspace.linkTargets,
         headings: (target) => workspace.headingsFor(target),
+        tags: () => workspace.tags,
       },
     })
 
@@ -55,10 +64,11 @@
   })
 
   $effect(() => {
-    const jump = workspace.headingJump
+    const jump = workspace.jump
     if (!view || !jump) return
-    scrollToHeading(view, jump.heading)
-    workspace.headingJump = null
+    if (jump.heading) scrollToHeading(view, jump.heading)
+    else if (jump.line) scrollToLine(view, jump.line)
+    workspace.jump = null
   })
 </script>
 
@@ -75,9 +85,9 @@
       </button>
       <button
         class="icon"
-        class:on={workspace.showBacklinks}
-        title="Backlinks"
-        onclick={() => workspace.toggleBacklinks()}
+        class:on={workspace.showRightPanel}
+        title="Toggle right sidebar"
+        onclick={() => workspace.toggleRightPanel()}
       >
         <PanelRight size={16} />
       </button>

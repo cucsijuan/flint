@@ -8,6 +8,8 @@ pub enum Error {
     OutsideVault(String),
     #[error("already exists: {0}")]
     AlreadyExists(String),
+    #[error("invalid search: {0}")]
+    InvalidQuery(String),
     #[error(transparent)]
     Io(#[from] std::io::Error),
     #[error(transparent)]

@@ -23,9 +23,12 @@ Tauri 2 + Svelte 5 app, linting, tests, and CI builds for Linux and Windows.
 - Backlinks panel.
 - Renaming or moving updates incoming links (ask, always, or never).
 
-### M3: Search and navigation
+### M3: Search and navigation ✅
 
-Full-text search, tags, quick switcher, and command palette.
+- Full-text search with Obsidian's syntax: terms, `"phrases"`, `-exclusions`, `OR`, `path:`, `file:`, `tag:` and `/regex/`.
+- Tags from the text (including nested `#tags/like/this`) and from frontmatter; tags pane, clickable tags and tag autocomplete.
+- Frontmatter `aliases`: links, autocomplete and the quick switcher understand them.
+- Quick switcher (Ctrl+O) and command palette (Ctrl+P) with fuzzy matching.
 
 ### M4: Graph view
 
@@ -41,6 +44,8 @@ Features deferred from a milestone. They are not scheduled yet.
 
 - **Editor:** tabs and split panes, images, tables, reading view, custom editor context menu.
 - **File tree:** drag-and-drop moves, keeping folders expanded after a rename.
-- **Links:** rendering embedded notes (`![[note]]`), block references (`[[note#^id]]`), frontmatter `aliases`, and standard Markdown links to notes (`[text](note.md)`).
+- **Links:** rendering embedded notes (`![[note]]`), block references (`[[note#^id]]`), and standard Markdown links to notes (`[text](note.md)`).
+- **Search:** parentheses for grouping terms, more operators (`line:`, `section:`, `content:`), sort options.
+- **Commands:** customizable hotkeys.
 - **Settings:** per-vault settings stored in the vault's `.flint/` folder.
 - **Platforms:** macOS and mobile; manual testing on Windows.

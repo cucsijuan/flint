@@ -1,7 +1,9 @@
 <script lang="ts">
-  import { FilePlus, FolderOpen, FolderPlus, Settings } from '@lucide/svelte'
+  import { FilePlus, Files, FolderOpen, FolderPlus, Search, Settings } from '@lucide/svelte'
+  import { Tabs } from 'bits-ui'
   import { workspace } from '../lib/workspace.svelte'
   import FileTree from './FileTree.svelte'
+  import SearchPanel from './SearchPanel.svelte'
 </script>
 
 <aside>
@@ -24,7 +26,16 @@
       <Settings size={16} />
     </button>
   </header>
-  <FileTree />
+  <Tabs.Root bind:value={workspace.leftTab} class="panel-tabs">
+    <Tabs.List class="tab-list">
+      <Tabs.Trigger class="tab" value="files" title="Files"><Files size={16} /></Tabs.Trigger>
+      <Tabs.Trigger class="tab" value="search" title="Search (Ctrl+Shift+F)">
+        <Search size={16} />
+      </Tabs.Trigger>
+    </Tabs.List>
+    <Tabs.Content class="tab-content" value="files"><FileTree /></Tabs.Content>
+    <Tabs.Content class="tab-content" value="search"><SearchPanel /></Tabs.Content>
+  </Tabs.Root>
 </aside>
 
 <style>

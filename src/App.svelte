@@ -2,12 +2,18 @@
   import { getCurrentWindow } from '@tauri-apps/api/window'
   import { Pane, PaneGroup, PaneResizer } from 'paneforge'
   import { onMount } from 'svelte'
-  import BacklinksPanel from './components/BacklinksPanel.svelte'
+  import CommandPalette from './components/CommandPalette.svelte'
   import NoteEditor from './components/NoteEditor.svelte'
+  import QuickSwitcher from './components/QuickSwitcher.svelte'
+  import RightPanel from './components/RightPanel.svelte'
   import SettingsDialog from './components/SettingsDialog.svelte'
   import Sidebar from './components/Sidebar.svelte'
   import Welcome from './components/Welcome.svelte'
+  import { registerAppCommands } from './lib/app-commands'
+  import { commands } from './lib/commands.svelte'
   import { workspace } from './lib/workspace.svelte'
+
+  registerAppCommands()
 
   let restored = $state(false)
 
@@ -17,25 +23,13 @@
     return () => void closing.then((unlisten) => unlisten())
   })
 
-  function onKeydown(event: KeyboardEvent) {
-    if (!(event.ctrlKey || event.metaKey)) return
-    if (event.key.toLowerCase() === 'n' && workspace.info) {
-      event.preventDefault()
-      void workspace.createNote()
-    }
-    if (event.key === ',') {
-      event.preventDefault()
-      workspace.isSettingsOpen = true
-    }
-  }
-
   function onContextMenu(event: MouseEvent) {
     const allowsNativeMenu = (event.target as Element).closest('.cm-editor, input, textarea')
     if (!allowsNativeMenu) event.preventDefault()
   }
 </script>
 
-<svelte:window onkeydown={onKeydown} oncontextmenu={onContextMenu} />
+<svelte:window onkeydown={(event) => commands.handleKeydown(event)} oncontextmenu={onContextMenu} />
 
 {#if restored}
   {#if workspace.info}
@@ -51,10 +45,10 @@
           <div class="empty">Select or create a note.</div>
         {/if}
       </Pane>
-      {#if workspace.note && workspace.showBacklinks}
+      {#if workspace.showRightPanel}
         <PaneResizer class="resizer" />
-        <Pane id="backlinks" order={3} defaultSize={22} minSize={12} maxSize={50}>
-          <BacklinksPanel path={workspace.note.path} />
+        <Pane id="right" order={3} defaultSize={22} minSize={12} maxSize={50}>
+          <RightPanel />
         </Pane>
       {/if}
     </PaneGroup>
@@ -64,6 +58,8 @@
 {/if}
 
 <SettingsDialog />
+<QuickSwitcher />
+<CommandPalette />
 
 {#if workspace.notice}
   <div class="notice" role="alert">{workspace.notice}</div>

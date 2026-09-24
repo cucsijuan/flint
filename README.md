@@ -2,7 +2,7 @@
 
 An open-source, local-first Markdown knowledge base. Flint works on a plain folder of Markdown files and stays compatible with Obsidian vaults.
 
-> **Status:** early development. Nothing is usable yet.
+> **Status:** early development. Vaults, the live-preview editor and wikilinks work; see the [roadmap](ROADMAP.md) for what comes next.
 
 ## Development
 

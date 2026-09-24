@@ -198,3 +198,8 @@ button.primary {
   margin: 4px 0;
   background: var(--border);
 }
+
+.cm-live-language {
+  color: var(--text-faint);
+  font-size: 0.8em;
+}

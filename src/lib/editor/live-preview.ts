@@ -27,6 +27,23 @@ class RuleWidget extends WidgetType {
   }
 }
 
+export class LanguageWidget extends WidgetType {
+  constructor(readonly language: string) {
+    super()
+  }
+
+  eq(other: LanguageWidget) {
+    return other.language === this.language
+  }
+
+  toDOM() {
+    const label = document.createElement('span')
+    label.className = 'cm-live-language'
+    label.textContent = this.language
+    return label
+  }
+}
+
 export class CheckboxWidget extends WidgetType {
   constructor(
     readonly checked: boolean,
@@ -164,9 +181,23 @@ export function previewDecorations(
             decorations.push(rule.range(node.from, node.to))
           }
           break
-        case 'FencedCode':
+        case 'FencedCode': {
           eachLine(node, codeLine)
+          const [open, close] = node.getChildren('CodeMark')
+          if (!open || linesTouchSelection(node.from, node.to)) break
+          const info = node.getChild('CodeInfo')
+          const language = info && doc.sliceString(info.from, info.to)
+          decorations.push(
+            language
+              ? Decoration.replace({ widget: new LanguageWidget(language) }).range(
+                  open.from,
+                  info.to,
+                )
+              : hide.range(open.from, open.to),
+          )
+          if (close) decorations.push(hide.range(close.from, close.to))
           break
+        }
       }
     },
   })

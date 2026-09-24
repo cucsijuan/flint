@@ -2,7 +2,7 @@ import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import { ensureSyntaxTree } from '@codemirror/language'
 import { EditorState } from '@codemirror/state'
 import { describe, expect, it } from 'vitest'
-import { CheckboxWidget, previewDecorations } from './live-preview'
+import { CheckboxWidget, LanguageWidget, previewDecorations } from './live-preview'
 
 function preview(doc: string, cursor = doc.length) {
   const state = EditorState.create({
@@ -19,7 +19,9 @@ function preview(doc: string, cursor = doc.length) {
     if (from === to && className) lineClasses.push(className)
     else if (decoration.spec.class === undefined) {
       const text = doc.slice(from, to)
-      replaced.push(widget instanceof CheckboxWidget ? `[${widget.checked ? 'x' : ' '}]` : text)
+      if (widget instanceof CheckboxWidget) replaced.push(`[${widget.checked ? 'x' : ' '}]`)
+      else if (widget instanceof LanguageWidget) replaced.push(`<${widget.language}>`)
+      else replaced.push(text)
     }
   })
   return { replaced, lineClasses }
@@ -52,6 +54,12 @@ describe('live preview', () => {
 
   it('leaves ordered list numbers visible', () => {
     expect(preview('1. first\n\nend').replaced).toEqual([])
+  })
+
+  it('hides code fences and labels the language unless the cursor is in the block', () => {
+    const doc = '```js\nlet a\n```\n\n```\nplain\n```\n\nend'
+    expect(preview(doc).replaced).toEqual(['<js>', '```', '```', '```'])
+    expect(preview(doc, doc.indexOf('let')).replaced).toEqual(['```', '```'])
   })
 
   it('styles quote and code block lines', () => {

@@ -20,7 +20,7 @@
     "@sveltejs/vite-plugin-svelte": "^7.3.0",
     "@tauri-apps/cli": "^2.11.5",
     "@tsconfig/svelte": "^5.0.8",
-    "@types/node": "^24.13.3",
+    "@types/node": "^26.6.2",
     "eslint": "^10.11.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-svelte": "^3.23.0",

@@ -38,6 +38,19 @@ describe('tabs and panes', () => {
     await browser.waitUntil(() => vaultFile('Welcome.md').includes('Typed in the second pane.'))
   })
 
+  it('resizes split panes by dragging the divider', async () => {
+    const [left] = await $$('.group')
+    const widthBefore = (await left.getSize()).width
+    await browser
+      .action('pointer')
+      .move({ origin: await $('.resizer.horizontal') })
+      .down()
+      .move({ origin: 'pointer', x: -120, y: 0, duration: 200 })
+      .up()
+      .perform()
+    await browser.waitUntil(async () => (await left.getSize()).width < widthBefore - 60)
+  })
+
   it('navigates back and forward within a tab', async () => {
     await $('.group.active').$('.cm-live-link=Roadmap').click()
     await expectText('.group.active .view:not([hidden]) .note h1', 'Roadmap')

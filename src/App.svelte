@@ -74,15 +74,30 @@
 
 <style>
   :global(.resizer) {
+    position: relative;
+    z-index: 5;
     width: 1px;
     background: var(--border);
+    cursor: col-resize;
+  }
+
+  :global(.resizer::after) {
+    content: '';
+    position: absolute;
+    inset: 0 -3px;
   }
 
   :global(.resizer.vertical) {
     width: auto;
     height: 1px;
+    cursor: row-resize;
   }
 
+  :global(.resizer.vertical::after) {
+    inset: -3px 0;
+  }
+
+  :global(.resizer:hover),
   :global(.resizer[data-active]) {
     background: var(--accent);
   }

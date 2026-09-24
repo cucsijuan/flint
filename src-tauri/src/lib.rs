@@ -17,6 +17,7 @@ pub fn run() {
         .plugin(tauri_plugin_window_state::Builder::new().build())
         .manage(AppState::default())
         .invoke_handler(tauri::generate_handler![
+            commands::launch_vault,
             commands::open_vault,
             commands::list_entries,
             commands::read_note,

@@ -80,8 +80,8 @@ class Workspace {
     this.mode = (await getSetting('editorMode')) ?? 'live'
     this.showRightPanel = (await getSetting('showRightPanel')) ?? true
     this.linkUpdate = (await getSetting('linkUpdate')) ?? 'ask'
-    const lastVault = await getSetting('lastVault')
-    if (lastVault) await this.openVault(lastVault)
+    const vaultPath = (await vault.launchVault()) ?? (await getSetting('lastVault'))
+    if (vaultPath) await this.openVault(vaultPath)
   }
 
   async chooseVault() {

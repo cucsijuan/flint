@@ -13,6 +13,7 @@ export interface VaultInfo {
   name: string
 }
 
+export const launchVault = () => invoke<string | null>('launch_vault')
 export const openVault = (path: string) => invoke<VaultInfo>('open_vault', { path })
 export const listEntries = () => invoke<Entry[]>('list_entries')
 export const readNote = (path: string) => invoke<string>('read_note', { path })

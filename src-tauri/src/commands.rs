@@ -64,6 +64,16 @@ pub fn open_vault(app: AppHandle, state: State<AppState>, path: String) -> Resul
     Ok(info)
 }
 
+#[tauri::command]
+pub fn launch_vault() -> Option<String> {
+    std::env::args()
+        .skip(1)
+        .find(|arg| !arg.starts_with('-'))
+        .and_then(|arg| std::fs::canonicalize(arg).ok())
+        .filter(|path| path.is_dir())
+        .map(|path| path.to_string_lossy().into_owned())
+}
+
 #[tauri::command(async)]
 pub fn list_entries(state: State<AppState>) -> Result<Vec<Entry>> {
     state.vault()?.entries()

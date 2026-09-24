@@ -35,6 +35,7 @@ const APP_HOTKEYS = new Set(['Mod-g'])
 const editorSearchKeymap = searchKeymap.filter((binding) => !APP_HOTKEYS.has(binding.key ?? ''))
 
 const mode = new Compartment()
+const pluginExtensions = new Compartment()
 const externalChange = Annotation.define<boolean>()
 
 const modeExtension = (editorMode: EditorMode): Extension =>
@@ -47,6 +48,7 @@ export interface EditorOptions {
   resolveLinks: LinkResolver
   navigation: Navigation
   completion: CompletionSources
+  plugins: Extension[]
 }
 
 export function createEditorState({
@@ -56,6 +58,7 @@ export function createEditorState({
   resolveLinks,
   navigation: handlers,
   completion: sources,
+  plugins,
 }: EditorOptions) {
   return EditorState.create({
     doc,
@@ -73,6 +76,7 @@ export function createEditorState({
       EditorView.lineWrapping,
       EditorView.contentAttributes.of({ spellcheck: 'true' }),
       mode.of(modeExtension(editorMode)),
+      pluginExtensions.of(plugins),
       EditorView.updateListener.of((update) => {
         const isUserEdit = !update.transactions.some((tr) => tr.annotation(externalChange))
         if (update.docChanged && isUserEdit) onChange(update.state.doc.toString())
@@ -80,6 +84,9 @@ export function createEditorState({
     ],
   })
 }
+
+export const setPluginExtensions = (view: EditorView, plugins: Extension[]) =>
+  view.dispatch({ effects: pluginExtensions.reconfigure(plugins) })
 
 export const setMode = (view: EditorView, editorMode: EditorMode) =>
   view.dispatch({ effects: mode.reconfigure(modeExtension(editorMode)) })

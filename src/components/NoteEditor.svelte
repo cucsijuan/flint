@@ -8,7 +8,10 @@
     scrollToHeading,
     scrollToLine,
     setMode,
+    setPluginExtensions,
   } from '../lib/editor/editor'
+  import { setActiveView } from '../lib/editor/active'
+  import { pluginHost } from '../lib/plugins/host.svelte'
   import { refreshLinks } from '../lib/editor/links'
   import { noteTitle } from '../lib/paths'
   import { workspace, type OpenNote } from '../lib/workspace.svelte'
@@ -34,13 +37,18 @@
         headings: (target) => workspace.headingsFor(target),
         tags: () => workspace.tags,
       },
+      plugins: pluginHost.editorExtensions,
     })
 
   onMount(() => {
     view = new EditorView({ state: stateFor(note.contents), parent: container })
+    setActiveView(view)
     shownRevision = note.revision
     view.focus()
-    return () => view?.destroy()
+    return () => {
+      setActiveView(null)
+      view?.destroy()
+    }
   })
 
   $effect(() => {
@@ -57,6 +65,10 @@
 
   $effect(() => {
     if (view) setMode(view, workspace.mode)
+  })
+
+  $effect(() => {
+    if (view) setPluginExtensions(view, pluginHost.editorExtensions)
   })
 
   $effect(() => {

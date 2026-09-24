@@ -9,6 +9,7 @@ import {
   uniqueName,
 } from './paths'
 import { getSetting, setSetting, type EditorMode, type LinkUpdate } from './settings'
+import { noteOpened, vaultChanged } from './events'
 import type { GraphFilters } from './graph'
 import { buildTree } from './tree'
 import * as vault from './vault'
@@ -18,7 +19,7 @@ const SEARCH_DELAY_MS = 200
 const NOTICE_MS = 5000
 
 export type LeftTab = 'files' | 'search'
-export type RightTab = 'backlinks' | 'tags' | 'graph'
+export type RightTab = 'backlinks' | 'tags' | 'graph' | (string & {})
 export type MainView = 'editor' | 'graph'
 
 export interface Jump {
@@ -92,7 +93,7 @@ class Workspace {
     await this.#run(async () => {
       await this.flush()
       this.info = await vault.openVault(path)
-      this.note = null
+      this.#closeNote()
       await this.#refresh()
       await setSetting('lastVault', path)
       if (!this.#isWatching) {
@@ -238,7 +239,7 @@ class Workspace {
         this.note.path = replacePrefix(this.note.path, path, target)
       }
       await this.#refresh()
-      if (updated) this.#notify(`Updated ${updated} ${updated === 1 ? 'link' : 'links'}.`)
+      if (updated) this.notify(`Updated ${updated} ${updated === 1 ? 'link' : 'links'}.`)
     })
   }
 
@@ -260,7 +261,7 @@ class Workspace {
     await this.#run(async () => {
       await this.flush()
       await vault.trashEntry(path)
-      if (this.note && isWithin(this.note.path, path)) this.note = null
+      if (this.note && isWithin(this.note.path, path)) this.#closeNote()
       await this.#refresh()
     })
   }
@@ -269,9 +270,16 @@ class Workspace {
     return new Set(this.entries.map((entry) => entry.path))
   }
 
+  #closeNote() {
+    this.note = null
+    noteOpened.emit(null)
+  }
+
   #show(path: string, contents: string) {
     this.#contents = contents
-    this.note = { path, contents, revision: ++this.#revision, isNewPath: path !== this.note?.path }
+    const isNewPath = path !== this.note?.path
+    this.note = { path, contents, revision: ++this.#revision, isNewPath }
+    if (isNewPath) noteOpened.emit(path)
   }
 
   async #refresh() {
@@ -295,12 +303,13 @@ class Workspace {
   }
 
   async #onExternalChange(paths: string[]) {
+    vaultChanged.emit(paths)
     await this.#run(async () => {
       await this.#refresh()
       const path = this.note?.path
       if (!path || !paths.includes(path) || this.#saveTimer !== undefined) return
       if (!this.entries.some((entry) => entry.path === path)) {
-        this.note = null
+        this.#closeNote()
         return
       }
       const contents = await vault.readNote(path)
@@ -312,11 +321,11 @@ class Workspace {
     try {
       await action()
     } catch (error) {
-      this.#notify(String(error))
+      this.notify(String(error))
     }
   }
 
-  #notify(message: string) {
+  notify(message: string) {
     this.notice = message
     clearTimeout(this.#noticeTimer)
     this.#noticeTimer = setTimeout(() => (this.notice = null), NOTICE_MS)

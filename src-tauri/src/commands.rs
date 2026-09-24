@@ -6,6 +6,7 @@ use tauri::{AppHandle, State};
 use crate::error::{Error, Result};
 use crate::index::{Backlink, Graph, Index, LinkTarget, TagCount};
 use crate::markdown::Heading;
+use crate::plugins::{self, PluginListing};
 use crate::search::SearchResult;
 use crate::vault::{Entry, Vault};
 use crate::watcher::{VaultWatcher, watch};
@@ -156,4 +157,38 @@ pub fn tags(state: State<AppState>) -> Result<Vec<TagCount>> {
 #[tauri::command(async)]
 pub fn graph(state: State<AppState>) -> Result<Graph> {
     state.read_index(Index::graph)
+}
+
+#[tauri::command(async)]
+pub fn list_plugins(state: State<AppState>) -> Result<Vec<PluginListing>> {
+    plugins::list(&state.vault()?)
+}
+
+#[tauri::command(async)]
+pub fn read_plugin_file(
+    state: State<AppState>,
+    folder: String,
+    file: String,
+) -> Result<Option<String>> {
+    plugins::read_file(&state.vault()?, &folder, &file)
+}
+
+#[tauri::command(async)]
+pub fn read_plugin_data(state: State<AppState>, folder: String) -> Result<Option<String>> {
+    plugins::read_data(&state.vault()?, &folder)
+}
+
+#[tauri::command(async)]
+pub fn write_plugin_data(state: State<AppState>, folder: String, data: String) -> Result<()> {
+    plugins::write_data(&state.vault()?, &folder, &data)
+}
+
+#[tauri::command(async)]
+pub fn enabled_plugins(state: State<AppState>) -> Result<Vec<String>> {
+    plugins::enabled(&state.vault()?)
+}
+
+#[tauri::command(async)]
+pub fn set_enabled_plugins(state: State<AppState>, enabled: Vec<String>) -> Result<()> {
+    plugins::set_enabled(&state.vault()?, enabled)
 }

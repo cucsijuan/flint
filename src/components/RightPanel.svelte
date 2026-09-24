@@ -1,9 +1,11 @@
 <script lang="ts">
   import { Link, Tags, Waypoints } from '@lucide/svelte'
   import { Tabs } from 'bits-ui'
+  import { pluginHost } from '../lib/plugins/host.svelte'
   import { workspace } from '../lib/workspace.svelte'
   import BacklinksPanel from './BacklinksPanel.svelte'
   import GraphPanel from './GraphPanel.svelte'
+  import PluginTab from './PluginTab.svelte'
   import TagsPanel from './TagsPanel.svelte'
 </script>
 
@@ -16,6 +18,11 @@
       <Tabs.Trigger class="tab" value="graph" title="Local graph">
         <Waypoints size={16} />
       </Tabs.Trigger>
+      {#each pluginHost.sidebarTabs as tab (tab.key)}
+        <Tabs.Trigger class="tab text" value={tab.key} title={tab.name}>
+          {tab.name.slice(0, 2)}
+        </Tabs.Trigger>
+      {/each}
     </Tabs.List>
     <Tabs.Content class="tab-content" value="backlinks">
       {#if workspace.note}
@@ -25,6 +32,9 @@
       {/if}
     </Tabs.Content>
     <Tabs.Content class="tab-content" value="tags"><TagsPanel /></Tabs.Content>
+    {#each pluginHost.sidebarTabs as tab (tab.key)}
+      <Tabs.Content class="tab-content" value={tab.key}><PluginTab {tab} /></Tabs.Content>
+    {/each}
     <Tabs.Content class="tab-content" value="graph">
       {#if workspace.note}
         <GraphPanel scope={{ center: workspace.note.path, depth: workspace.localGraphDepth }} />

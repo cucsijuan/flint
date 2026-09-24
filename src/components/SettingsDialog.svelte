@@ -2,6 +2,7 @@
   import { Dialog } from 'bits-ui'
   import type { LinkUpdate } from '../lib/settings'
   import { workspace } from '../lib/workspace.svelte'
+  import PluginSettings from './PluginSettings.svelte'
 
   const linkUpdateOptions: { value: LinkUpdate; label: string }[] = [
     { value: 'ask', label: 'Ask' },
@@ -29,6 +30,7 @@
           {/each}
         </select>
       </label>
+      {#if workspace.info}<PluginSettings />{/if}
     </Dialog.Content>
   </Dialog.Portal>
 </Dialog.Root>

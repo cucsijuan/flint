@@ -31,6 +31,10 @@ class CommandRegistry {
     this.#commands = [...this.#commands.filter((command) => !ids.has(command.id)), ...commands]
   }
 
+  unregister(id: string) {
+    this.#commands = this.#commands.filter((command) => command.id !== id)
+  }
+
   available() {
     return this.#commands.filter((command) => command.isAvailable?.() ?? true)
   }

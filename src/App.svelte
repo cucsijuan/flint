@@ -12,6 +12,7 @@
   import Welcome from './components/Welcome.svelte'
   import { registerAppCommands } from './lib/app-commands'
   import { commands } from './lib/commands.svelte'
+  import { pluginHost } from './lib/plugins/host.svelte'
   import { workspace } from './lib/workspace.svelte'
 
   registerAppCommands()
@@ -22,6 +23,10 @@
     void workspace.restore().finally(() => (restored = true))
     const closing = getCurrentWindow().onCloseRequested(() => workspace.flush())
     return () => void closing.then((unlisten) => unlisten())
+  })
+
+  $effect(() => {
+    if (workspace.info?.root) void pluginHost.load()
   })
 
   function onContextMenu(event: MouseEvent) {

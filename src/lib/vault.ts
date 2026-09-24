@@ -76,5 +76,30 @@ export interface Graph {
 
 export const graph = () => invoke<Graph>('graph')
 
+export interface PluginManifest {
+  id: string
+  name: string
+  version: string
+  author: string
+  description: string
+  license: string
+}
+
+export interface PluginListing {
+  folder: string
+  manifest: PluginManifest | null
+  error: string | null
+}
+
+export const listPlugins = () => invoke<PluginListing[]>('list_plugins')
+export const readPluginFile = (folder: string, file: 'main.js' | 'styles.css') =>
+  invoke<string | null>('read_plugin_file', { folder, file })
+export const readPluginData = (folder: string) =>
+  invoke<string | null>('read_plugin_data', { folder })
+export const writePluginData = (folder: string, data: string) =>
+  invoke('write_plugin_data', { folder, data })
+export const enabledPlugins = () => invoke<string[]>('enabled_plugins')
+export const setEnabledPlugins = (enabled: string[]) => invoke('set_enabled_plugins', { enabled })
+
 export const onVaultChanged = (handler: (paths: string[]) => void): Promise<UnlistenFn> =>
   listen<string[]>('vault-changed', (event) => handler(event.payload))

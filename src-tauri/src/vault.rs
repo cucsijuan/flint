@@ -114,6 +114,26 @@ impl Vault {
         Ok(fs::rename(source, target)?)
     }
 
+    pub fn ensure_folder(&self, path: &str) -> Result<()> {
+        Ok(fs::create_dir_all(self.resolve(path)?)?)
+    }
+
+    pub fn subfolders(&self, path: &str) -> Result<Vec<String>> {
+        let folder = self.resolve(path)?;
+        if !folder.is_dir() {
+            return Ok(Vec::new());
+        }
+        let mut names = Vec::new();
+        for entry in fs::read_dir(folder)? {
+            let entry = entry?;
+            if entry.file_type()?.is_dir() {
+                names.extend(entry.file_name().to_str().map(str::to_owned));
+            }
+        }
+        names.sort();
+        Ok(names)
+    }
+
     pub fn trash(&self, path: &str) -> Result<()> {
         Ok(trash::delete(self.resolve(path)?)?)
     }

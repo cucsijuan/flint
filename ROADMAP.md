@@ -36,9 +36,14 @@ Tauri 2 + Svelte 5 app, linting, tests, and CI builds for Linux and Windows.
 - Local graph in the right sidebar with a configurable depth.
 - Filters for tags, missing notes, orphans and paths.
 
-### M5: Plugins
+### M5: Plugins ✅
 
-Plugin API v0 and a sample plugin.
+- Plugins live in each vault's `.flint/plugins/` folder and are turned on per vault in Settings, after a trust warning.
+- API v0 ([`plugin-api`](plugin-api)): commands, CodeMirror extensions, vault access and change events, active note events, notices, sidebar tabs and plugin storage.
+- Warning for plugins whose license isn't compatible with the AGPL.
+- Sample plugin: [`examples/word-count`](examples/word-count).
+
+With M5, the MVP is complete.
 
 ## Backlog
 
@@ -49,7 +54,8 @@ Features deferred from a milestone. They are not scheduled yet.
 - **Links:** rendering embedded notes (`![[note]]`), block references (`[[note#^id]]`), and standard Markdown links to notes (`[text](note.md)`).
 - **Search:** parentheses for grouping terms, more operators (`line:`, `section:`, `content:`), sort options.
 - **Commands:** customizable hotkeys.
-- **Settings:** per-vault settings stored in the vault's `.flint/` folder.
+- **Plugins:** browsing and installing community plugins, reloading when plugin files change, a settings-page API, icons for plugin sidebar tabs, publishing the API types as a package.
+- **Settings:** move the remaining vault-specific settings (e.g. link update on rename) into the vault's `.flint/` folder, next to the enabled plugins.
 - **Graph:** color groups, force settings, graph in its own tab once tabs exist.
 - **Platforms:** macOS and mobile; manual testing on Windows.
 - **Testing:** verify light/dark theme switching (graph colors in particular).

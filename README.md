@@ -2,7 +2,7 @@
 
 An open-source, local-first Markdown knowledge base. Flint works on a plain folder of Markdown files and stays compatible with Obsidian vaults.
 
-> **Status:** early development. Vaults, the live-preview editor, wikilinks, search, tags, the command palette and the graph view work; see the [roadmap](ROADMAP.md) for what comes next.
+> **Status:** early development. Vaults, the live-preview editor, wikilinks, search, tags, the command palette, the graph view and plugins work; see the [roadmap](ROADMAP.md) for what comes next.
 
 ## Development
 

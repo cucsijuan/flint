@@ -31,6 +31,9 @@ const markdownStyle = HighlightStyle.define([
   { tag: tags.labelName, class: 'cm-hashtag' },
 ])
 
+const APP_HOTKEYS = new Set(['Mod-g'])
+const editorSearchKeymap = searchKeymap.filter((binding) => !APP_HOTKEYS.has(binding.key ?? ''))
+
 const mode = new Compartment()
 const externalChange = Annotation.define<boolean>()
 
@@ -58,7 +61,7 @@ export function createEditorState({
     doc,
     extensions: [
       minimalSetup,
-      keymap.of([indentWithTab, ...searchKeymap]),
+      keymap.of([indentWithTab, ...editorSearchKeymap]),
       markdown({
         base: markdownLanguage,
         codeLanguages: languages,

@@ -4,7 +4,7 @@ use serde::Serialize;
 use tauri::{AppHandle, State};
 
 use crate::error::{Error, Result};
-use crate::index::{Backlink, Index, LinkTarget, TagCount};
+use crate::index::{Backlink, Graph, Index, LinkTarget, TagCount};
 use crate::markdown::Heading;
 use crate::search::SearchResult;
 use crate::vault::{Entry, Vault};
@@ -151,4 +151,9 @@ pub fn search(state: State<AppState>, query: String) -> Result<Vec<SearchResult>
 #[tauri::command(async)]
 pub fn tags(state: State<AppState>) -> Result<Vec<TagCount>> {
     state.read_index(Index::tags)
+}
+
+#[tauri::command(async)]
+pub fn graph(state: State<AppState>) -> Result<Graph> {
+    state.read_index(Index::graph)
 }

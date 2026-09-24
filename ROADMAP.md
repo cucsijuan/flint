@@ -30,9 +30,11 @@ Tauri 2 + Svelte 5 app, linting, tests, and CI builds for Linux and Windows.
 - Frontmatter `aliases`: links, autocomplete and the quick switcher understand them.
 - Quick switcher (Ctrl+O) and command palette (Ctrl+P) with fuzzy matching.
 
-### M4: Graph view
+### M4: Graph view ✅
 
-Global and local graph, built on the vault index.
+- Global graph (Ctrl+G) with live force layout, hover highlighting, zoom and drag; clicking a node opens the note, searches the tag, or creates the missing note.
+- Local graph in the right sidebar with a configurable depth.
+- Filters for tags, missing notes, orphans and paths.
 
 ### M5: Plugins
 
@@ -48,4 +50,6 @@ Features deferred from a milestone. They are not scheduled yet.
 - **Search:** parentheses for grouping terms, more operators (`line:`, `section:`, `content:`), sort options.
 - **Commands:** customizable hotkeys.
 - **Settings:** per-vault settings stored in the vault's `.flint/` folder.
+- **Graph:** color groups, force settings, graph in its own tab once tabs exist.
 - **Platforms:** macOS and mobile; manual testing on Windows.
+- **Testing:** verify light/dark theme switching (graph colors in particular).

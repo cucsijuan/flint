@@ -27,6 +27,19 @@ export function registerAppCommands() {
       run: () => workspace.openSearch(),
     },
     {
+      id: 'open-graph',
+      name: 'Open graph view',
+      hotkey: 'Mod+G',
+      isAvailable: hasVault,
+      run: () => (workspace.view = 'graph'),
+    },
+    {
+      id: 'show-local-graph',
+      name: 'Show local graph',
+      isAvailable: hasVault,
+      run: () => workspace.showRightTab('graph'),
+    },
+    {
       id: 'show-files',
       name: 'Show file explorer',
       isAvailable: hasVault,

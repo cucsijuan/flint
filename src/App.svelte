@@ -3,6 +3,7 @@
   import { Pane, PaneGroup, PaneResizer } from 'paneforge'
   import { onMount } from 'svelte'
   import CommandPalette from './components/CommandPalette.svelte'
+  import GraphPanel from './components/GraphPanel.svelte'
   import NoteEditor from './components/NoteEditor.svelte'
   import QuickSwitcher from './components/QuickSwitcher.svelte'
   import RightPanel from './components/RightPanel.svelte'
@@ -39,7 +40,9 @@
       </Pane>
       <PaneResizer class="resizer" />
       <Pane id="editor" order={2}>
-        {#if workspace.note}
+        {#if workspace.view === 'graph'}
+          <GraphPanel />
+        {:else if workspace.note}
           <NoteEditor note={workspace.note} />
         {:else}
           <div class="empty">Select or create a note.</div>

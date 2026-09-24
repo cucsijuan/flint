@@ -1,5 +1,5 @@
 use std::cmp::Reverse;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use serde::Serialize;
 
@@ -39,6 +39,33 @@ pub struct LinkTarget {
     pub path: String,
     pub link_text: String,
     pub alias: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum NodeKind {
+    Note,
+    Tag,
+    Unresolved,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct GraphNode {
+    pub id: String,
+    pub label: String,
+    pub kind: NodeKind,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct GraphLink {
+    pub source: String,
+    pub target: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+pub struct Graph {
+    pub nodes: Vec<GraphNode>,
+    pub links: Vec<GraphLink>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -191,6 +218,66 @@ impl Index {
             .into_values()
             .map(|(tag, count)| TagCount { tag, count })
             .collect()
+    }
+
+    pub fn graph(&self) -> Graph {
+        let mut nodes: BTreeMap<String, GraphNode> = self
+            .notes
+            .keys()
+            .map(|path| {
+                let label = strip_note_extension(path)
+                    .rsplit('/')
+                    .next()
+                    .unwrap_or(path);
+                let node = GraphNode {
+                    id: path.clone(),
+                    label: label.to_owned(),
+                    kind: NodeKind::Note,
+                };
+                (path.clone(), node)
+            })
+            .collect();
+        let mut links = BTreeSet::new();
+        let mut connect = |source: &str, target: String| {
+            if source != target.as_str() {
+                links.insert((source.to_owned(), target));
+            }
+        };
+
+        for (source, note) in &self.notes {
+            for link in &note.links {
+                if link.link.target.is_empty() {
+                    continue;
+                }
+                let target = self.resolve(source, &link.link.target).unwrap_or_else(|| {
+                    let id = format!("?{}", note_key(link.link.target.trim()));
+                    nodes.entry(id.clone()).or_insert_with(|| GraphNode {
+                        id: id.clone(),
+                        label: link.link.target.trim().to_owned(),
+                        kind: NodeKind::Unresolved,
+                    });
+                    id
+                });
+                connect(source, target);
+            }
+            for tag in &note.tags {
+                let id = format!("#{}", tag.to_lowercase());
+                nodes.entry(id.clone()).or_insert_with(|| GraphNode {
+                    id: id.clone(),
+                    label: format!("#{tag}"),
+                    kind: NodeKind::Tag,
+                });
+                connect(source, id);
+            }
+        }
+
+        Graph {
+            nodes: nodes.into_values().collect(),
+            links: links
+                .into_iter()
+                .map(|(source, target)| GraphLink { source, target })
+                .collect(),
+        }
     }
 
     pub fn search(&self, query: &str) -> Result<Vec<SearchResult>> {
@@ -394,6 +481,49 @@ mod tests {
                 ("project/flint".to_owned(), 1),
                 ("project/other".to_owned(), 1),
                 ("solo".to_owned(), 1)
+            ]
+        );
+    }
+
+    #[test]
+    fn builds_a_graph_of_notes_tags_and_unresolved_links() {
+        let index = index_of(&[
+            (
+                "a.md",
+                "[[b]] [[b#Part]] [[Missing]] [[missing]] [[#Self]] [[a]] #Topic",
+            ),
+            ("folder/b.md", "#topic"),
+            ("orphan.md", ""),
+        ]);
+        let graph = index.graph();
+
+        let nodes: Vec<_> = graph
+            .nodes
+            .iter()
+            .map(|node| (node.id.as_str(), node.label.as_str(), node.kind.clone()))
+            .collect();
+        assert_eq!(
+            nodes,
+            [
+                ("#topic", "#Topic", NodeKind::Tag),
+                ("?missing", "Missing", NodeKind::Unresolved),
+                ("a.md", "a", NodeKind::Note),
+                ("folder/b.md", "b", NodeKind::Note),
+                ("orphan.md", "orphan", NodeKind::Note),
+            ]
+        );
+        let links: Vec<_> = graph
+            .links
+            .iter()
+            .map(|link| (link.source.as_str(), link.target.as_str()))
+            .collect();
+        assert_eq!(
+            links,
+            [
+                ("a.md", "#topic"),
+                ("a.md", "?missing"),
+                ("a.md", "folder/b.md"),
+                ("folder/b.md", "#topic"),
             ]
         );
     }

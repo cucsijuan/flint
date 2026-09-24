@@ -9,6 +9,7 @@ import {
   uniqueName,
 } from './paths'
 import { getSetting, setSetting, type EditorMode, type LinkUpdate } from './settings'
+import type { GraphFilters } from './graph'
 import { buildTree } from './tree'
 import * as vault from './vault'
 
@@ -17,7 +18,8 @@ const SEARCH_DELAY_MS = 200
 const NOTICE_MS = 5000
 
 export type LeftTab = 'files' | 'search'
-export type RightTab = 'backlinks' | 'tags'
+export type RightTab = 'backlinks' | 'tags' | 'graph'
+export type MainView = 'editor' | 'graph'
 
 export interface Jump {
   heading?: string
@@ -55,6 +57,15 @@ class Workspace {
   searchResults = $state<vault.SearchResult[]>([])
   searchError = $state<string | null>(null)
   searchFocus = $state(0)
+  view = $state<MainView>('editor')
+  graph = $state<vault.Graph>({ nodes: [], links: [] })
+  graphFilters = $state<GraphFilters>({
+    showTags: false,
+    showUnresolved: true,
+    showOrphans: true,
+    query: '',
+  })
+  localGraphDepth = $state(1)
 
   #contents = ''
   #saveTimer: ReturnType<typeof setTimeout> | undefined
@@ -92,6 +103,7 @@ class Workspace {
   }
 
   async openNote(path: string) {
+    this.view = 'editor'
     if (this.note?.path === path) return
     await this.#run(async () => {
       await this.flush()
@@ -263,10 +275,11 @@ class Workspace {
   }
 
   async #refresh() {
-    ;[this.entries, this.linkTargets, this.tags] = await Promise.all([
+    ;[this.entries, this.linkTargets, this.tags, this.graph] = await Promise.all([
       vault.listEntries(),
       vault.linkTargets(),
       vault.tags(),
+      vault.graph(),
     ])
     this.indexVersion++
     if (this.searchQuery) await this.#runSearch()

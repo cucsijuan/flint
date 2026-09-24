@@ -31,6 +31,7 @@ pub fn run() {
             commands::incoming_link_count,
             commands::search,
             commands::tags,
+            commands::graph,
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

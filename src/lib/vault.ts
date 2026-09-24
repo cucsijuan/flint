@@ -61,5 +61,20 @@ export const incomingLinkCount = (path: string) => invoke<number>('incoming_link
 export const search = (query: string) => invoke<SearchResult[]>('search', { query })
 export const tags = () => invoke<TagCount[]>('tags')
 
+export type NodeKind = 'note' | 'tag' | 'unresolved'
+
+export interface GraphNode {
+  id: string
+  label: string
+  kind: NodeKind
+}
+
+export interface Graph {
+  nodes: GraphNode[]
+  links: { source: string; target: string }[]
+}
+
+export const graph = () => invoke<Graph>('graph')
+
 export const onVaultChanged = (handler: (paths: string[]) => void): Promise<UnlistenFn> =>
   listen<string[]>('vault-changed', (event) => handler(event.payload))

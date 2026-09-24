@@ -45,9 +45,11 @@ Tauri 2 + Svelte 5 app, linting, tests, and CI builds for Linux and Windows.
 
 With M5, the MVP is complete. [v0.1.0](https://github.com/cucsijuan/flint/releases/tag/v0.1.0) is the first preview release.
 
-### M6: UI tests and updates
+### M6: UI tests and updates ✅
 
-End-to-end tests of the real app with `tauri-driver` on Linux and Windows in CI, and automatic updates.
+- End-to-end tests that drive the real app with `tauri-driver` and WebdriverIO, run in CI on Linux.
+- Open a vault from the command line: `flint /path/to/vault`.
+- Automatic updates: Flint checks for a new version on startup (can be turned off) or with "Check for updates", then installs it and restarts. Supported for the AppImage and the Windows installers.
 
 ### M7: Tabs and panes
 

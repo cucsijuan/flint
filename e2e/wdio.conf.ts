@@ -1,5 +1,6 @@
 import { type ChildProcess, spawn } from 'node:child_process'
 import { connect } from 'node:net'
+import { download as downloadEdgeDriver } from 'edgedriver'
 import { cpSync, mkdtempSync, rmSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -51,7 +52,9 @@ export const config: WebdriverIO.Config = {
   },
 
   async onPrepare() {
-    const args = process.env.NATIVE_DRIVER ? ['--native-driver', process.env.NATIVE_DRIVER] : []
+    const nativeDriver =
+      process.env.NATIVE_DRIVER ?? (isWindows ? await downloadEdgeDriver() : undefined)
+    const args = nativeDriver ? ['--native-driver', nativeDriver] : []
     driver = spawn(tauriDriver, args, {
       stdio: ['ignore', 'inherit', 'inherit'],
       env: {

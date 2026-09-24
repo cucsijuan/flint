@@ -1,5 +1,5 @@
 import { Key } from 'webdriverio'
-import { pressShortcut, waitForVault } from '../helpers'
+import { expectOpenNote, pressShortcut, waitForVault } from '../helpers'
 
 describe('navigation', () => {
   before(waitForVault)
@@ -8,7 +8,7 @@ describe('navigation', () => {
     await pressShortcut('o')
     await $('.picker-input').setValue('idea')
     await browser.keys(['Enter'])
-    await expect($('.note h1')).toHaveText('Ideas')
+    await expectOpenNote('Ideas')
   })
 
   it('runs commands from the palette', async () => {

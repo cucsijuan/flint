@@ -1,10 +1,10 @@
-import { openFromTree, vaultFile, waitForVault } from '../helpers'
+import { expectText, openFromTree, vaultFile, waitForVault } from '../helpers'
 
 describe('vault and editor', () => {
   before(waitForVault)
 
   it('opens the vault passed on the command line', async () => {
-    await expect($('.vault')).toHaveText(expect.stringContaining('vault-'))
+    await expectText('.vault', expect.stringContaining('vault-'))
     await expect($('button.row*=Projects')).toBeDisplayed()
     await expect($('button.row*=Welcome')).toBeDisplayed()
   })

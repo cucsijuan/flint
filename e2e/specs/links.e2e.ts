@@ -1,4 +1,4 @@
-import { openFromTree, waitForVault } from '../helpers'
+import { expectOpenNote, openFromTree, waitForVault } from '../helpers'
 
 describe('wikilinks', () => {
   before(waitForVault)
@@ -6,7 +6,7 @@ describe('wikilinks', () => {
   it('opens the target of a clicked link', async () => {
     await openFromTree('Welcome')
     await $('.cm-live-link=Roadmap').click()
-    await expect($('.note h1')).toHaveText('Roadmap')
+    await expectOpenNote('Roadmap')
   })
 
   it('lists backlinks for the open note', async () => {

@@ -9,9 +9,16 @@ export async function waitForVault() {
   await $('.vault').waitForDisplayed()
 }
 
+export const expectText = (
+  selector: string,
+  text: string | ExpectWebdriverIO.PartialMatcher<string>,
+) => expect($(selector)).toHaveElementProperty('textContent', text)
+
+export const expectOpenNote = (name: string) => expectText('.note h1', name)
+
 export async function openFromTree(name: string) {
   await $(`button.row*=${name}`).click()
-  await expect($('.note h1')).toHaveText(name)
+  await expectOpenNote(name)
 }
 
 export const pressShortcut = (...keys: string[]) => browser.keys([Key.Ctrl, ...keys])

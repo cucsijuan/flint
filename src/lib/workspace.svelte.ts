@@ -51,6 +51,7 @@ class Workspace {
   rightTab = $state<RightTab>('backlinks')
   showRightPanel = $state(true)
   linkUpdate = $state<LinkUpdate>('ask')
+  checkForUpdates = $state(true)
   isSettingsOpen = $state(false)
   isQuickSwitcherOpen = $state(false)
   isCommandPaletteOpen = $state(false)
@@ -80,6 +81,7 @@ class Workspace {
     this.mode = (await getSetting('editorMode')) ?? 'live'
     this.showRightPanel = (await getSetting('showRightPanel')) ?? true
     this.linkUpdate = (await getSetting('linkUpdate')) ?? 'ask'
+    this.checkForUpdates = (await getSetting('checkForUpdates')) ?? true
     const vaultPath = (await vault.launchVault()) ?? (await getSetting('lastVault'))
     if (vaultPath) await this.openVault(vaultPath)
   }
@@ -171,6 +173,11 @@ class Workspace {
       }
       await this.openNote(path)
     })
+  }
+
+  setCheckForUpdates(isEnabled: boolean) {
+    this.checkForUpdates = isEnabled
+    void setSetting('checkForUpdates', isEnabled)
   }
 
   setLinkUpdate(value: LinkUpdate) {

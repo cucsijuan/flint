@@ -78,5 +78,6 @@ Features that are not scheduled in a milestone yet.
 - **Search:** parentheses for grouping terms, more operators (`line:`, `section:`, `content:`), sort options.
 - **Graph:** force settings.
 - **Distribution:** macOS builds, Windows code signing.
+- **Testing:** run the end-to-end tests on Windows too (`msedgedriver` can't attach to WebView2 in CI yet).
 - **Later:** sync, canvas, mobile.
 - **Testing:** verify light/dark theme switching (graph colors in particular).

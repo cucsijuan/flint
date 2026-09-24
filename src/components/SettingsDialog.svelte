@@ -30,6 +30,17 @@
           {/each}
         </select>
       </label>
+      <label class="setting">
+        <span>
+          <strong>Check for updates</strong>
+          <small>Look for a new version of Flint when it starts.</small>
+        </span>
+        <input
+          type="checkbox"
+          checked={workspace.checkForUpdates}
+          onchange={(event) => workspace.setCheckForUpdates(event.currentTarget.checked)}
+        />
+      </label>
       {#if workspace.info}<PluginSettings />{/if}
     </Dialog.Content>
   </Dialog.Portal>
@@ -67,6 +78,16 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+  }
+
+  .setting + .setting {
+    margin-top: 16px;
+  }
+
+  .setting input[type='checkbox'] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
   }
 
   .setting span {

@@ -11,6 +11,7 @@
   import Sidebar from './components/Sidebar.svelte'
   import Welcome from './components/Welcome.svelte'
   import { registerAppCommands } from './lib/app-commands'
+  import { checkForUpdates } from './lib/updates'
   import { commands } from './lib/commands.svelte'
   import { pluginHost } from './lib/plugins/host.svelte'
   import { workspace } from './lib/workspace.svelte'
@@ -20,7 +21,12 @@
   let restored = $state(false)
 
   onMount(() => {
-    void workspace.restore().finally(() => (restored = true))
+    void workspace.restore().finally(() => {
+      restored = true
+      if (workspace.checkForUpdates && !import.meta.env.DEV) {
+        void checkForUpdates({ isManual: false })
+      }
+    })
     const closing = getCurrentWindow().onCloseRequested(() => workspace.flush())
     return () => void closing.then((unlisten) => unlisten())
   })

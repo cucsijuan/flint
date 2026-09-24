@@ -8,6 +8,7 @@ interface Settings {
   editorMode: EditorMode
   linkUpdate: LinkUpdate
   showRightPanel: boolean
+  checkForUpdates: boolean
 }
 
 const store = new LazyStore('settings.json')

@@ -1,4 +1,5 @@
 import { commands } from './commands.svelte'
+import { checkForUpdates } from './updates'
 import { workspace } from './workspace.svelte'
 
 const hasVault = () => workspace.info !== null
@@ -102,6 +103,11 @@ export function registerAppCommands() {
       id: 'open-vault',
       name: 'Open another vault',
       run: () => workspace.chooseVault(),
+    },
+    {
+      id: 'check-for-updates',
+      name: 'Check for updates',
+      run: () => checkForUpdates({ isManual: true }),
     },
     {
       id: 'open-settings',

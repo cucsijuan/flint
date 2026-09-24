@@ -203,3 +203,29 @@ button.primary {
   color: var(--text-faint);
   font-size: 0.8em;
 }
+
+.cm-live-unresolved {
+  opacity: 0.6;
+}
+
+.cm-live-link {
+  cursor: pointer;
+}
+
+.cm-tooltip-autocomplete {
+  border: 1px solid var(--border) !important;
+  border-radius: 6px;
+  background: var(--background-secondary) !important;
+  color: var(--text);
+}
+
+.cm-tooltip-autocomplete ul li[aria-selected] {
+  background: var(--selected) !important;
+  color: var(--text) !important;
+}
+
+.cm-completionDetail {
+  margin-left: 8px;
+  color: var(--text-faint);
+  font-style: normal !important;
+}

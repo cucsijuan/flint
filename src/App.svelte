@@ -2,7 +2,9 @@
   import { getCurrentWindow } from '@tauri-apps/api/window'
   import { Pane, PaneGroup, PaneResizer } from 'paneforge'
   import { onMount } from 'svelte'
+  import BacklinksPanel from './components/BacklinksPanel.svelte'
   import NoteEditor from './components/NoteEditor.svelte'
+  import SettingsDialog from './components/SettingsDialog.svelte'
   import Sidebar from './components/Sidebar.svelte'
   import Welcome from './components/Welcome.svelte'
   import { workspace } from './lib/workspace.svelte'
@@ -16,9 +18,14 @@
   })
 
   function onKeydown(event: KeyboardEvent) {
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'n' && workspace.info) {
+    if (!(event.ctrlKey || event.metaKey)) return
+    if (event.key.toLowerCase() === 'n' && workspace.info) {
       event.preventDefault()
       void workspace.createNote()
+    }
+    if (event.key === ',') {
+      event.preventDefault()
+      workspace.isSettingsOpen = true
     }
   }
 
@@ -33,22 +40,30 @@
 {#if restored}
   {#if workspace.info}
     <PaneGroup direction="horizontal" autoSaveId="layout">
-      <Pane defaultSize={22} minSize={12} maxSize={50}>
+      <Pane id="sidebar" order={1} defaultSize={22} minSize={12} maxSize={50}>
         <Sidebar />
       </Pane>
       <PaneResizer class="resizer" />
-      <Pane>
+      <Pane id="editor" order={2}>
         {#if workspace.note}
           <NoteEditor note={workspace.note} />
         {:else}
           <div class="empty">Select or create a note.</div>
         {/if}
       </Pane>
+      {#if workspace.note && workspace.showBacklinks}
+        <PaneResizer class="resizer" />
+        <Pane id="backlinks" order={3} defaultSize={22} minSize={12} maxSize={50}>
+          <BacklinksPanel path={workspace.note.path} />
+        </Pane>
+      {/if}
     </PaneGroup>
   {:else}
     <Welcome />
   {/if}
 {/if}
+
+<SettingsDialog />
 
 {#if workspace.notice}
   <div class="notice" role="alert">{workspace.notice}</div>

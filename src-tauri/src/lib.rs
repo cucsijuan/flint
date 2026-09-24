@@ -1,5 +1,7 @@
 mod commands;
 mod error;
+mod index;
+mod markdown;
 mod vault;
 mod watcher;
 
@@ -21,6 +23,11 @@ pub fn run() {
             commands::create_folder,
             commands::rename_entry,
             commands::trash_entry,
+            commands::link_targets,
+            commands::resolve_links,
+            commands::note_headings,
+            commands::backlinks,
+            commands::incoming_link_count,
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

@@ -19,6 +19,7 @@ ignore = "0.4.33"
 log = "0.4"
 notify = "8.2.0"
 notify-debouncer-full = "0.7.0"
+pulldown-cmark = { version = "0.13.4", default-features = false }
 serde = { version = "1.0.229", features = ["derive"] }
 tauri = { version = "2.11.6", features = [] }
 tauri-plugin-dialog = "2.7.3"

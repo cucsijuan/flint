@@ -1,27 +1,38 @@
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex, RwLock};
 
 use serde::Serialize;
 use tauri::{AppHandle, State};
 
 use crate::error::{Error, Result};
+use crate::index::{Backlink, Index, LinkTarget};
+use crate::markdown::Heading;
 use crate::vault::{Entry, Vault};
 use crate::watcher::{VaultWatcher, watch};
 
 #[derive(Default)]
 pub struct AppState(Mutex<Option<OpenVault>>);
 
+#[derive(Clone)]
 struct OpenVault {
     vault: Vault,
-    _watcher: VaultWatcher,
+    index: Arc<RwLock<Index>>,
+    _watcher: Arc<VaultWatcher>,
 }
 
 impl AppState {
-    fn vault(&self) -> Result<Vault> {
+    fn open(&self) -> Result<OpenVault> {
         let guard = self.0.lock().unwrap_or_else(|e| e.into_inner());
-        guard
-            .as_ref()
-            .map(|open| open.vault.clone())
-            .ok_or(Error::NoVault)
+        guard.clone().ok_or(Error::NoVault)
+    }
+
+    fn vault(&self) -> Result<Vault> {
+        Ok(self.open()?.vault)
+    }
+
+    fn read_index<T>(&self, read: impl FnOnce(&Index) -> T) -> Result<T> {
+        let index = self.open()?.index;
+        let index = index.read().unwrap_or_else(|e| e.into_inner());
+        Ok(read(&index))
     }
 }
 
@@ -41,10 +52,12 @@ pub fn open_vault(app: AppHandle, state: State<AppState>, path: String) -> Resul
             .file_name()
             .map_or_else(String::new, |name| name.to_string_lossy().into_owned()),
     };
-    let watcher = watch(app, vault.clone())?;
+    let index = Arc::new(RwLock::new(Index::build(&vault)?));
+    let watcher = watch(app, vault.clone(), index.clone())?;
     *state.0.lock().unwrap_or_else(|e| e.into_inner()) = Some(OpenVault {
         vault,
-        _watcher: watcher,
+        index,
+        _watcher: Arc::new(watcher),
     });
     Ok(info)
 }
@@ -75,11 +88,56 @@ pub fn create_folder(state: State<AppState>, path: String) -> Result<()> {
 }
 
 #[tauri::command(async)]
-pub fn rename_entry(state: State<AppState>, from: String, to: String) -> Result<()> {
-    state.vault()?.rename(&from, &to)
+pub fn rename_entry(
+    state: State<AppState>,
+    from: String,
+    to: String,
+    update_links: bool,
+) -> Result<usize> {
+    let open = state.open()?;
+    if !update_links {
+        open.vault.rename(&from, &to)?;
+        return Ok(0);
+    }
+    let mut index = open.index.write().unwrap_or_else(|e| e.into_inner());
+    index.update_links_for_rename(&open.vault, &from, &to)
 }
 
 #[tauri::command(async)]
 pub fn trash_entry(state: State<AppState>, path: String) -> Result<()> {
     state.vault()?.trash(&path)
+}
+
+#[tauri::command(async)]
+pub fn link_targets(state: State<AppState>) -> Result<Vec<LinkTarget>> {
+    state.read_index(Index::link_targets)
+}
+
+#[tauri::command(async)]
+pub fn resolve_links(
+    state: State<AppState>,
+    source: String,
+    targets: Vec<String>,
+) -> Result<Vec<Option<String>>> {
+    state.read_index(|index| {
+        targets
+            .iter()
+            .map(|target| index.resolve(&source, target))
+            .collect()
+    })
+}
+
+#[tauri::command(async)]
+pub fn note_headings(state: State<AppState>, path: String) -> Result<Vec<Heading>> {
+    state.read_index(|index| index.headings(&path))
+}
+
+#[tauri::command(async)]
+pub fn backlinks(state: State<AppState>, path: String) -> Result<Vec<Backlink>> {
+    state.read_index(|index| index.backlinks(&path))
+}
+
+#[tauri::command(async)]
+pub fn incoming_link_count(state: State<AppState>, path: String) -> Result<usize> {
+    state.read_index(|index| index.incoming_link_count(&path))
 }

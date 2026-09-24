@@ -9,6 +9,8 @@ import {
   WidgetType,
 } from '@codemirror/view'
 import type { SyntaxNode, Tree } from '@lezer/common'
+import { resolvedLinks } from './links'
+import { wikiLinkParts } from './wikilink'
 
 class BulletWidget extends WidgetType {
   toDOM() {
@@ -99,6 +101,7 @@ export function previewDecorations(
   tree: Tree = syntaxTree(state),
 ): DecorationSet {
   const { doc, selection } = state
+  const resolved = state.field(resolvedLinks, false)
   const decorations: Range<Decoration>[] = []
 
   const touchesSelection = (start: number, end: number) =>
@@ -146,6 +149,27 @@ export function previewDecorations(
               hide.range(close.from, node.to),
             )
           }
+          break
+        }
+        case 'WikiLink': {
+          if (touchesSelection(node.from, node.to)) break
+          const { target, destination, targetNode, subpathNode, aliasNode } = wikiLinkParts(
+            state,
+            node,
+          )
+          const shown = aliasNode ?? {
+            from: (targetNode ?? subpathNode)?.from ?? node.from,
+            to: (subpathNode ?? targetNode)?.to ?? node.to,
+          }
+          const isUnresolved = target !== '' && resolved?.get(target) === null
+          if (shown.from > node.from) decorations.push(hide.range(node.from, shown.from))
+          decorations.push(
+            Decoration.mark({
+              class: isUnresolved ? 'cm-live-link cm-live-unresolved' : 'cm-live-link',
+              attributes: { 'data-link': destination },
+            }).range(shown.from, shown.to),
+          )
+          if (node.to > shown.to) decorations.push(hide.range(shown.to, node.to))
           break
         }
         case 'Blockquote':

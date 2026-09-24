@@ -1,10 +1,13 @@
 import { LazyStore } from '@tauri-apps/plugin-store'
 
 export type EditorMode = 'live' | 'source'
+export type LinkUpdate = 'ask' | 'always' | 'never'
 
 interface Settings {
   lastVault: string
   editorMode: EditorMode
+  linkUpdate: LinkUpdate
+  showBacklinks: boolean
 }
 
 const store = new LazyStore('settings.json')

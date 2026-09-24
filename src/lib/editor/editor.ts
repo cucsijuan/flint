@@ -8,7 +8,10 @@ import { EditorView, keymap } from '@codemirror/view'
 import { tags } from '@lezer/highlight'
 import { minimalSetup } from 'codemirror'
 import type { EditorMode } from '../settings'
+import { linkCompletion, type LinkCompletionSources } from './link-completion'
+import { type LinkResolver, wikiLinks } from './links'
 import { livePreview } from './live-preview'
+import { wikiLinkSyntax } from './wikilink'
 
 const markdownStyle = HighlightStyle.define([
   { tag: tags.heading1, class: 'cm-h cm-h1' },
@@ -37,6 +40,9 @@ export interface EditorOptions {
   mode: EditorMode
   onChange: (doc: string) => void
   onToggleMode: () => void
+  resolveLinks: LinkResolver
+  openLink: (destination: string) => void
+  completion: LinkCompletionSources
 }
 
 export function createEditorState({
@@ -44,6 +50,9 @@ export function createEditorState({
   mode: editorMode,
   onChange,
   onToggleMode,
+  resolveLinks,
+  openLink,
+  completion,
 }: EditorOptions) {
   return EditorState.create({
     doc,
@@ -60,7 +69,13 @@ export function createEditorState({
           },
         },
       ]),
-      markdown({ base: markdownLanguage, codeLanguages: languages }),
+      markdown({
+        base: markdownLanguage,
+        codeLanguages: languages,
+        extensions: wikiLinkSyntax,
+      }),
+      wikiLinks(resolveLinks, openLink),
+      linkCompletion(completion),
       syntaxHighlighting(markdownStyle),
       EditorView.lineWrapping,
       EditorView.contentAttributes.of({ spellcheck: 'true' }),
@@ -84,4 +99,20 @@ export function replaceDoc(view: EditorView, doc: string) {
     selection: { anchor },
     annotations: externalChange.of(true),
   })
+}
+
+const HEADING_LINE = /^#{1,6}\s+(.*?)\s*#*\s*$/
+
+export function scrollToHeading(view: EditorView, heading: string) {
+  const wanted = heading.trim().toLowerCase()
+  for (let number = 1; number <= view.state.doc.lines; number++) {
+    const line = view.state.doc.line(number)
+    if (HEADING_LINE.exec(line.text)?.[1].toLowerCase() === wanted) {
+      view.dispatch({
+        selection: { anchor: line.from },
+        effects: EditorView.scrollIntoView(line.from, { y: 'start', yMargin: 40 }),
+      })
+      return
+    }
+  }
 }

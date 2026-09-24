@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { FilePlus, FolderOpen, FolderPlus } from '@lucide/svelte'
+  import { FilePlus, FolderOpen, FolderPlus, Settings } from '@lucide/svelte'
   import { workspace } from '../lib/workspace.svelte'
   import FileTree from './FileTree.svelte'
 </script>
@@ -15,6 +15,13 @@
     </button>
     <button class="icon" title="Open another vault" onclick={() => workspace.chooseVault()}>
       <FolderOpen size={16} />
+    </button>
+    <button
+      class="icon"
+      title="Settings (Ctrl+,)"
+      onclick={() => (workspace.isSettingsOpen = true)}
+    >
+      <Settings size={16} />
     </button>
   </header>
   <FileTree />

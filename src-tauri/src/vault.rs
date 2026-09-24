@@ -42,14 +42,26 @@ impl Vault {
     }
 
     pub fn entries(&self) -> Result<Vec<Entry>> {
+        self.entries_under("")
+    }
+
+    pub fn entries_under(&self, path: &str) -> Result<Vec<Entry>> {
+        let start = if path.is_empty() {
+            self.root.clone()
+        } else {
+            self.resolve(path)?
+        };
+        if !start.exists() {
+            return Ok(Vec::new());
+        }
         let mut entries = Vec::new();
-        for item in WalkBuilder::new(&self.root)
+        for item in WalkBuilder::new(start)
             .standard_filters(false)
             .hidden(true)
             .build()
         {
             let item = item?;
-            if item.depth() == 0 {
+            if item.depth() == 0 && item.path() == self.root {
                 continue;
             }
             let kind = if item.file_type().is_some_and(|t| t.is_dir()) {
@@ -123,6 +135,18 @@ impl Vault {
         }
         Ok(self.root.join(relative))
     }
+}
+
+pub fn is_within(path: &str, folder: &str) -> bool {
+    folder.is_empty()
+        || path == folder
+        || path
+            .strip_prefix(folder)
+            .is_some_and(|rest| rest.starts_with('/'))
+}
+
+pub fn parent_of(path: &str) -> &str {
+    path.rsplit_once('/').map_or("", |(parent, _)| parent)
 }
 
 pub fn is_hidden(relative: &str) -> bool {

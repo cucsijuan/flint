@@ -8,7 +8,7 @@ import {
   replacePrefix,
   uniqueName,
 } from './paths'
-import { getSetting, setSetting, type EditorMode } from './settings'
+import { getSetting, setSetting, type EditorMode, type LinkUpdate } from './settings'
 import { buildTree } from './tree'
 import * as vault from './vault'
 
@@ -30,6 +30,12 @@ class Workspace {
   mode = $state<EditorMode>('live')
   renaming = $state<string | null>(null)
   notice = $state<string | null>(null)
+  linkTargets = $state<vault.LinkTarget[]>([])
+  indexVersion = $state(0)
+  headingJump = $state<{ heading: string; id: number } | null>(null)
+  showBacklinks = $state(true)
+  linkUpdate = $state<LinkUpdate>('ask')
+  isSettingsOpen = $state(false)
 
   #contents = ''
   #saveTimer: ReturnType<typeof setTimeout> | undefined
@@ -39,6 +45,8 @@ class Workspace {
 
   async restore() {
     this.mode = (await getSetting('editorMode')) ?? 'live'
+    this.showBacklinks = (await getSetting('showBacklinks')) ?? true
+    this.linkUpdate = (await getSetting('linkUpdate')) ?? 'ask'
     const lastVault = await getSetting('lastVault')
     if (lastVault) await this.openVault(lastVault)
   }
@@ -89,6 +97,41 @@ class Workspace {
     void setSetting('editorMode', this.mode)
   }
 
+  toggleBacklinks() {
+    this.showBacklinks = !this.showBacklinks
+    void setSetting('showBacklinks', this.showBacklinks)
+  }
+
+  setLinkUpdate(value: LinkUpdate) {
+    this.linkUpdate = value
+    void setSetting('linkUpdate', value)
+  }
+
+  resolveLinks(targets: string[]) {
+    return vault.resolveLinks(this.note?.path ?? '', targets)
+  }
+
+  async headingsFor(target: string) {
+    const [path] = target ? await this.resolveLinks([target]) : [this.note?.path ?? null]
+    return path ? vault.noteHeadings(path) : []
+  }
+
+  async openLink(destination: string) {
+    const hash = destination.indexOf('#')
+    const target = hash === -1 ? destination : destination.slice(0, hash)
+    const heading = hash === -1 ? '' : destination.slice(hash + 1)
+    await this.#run(async () => {
+      let [path] = target ? await this.resolveLinks([target]) : [this.note?.path ?? null]
+      if (!path) {
+        path = target.toLowerCase().endsWith(NOTE_EXTENSION) ? target : target + NOTE_EXTENSION
+        await vault.createNote(path)
+        await this.#refresh()
+      }
+      await this.openNote(path)
+      if (heading) this.headingJump = { heading, id: (this.headingJump?.id ?? 0) + 1 }
+    })
+  }
+
   async createNote(folder = '') {
     const path = uniqueName(this.#takenPaths(), folder, 'Untitled', NOTE_EXTENSION)
     await this.#run(async () => {
@@ -118,11 +161,23 @@ class Workspace {
     if (!trimmed || target === path) return
     await this.#run(async () => {
       await this.flush()
-      await vault.renameEntry(path, target)
+      const linkCount = await vault.incomingLinkCount(path)
+      const updateLinks = linkCount > 0 && (await this.#shouldUpdateLinks(linkCount))
+      const updated = await vault.renameEntry(path, target, updateLinks)
       if (this.note && isWithin(this.note.path, path)) {
         this.note.path = replacePrefix(this.note.path, path, target)
       }
       await this.#refresh()
+      if (updated) this.#notify(`Updated ${updated} ${updated === 1 ? 'link' : 'links'}.`)
+    })
+  }
+
+  async #shouldUpdateLinks(count: number) {
+    if (this.linkUpdate !== 'ask') return this.linkUpdate === 'always'
+    return ask(`Update ${count} ${count === 1 ? 'link' : 'links'} pointing to it?`, {
+      title: 'Update links',
+      okLabel: 'Update',
+      cancelLabel: "Don't update",
     })
   }
 
@@ -150,7 +205,11 @@ class Workspace {
   }
 
   async #refresh() {
-    this.entries = await vault.listEntries()
+    ;[this.entries, this.linkTargets] = await Promise.all([
+      vault.listEntries(),
+      vault.linkTargets(),
+    ])
+    this.indexVersion++
   }
 
   async #onExternalChange(paths: string[]) {
@@ -171,10 +230,14 @@ class Workspace {
     try {
       await action()
     } catch (error) {
-      this.notice = String(error)
-      clearTimeout(this.#noticeTimer)
-      this.#noticeTimer = setTimeout(() => (this.notice = null), NOTICE_MS)
+      this.#notify(String(error))
     }
+  }
+
+  #notify(message: string) {
+    this.notice = message
+    clearTimeout(this.#noticeTimer)
+    this.#noticeTimer = setTimeout(() => (this.notice = null), NOTICE_MS)
   }
 }
 

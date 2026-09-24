@@ -3,12 +3,13 @@ import { ensureSyntaxTree } from '@codemirror/language'
 import { EditorState } from '@codemirror/state'
 import { describe, expect, it } from 'vitest'
 import { CheckboxWidget, LanguageWidget, previewDecorations } from './live-preview'
+import { wikiLinkSyntax } from './wikilink'
 
 function preview(doc: string, cursor = doc.length) {
   const state = EditorState.create({
     doc,
     selection: { anchor: cursor },
-    extensions: markdown({ base: markdownLanguage }),
+    extensions: markdown({ base: markdownLanguage, extensions: wikiLinkSyntax }),
   })
   const tree = ensureSyntaxTree(state, doc.length, 5000)
   if (!tree) throw new Error('Parsing timed out')
@@ -50,6 +51,13 @@ describe('live preview', () => {
     const doc = '- item\n- [ ] todo\n- [x] done\n\nend'
     expect(preview(doc).replaced).toEqual(['-', '- ', '[ ]', '- ', '[x]'])
     expect(preview(doc, 0).replaced).toEqual(['- ', '[ ]', '- ', '[x]'])
+  })
+
+  it('shows only the target, subpath or alias of wikilinks', () => {
+    expect(preview('[[Note]] and ![[Image]]\n').replaced).toEqual(['[[', ']]', '![[', ']]'])
+    expect(preview('[[Note#Part]]\n').replaced).toEqual(['[[', ']]'])
+    expect(preview('[[Note#Part|Shown]]\n').replaced).toEqual(['[[Note#Part|', ']]'])
+    expect(preview('[[Note]]', 3).replaced).toEqual([])
   })
 
   it('leaves ordered list numbers visible', () => {

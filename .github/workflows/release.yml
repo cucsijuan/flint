@@ -46,3 +46,21 @@ jobs:
           releaseBody: See the release notes below.
           releaseDraft: true
           args: --config {"bundle":{"createUpdaterArtifacts":true}}
+
+  updater-urls:
+    needs: release
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPO: ${{ github.repository }}
+      TAG: ${{ github.ref_name }}
+    steps:
+      - name: Point latest.json at the public download URLs
+        run: |
+          gh release download "$TAG" --repo "$REPO" --pattern latest.json
+          names=$(gh api "repos/$REPO/releases" --jq "[.[] | select(.tag_name == \"$TAG\") | .assets[] | {key: (.id | tostring), value: .name}] | from_entries")
+          jq --argjson names "$names" --arg base "https://github.com/$REPO/releases/download/$TAG" \
+            '.platforms |= map_values(.url = "\($base)/\($names[.url | split("/") | last])")' \
+            latest.json > fixed.json
+          mv fixed.json latest.json
+          gh release upload "$TAG" latest.json --repo "$REPO" --clobber

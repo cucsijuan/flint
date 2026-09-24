@@ -43,19 +43,40 @@ Tauri 2 + Svelte 5 app, linting, tests, and CI builds for Linux and Windows.
 - Warning for plugins whose license isn't compatible with the AGPL.
 - Sample plugin: [`examples/word-count`](examples/word-count).
 
-With M5, the MVP is complete.
+With M5, the MVP is complete. [v0.1.0](https://github.com/cucsijuan/flint/releases/tag/v0.1.0) is the first preview release.
+
+### M6: UI tests and updates
+
+End-to-end tests of the real app with `tauri-driver` on Linux and Windows in CI, and automatic updates.
+
+### M7: Tabs and panes
+
+Several notes open at once in tabs (Ctrl+click opens a link in a new tab), split panes, and the graph in its own tab.
+
+### M8: Rich content
+
+Images and attachments (paste or drop to save), embedded notes (`![[note]]`), tables, reading view, and an editor context menu.
+
+### M9: Core workflows
+
+Daily notes, templates, outline, bookmarks, a properties editor for frontmatter, and standard Markdown links to notes.
+
+### M10: Customization
+
+Appearance (theme, fonts), customizable hotkeys, per-vault settings, and graph color groups.
+
+### M11: Plugin ecosystem
+
+Browsing and installing community plugins, hot reload, a settings-page API, tab icons, and published API types.
 
 ## Backlog
 
-Features deferred from a milestone. They are not scheduled yet.
+Features that are not scheduled in a milestone yet.
 
-- **Editor:** tabs and split panes, images, tables, reading view, custom editor context menu.
 - **File tree:** drag-and-drop moves, keeping folders expanded after a rename.
-- **Links:** rendering embedded notes (`![[note]]`), block references (`[[note#^id]]`), and standard Markdown links to notes (`[text](note.md)`).
+- **Links:** block references (`[[note#^id]]`).
 - **Search:** parentheses for grouping terms, more operators (`line:`, `section:`, `content:`), sort options.
-- **Commands:** customizable hotkeys.
-- **Plugins:** browsing and installing community plugins, reloading when plugin files change, a settings-page API, icons for plugin sidebar tabs, publishing the API types as a package.
-- **Settings:** move the remaining vault-specific settings (e.g. link update on rename) into the vault's `.flint/` folder, next to the enabled plugins.
-- **Graph:** color groups, force settings, graph in its own tab once tabs exist.
-- **Platforms:** macOS and mobile; manual testing on Windows.
+- **Graph:** force settings.
+- **Distribution:** macOS builds, Windows code signing.
+- **Later:** sync, canvas, mobile.
 - **Testing:** verify light/dark theme switching (graph colors in particular).

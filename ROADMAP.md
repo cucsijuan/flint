@@ -51,9 +51,13 @@ With M5, the MVP is complete. [v0.1.0](https://github.com/cucsijuan/flint/releas
 - Open a vault from the command line: `flint /path/to/vault`.
 - Automatic updates: Flint checks for a new version on startup (can be turned off) or with "Check for updates", then installs it and restarts. Supported for the AppImage and the Windows installers.
 
-### M7: Tabs and panes
+### M7: Tabs and panes ✅
 
-Several notes open at once in tabs (Ctrl+click opens a link in a new tab), split panes, and the graph in its own tab.
+- Tabs: Ctrl+click or middle-click opens notes and links in a new tab; Ctrl+T, Ctrl+W and Ctrl+Tab.
+- Back and forward history per tab (Alt+← / Alt+→).
+- Split panes, resizable, with the same note editable in several panes at once.
+- Drag tabs to reorder them, move them between panes, or drop them on a pane's edge to split it.
+- The graph opens in its own tab; tabs and splits are restored when the vault is reopened.
 
 ### M8: Rich content
 

@@ -36,6 +36,24 @@
   },
   "packageManager": "pnpm@12.6.0",
   "dependencies": {
-    "@tauri-apps/api": "^2.11.1"
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/lang-markdown": "^6.5.2",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/language-data": "^6.5.2",
+    "@codemirror/search": "^6.7.2",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.13",
+    "@internationalized/date": "^3.12.4",
+    "@lezer/common": "^1.5.2",
+    "@lezer/highlight": "^1.2.3",
+    "@lezer/markdown": "^1.7.2",
+    "@lucide/svelte": "^1.47.0",
+    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-dialog": "^2.7.3",
+    "@tauri-apps/plugin-store": "^2.4.5",
+    "@tauri-apps/plugin-window-state": "^2.4.1",
+    "bits-ui": "^2.19.3",
+    "codemirror": "^6.0.2",
+    "paneforge": "^1.0.2"
   }
 }

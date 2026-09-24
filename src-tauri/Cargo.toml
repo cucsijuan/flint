@@ -5,7 +5,7 @@ description = "An open-source, local-first Markdown knowledge base"
 license = "AGPL-3.0-or-later"
 repository = "https://github.com/cucsijuan/flint"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.88"
 
 [lib]
 name = "flint_lib"
@@ -15,6 +15,16 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2.6.3", features = [] }
 
 [dependencies]
+ignore = "0.4.33"
 log = "0.4"
+notify = "8.2.0"
+notify-debouncer-full = "0.7.0"
+serde = { version = "1.0.229", features = ["derive"] }
 tauri = { version = "2.11.6", features = [] }
+tauri-plugin-dialog = "2.7.3"
 tauri-plugin-log = "2"
+tauri-plugin-store = "2.4.5"
+tauri-plugin-window-state = "2.4.1"
+tempfile = "3.27.0"
+thiserror = "2.0.21"
+trash = "5.2.9"

@@ -1,0 +1,247 @@
+use std::fs::{self, OpenOptions};
+use std::io::Write;
+use std::path::{Component, Path, PathBuf};
+
+use ignore::WalkBuilder;
+use serde::Serialize;
+use tempfile::NamedTempFile;
+
+use crate::error::{Error, Result};
+
+const NOTE_EXTENSION: &str = "md";
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum EntryKind {
+    File,
+    Folder,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Entry {
+    pub path: String,
+    pub kind: EntryKind,
+}
+
+#[derive(Debug, Clone)]
+pub struct Vault {
+    root: PathBuf,
+}
+
+impl Vault {
+    pub fn open(root: impl AsRef<Path>) -> Result<Self> {
+        let root = fs::canonicalize(root)?;
+        if !root.is_dir() {
+            return Err(std::io::Error::from(std::io::ErrorKind::NotADirectory).into());
+        }
+        Ok(Self { root })
+    }
+
+    pub fn root(&self) -> &Path {
+        &self.root
+    }
+
+    pub fn entries(&self) -> Result<Vec<Entry>> {
+        let mut entries = Vec::new();
+        for item in WalkBuilder::new(&self.root)
+            .standard_filters(false)
+            .hidden(true)
+            .build()
+        {
+            let item = item?;
+            if item.depth() == 0 {
+                continue;
+            }
+            let kind = if item.file_type().is_some_and(|t| t.is_dir()) {
+                EntryKind::Folder
+            } else if is_note(item.path()) {
+                EntryKind::File
+            } else {
+                continue;
+            };
+            if let Some(path) = self.relative(item.path()) {
+                entries.push(Entry { path, kind });
+            }
+        }
+        Ok(entries)
+    }
+
+    pub fn read(&self, path: &str) -> Result<String> {
+        Ok(fs::read_to_string(self.resolve(path)?)?)
+    }
+
+    pub fn write(&self, path: &str, contents: &str) -> Result<()> {
+        let target = self.resolve(path)?;
+        let parent = target.parent().unwrap_or(&self.root);
+        let mut file = NamedTempFile::new_in(parent)?;
+        file.write_all(contents.as_bytes())?;
+        file.persist(&target).map_err(|e| e.error)?;
+        Ok(())
+    }
+
+    pub fn create_note(&self, path: &str) -> Result<()> {
+        let target = self.resolve(path)?;
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&target)
+            .map_err(|e| already_exists_or(e, path))?;
+        Ok(())
+    }
+
+    pub fn create_folder(&self, path: &str) -> Result<()> {
+        fs::create_dir(self.resolve(path)?).map_err(|e| already_exists_or(e, path))
+    }
+
+    pub fn rename(&self, from: &str, to: &str) -> Result<()> {
+        let source = self.resolve(from)?;
+        let target = self.resolve(to)?;
+        if target.exists() {
+            return Err(Error::AlreadyExists(to.to_owned()));
+        }
+        Ok(fs::rename(source, target)?)
+    }
+
+    pub fn trash(&self, path: &str) -> Result<()> {
+        Ok(trash::delete(self.resolve(path)?)?)
+    }
+
+    pub fn relative(&self, absolute: &Path) -> Option<String> {
+        let relative = absolute.strip_prefix(&self.root).ok()?;
+        let parts: Option<Vec<&str>> = relative.iter().map(|part| part.to_str()).collect();
+        Some(parts?.join("/"))
+    }
+
+    fn resolve(&self, path: &str) -> Result<PathBuf> {
+        let relative = Path::new(path);
+        let is_inside = !path.is_empty()
+            && relative
+                .components()
+                .all(|component| matches!(component, Component::Normal(_)));
+        if !is_inside {
+            return Err(Error::OutsideVault(path.to_owned()));
+        }
+        Ok(self.root.join(relative))
+    }
+}
+
+pub fn is_hidden(relative: &str) -> bool {
+    relative.split('/').any(|part| part.starts_with('.'))
+}
+
+fn is_note(path: &Path) -> bool {
+    path.extension()
+        .is_some_and(|extension| extension.eq_ignore_ascii_case(NOTE_EXTENSION))
+}
+
+fn already_exists_or(error: std::io::Error, path: &str) -> Error {
+    if error.kind() == std::io::ErrorKind::AlreadyExists {
+        Error::AlreadyExists(path.to_owned())
+    } else {
+        error.into()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    fn vault() -> (TempDir, Vault) {
+        let dir = TempDir::new().unwrap();
+        let vault = Vault::open(dir.path()).unwrap();
+        (dir, vault)
+    }
+
+    #[test]
+    fn rejects_paths_outside_the_vault() {
+        let (_dir, vault) = vault();
+        for path in [
+            "",
+            "../escape.md",
+            "a/../../escape.md",
+            "/etc/passwd",
+            "./a.md",
+        ] {
+            assert!(
+                matches!(vault.read(path), Err(Error::OutsideVault(_))),
+                "{path} should be rejected"
+            );
+        }
+    }
+
+    #[test]
+    fn writes_and_reads_notes() {
+        let (_dir, vault) = vault();
+        vault.write("note.md", "# Hello").unwrap();
+        vault.write("note.md", "# Replaced").unwrap();
+        assert_eq!(vault.read("note.md").unwrap(), "# Replaced");
+    }
+
+    #[test]
+    fn lists_folders_and_notes_but_skips_hidden_and_other_files() {
+        let (dir, vault) = vault();
+        fs::create_dir_all(dir.path().join("folder")).unwrap();
+        fs::create_dir_all(dir.path().join(".obsidian")).unwrap();
+        for file in [
+            "folder/nested.md",
+            "root.MD",
+            "image.png",
+            ".obsidian/app.md",
+        ] {
+            fs::write(dir.path().join(file), "").unwrap();
+        }
+
+        let mut entries = vault.entries().unwrap();
+        entries.sort_by(|a, b| a.path.cmp(&b.path));
+
+        let expected = [
+            ("folder", EntryKind::Folder),
+            ("folder/nested.md", EntryKind::File),
+            ("root.MD", EntryKind::File),
+        ]
+        .map(|(path, kind)| Entry {
+            path: path.to_owned(),
+            kind,
+        });
+        assert_eq!(entries, expected);
+    }
+
+    #[test]
+    fn creating_never_overwrites() {
+        let (_dir, vault) = vault();
+        vault.write("note.md", "content").unwrap();
+        vault.create_folder("folder").unwrap();
+
+        assert!(matches!(
+            vault.create_note("note.md"),
+            Err(Error::AlreadyExists(_))
+        ));
+        assert!(matches!(
+            vault.create_folder("folder"),
+            Err(Error::AlreadyExists(_))
+        ));
+        assert_eq!(vault.read("note.md").unwrap(), "content");
+    }
+
+    #[test]
+    fn renaming_never_overwrites() {
+        let (_dir, vault) = vault();
+        vault.write("a.md", "a").unwrap();
+        vault.write("b.md", "b").unwrap();
+
+        assert!(matches!(
+            vault.rename("a.md", "b.md"),
+            Err(Error::AlreadyExists(_))
+        ));
+        vault.rename("a.md", "c.md").unwrap();
+        assert_eq!(vault.read("c.md").unwrap(), "a");
+    }
+
+    #[test]
+    fn detects_hidden_paths() {
+        assert!(is_hidden(".obsidian/app.json"));
+        assert!(is_hidden("folder/.tmpXYZ"));
+        assert!(!is_hidden("folder/note.md"));
+    }
+}

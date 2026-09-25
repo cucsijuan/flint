@@ -1,8 +1,13 @@
 <script lang="ts">
   import { Dialog } from 'bits-ui'
-  import type { LinkUpdate } from '../lib/settings'
+  import type { EditorMode, LinkUpdate } from '../lib/settings'
   import { workspace } from '../lib/workspace.svelte'
   import PluginSettings from './PluginSettings.svelte'
+
+  const editorModeOptions: { value: EditorMode; label: string }[] = [
+    { value: 'live', label: 'Live preview' },
+    { value: 'source', label: 'Source mode' },
+  ]
 
   const linkUpdateOptions: { value: LinkUpdate; label: string }[] = [
     { value: 'ask', label: 'Ask' },
@@ -16,6 +21,22 @@
     <Dialog.Overlay class="overlay" />
     <Dialog.Content class="dialog">
       <Dialog.Title class="dialog-title">Settings</Dialog.Title>
+      <label class="setting">
+        <span>
+          <strong>Editing mode</strong>
+          <small
+            >Live preview hides Markdown syntax outside the cursor; source mode shows it all.</small
+          >
+        </span>
+        <select
+          value={workspace.mode}
+          onchange={(event) => workspace.setMode(event.currentTarget.value as EditorMode)}
+        >
+          {#each editorModeOptions as option (option.value)}
+            <option value={option.value}>{option.label}</option>
+          {/each}
+        </select>
+      </label>
       <label class="setting">
         <span>
           <strong>Update links on rename</strong>

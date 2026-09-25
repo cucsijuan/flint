@@ -9,6 +9,7 @@ export type TabView =
 export interface Tab {
   id: string
   view: TabView
+  isReading?: boolean
   back: TabView[]
   forward: TabView[]
 }
@@ -123,6 +124,14 @@ export function navigate(layout: Layout, view: TabView): Layout {
   if (sameView(tab.view, view)) return layout
   const back = tab.view.kind === 'empty' ? tab.back : [...tab.back, tab.view]
   return updateTab(layout, group.id, tab.id, () => ({ ...tab, view, back, forward: [] }))
+}
+
+export function toggleReading(layout: Layout): Layout {
+  const tab = activeTab(layout)
+  return updateTab(layout, activeGroup(layout).id, tab.id, () => ({
+    ...tab,
+    isReading: !tab.isReading,
+  }))
 }
 
 export function goBack(layout: Layout): Layout {

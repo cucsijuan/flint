@@ -20,6 +20,7 @@ import {
   renamePaths,
   split,
   type TabView,
+  toggleReading,
 } from './layout'
 
 const note = (path: string): TabView => ({ kind: 'note', path })
@@ -136,5 +137,14 @@ describe('layout', () => {
     expect(isLayout(withTabs('a'))).toBe(true)
     expect(isLayout({ root: { type: 'group', tabs: [] }, activeGroupId: 'x' })).toBe(false)
     expect(isLayout(null)).toBe(false)
+  })
+})
+
+describe('reading mode', () => {
+  it('toggles reading mode for the active tab only', () => {
+    let layout = withTabs('a', 'b')
+    layout = toggleReading(layout)
+    expect(groups(layout.root)[0].tabs.map((tab) => !!tab.isReading)).toEqual([false, true])
+    expect(activeTab(toggleReading(layout)).isReading).toBe(false)
   })
 })

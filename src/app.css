@@ -343,3 +343,175 @@ button.primary {
   font-size: 11px;
   font-weight: 600;
 }
+
+:root {
+  --code-keyword: #8f3fbf;
+  --code-string: #3a7d2c;
+  --code-number: #b0531c;
+  --code-comment: #8a8a95;
+  --code-type: #1f6fb2;
+  --code-function: #b03f6b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --code-keyword: #c792ea;
+    --code-string: #a5d6a7;
+    --code-number: #f5a97f;
+    --code-comment: #7a7a84;
+    --code-type: #82aaff;
+    --code-function: #f07178;
+  }
+}
+
+.tok-keyword,
+.tok-operatorKeyword,
+.tok-modifier {
+  color: var(--code-keyword);
+}
+
+.tok-string,
+.tok-string2 {
+  color: var(--code-string);
+}
+
+.tok-number,
+.tok-bool,
+.tok-atom {
+  color: var(--code-number);
+}
+
+.tok-comment {
+  color: var(--code-comment);
+  font-style: italic;
+}
+
+.tok-typeName,
+.tok-className,
+.tok-namespace {
+  color: var(--code-type);
+}
+
+.tok-variableName.tok-definition,
+.tok-propertyName.tok-definition {
+  color: var(--code-function);
+}
+
+.markdown {
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.markdown > :first-child {
+  margin-top: 0;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4 {
+  margin: 1.4em 0 0.5em;
+  line-height: 1.25;
+}
+
+.markdown a {
+  color: var(--accent);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.markdown a:hover {
+  text-decoration: underline;
+}
+
+.markdown a.unresolved {
+  opacity: 0.6;
+}
+
+.markdown a.tag {
+  padding: 0 4px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.markdown code {
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--code-background);
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+.markdown pre {
+  padding: 12px 16px;
+  overflow-x: auto;
+  border-radius: 6px;
+  background: var(--code-background);
+}
+
+.markdown pre code {
+  padding: 0;
+  background: none;
+}
+
+.markdown blockquote {
+  margin: 1em 0;
+  padding-left: 12px;
+  border-left: 3px solid var(--accent);
+  color: var(--text-muted);
+}
+
+.markdown hr {
+  border: none;
+  border-top: 1px solid var(--border);
+}
+
+.markdown table {
+  border-collapse: collapse;
+  margin: 1em 0;
+}
+
+.markdown th,
+.markdown td {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+}
+
+.markdown th {
+  background: var(--background-secondary);
+}
+
+.markdown img,
+.markdown video {
+  max-width: 100%;
+}
+
+.markdown li.task-list-item {
+  list-style: none;
+}
+
+.markdown li.task-list-item input {
+  margin: 0 6px 0 -20px;
+  accent-color: var(--accent);
+}
+
+.internal-embed.missing {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.note-embed {
+  display: block;
+  margin: 1em 0;
+  padding: 8px 16px;
+  border-left: 3px solid var(--border);
+  border-radius: 4px;
+  background: var(--background-secondary);
+}
+
+.note-embed .embed-title {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text-muted);
+  font-size: 0.85em;
+}

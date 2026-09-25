@@ -13,7 +13,7 @@ import {
   Transaction,
 } from '@codemirror/state'
 import { EditorView, keymap } from '@codemirror/view'
-import { tags } from '@lezer/highlight'
+import { classHighlighter, tags } from '@lezer/highlight'
 import { minimalSetup } from 'codemirror'
 import type { EditorMode } from '../settings'
 import { completion, type CompletionSources } from './completion'
@@ -81,6 +81,7 @@ export function createEditorState({
       navigation(resolveLinks, handlers),
       completion(sources),
       syntaxHighlighting(markdownStyle),
+      syntaxHighlighting(classHighlighter),
       EditorView.lineWrapping,
       EditorView.contentAttributes.of({ spellcheck: 'true' }),
       mode.of(modeExtension(editorMode)),

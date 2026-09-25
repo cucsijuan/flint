@@ -18,6 +18,7 @@
   import FileView from './FileView.svelte'
   import GraphPanel from './GraphPanel.svelte'
   import NoteEditor from './NoteEditor.svelte'
+  import ReadingView from './ReadingView.svelte'
 
   type Zone = layouts.Side | 'center'
   type TabDrag = { type: 'tab'; groupId: string; tabId: string }
@@ -237,7 +238,11 @@
       <div class="view" hidden={!isCurrent}>
         {#if tab.view.kind === 'note'}
           {#key tab.view.path}
-            <NoteEditor {tab} path={tab.view.path} isActive={isActiveGroup && isCurrent} />
+            {#if tab.isReading}
+              <ReadingView {tab} path={tab.view.path} />
+            {:else}
+              <NoteEditor {tab} path={tab.view.path} isActive={isActiveGroup && isCurrent} />
+            {/if}
           {/key}
         {:else if tab.view.kind === 'file'}
           <FileView path={tab.view.path} />

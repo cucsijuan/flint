@@ -164,8 +164,12 @@ class Workspace {
   }
 
   toggleMode() {
-    this.mode = this.mode === 'live' ? 'source' : 'live'
-    void setSetting('editorMode', this.mode)
+    this.setMode(this.mode === 'live' ? 'source' : 'live')
+  }
+
+  setMode(mode: EditorMode) {
+    this.mode = mode
+    void setSetting('editorMode', mode)
   }
 
   toggleRightPanel() {
@@ -224,7 +228,8 @@ class Workspace {
         await vault.createNote(path)
         await this.#refresh()
       }
-      if (heading) this.openNoteAt(path, { heading }, options)
+      if (!path.toLowerCase().endsWith(NOTE_EXTENSION)) await this.openFile(path, options)
+      else if (heading) this.openNoteAt(path, { heading }, options)
       else this.openNote(path, options)
     })
   }

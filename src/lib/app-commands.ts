@@ -144,9 +144,15 @@ export function registerAppCommands() {
       run: () => workspace.notePath && workspace.trash(workspace.notePath),
     },
     {
+      id: 'toggle-reading',
+      name: 'Toggle reading view',
+      hotkey: 'Mod+E',
+      isAvailable: hasNote,
+      run: () => workspace.updateLayout(layouts.toggleReading),
+    },
+    {
       id: 'toggle-source-mode',
       name: 'Toggle live preview and source mode',
-      hotkey: 'Mod+E',
       isAvailable: hasNote,
       run: () => workspace.toggleMode(),
     },

@@ -15,6 +15,18 @@ interface Document {
 class Documents {
   onError: (error: unknown) => void = console.error
   #documents = new Map<string, Document>()
+  #listeners = new Map<string, Set<(contents: string) => void>>()
+
+  subscribe(path: string, listener: (contents: string) => void) {
+    const listeners = this.#listeners.get(path) ?? new Set()
+    listeners.add(listener)
+    this.#listeners.set(path, listeners)
+    return () => void listeners.delete(listener)
+  }
+
+  #notify(path: string, contents: string) {
+    for (const listener of this.#listeners.get(path) ?? []) listener(contents)
+  }
 
   async load(path: string) {
     let document = this.#documents.get(path)
@@ -42,6 +54,7 @@ class Documents {
     if (!document) return
     document.contents = contents
     for (const view of document.views) if (view !== source) applyChanges(view, changes)
+    this.#notify(path, contents)
     clearTimeout(document.saveTimer)
     document.saveTimer = setTimeout(() => void this.#save(path), SAVE_DELAY_MS)
   }
@@ -57,6 +70,7 @@ class Documents {
     if (contents === document.contents) return
     document.contents = contents
     for (const view of document.views) replaceDoc(view, contents)
+    this.#notify(path, contents)
   }
 
   async flush() {

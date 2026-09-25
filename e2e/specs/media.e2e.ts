@@ -24,7 +24,7 @@ describe('rich content', () => {
   })
 
   it('opens images from the file tree in a viewer tab', async () => {
-    await $('button.row*=pic.png').click()
+    await $('button.row*=pic').click()
     await expect($('figure img')).toHaveAttribute('src', expect.stringContaining('pic.png'))
   })
 })

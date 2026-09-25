@@ -22,7 +22,7 @@ pub fn install(window: &WebviewWindow) -> tauri::Result<()> {
     use webkit2gtk::gio::SimpleAction;
     use webkit2gtk::{
         ContextMenuAction, ContextMenuExt, ContextMenuItem, ContextMenuItemExt, HitTestResultExt,
-        WebViewExt,
+        WebContextExt, WebViewExt,
     };
 
     const HIDDEN: [ContextMenuAction; 16] = [
@@ -46,30 +46,45 @@ pub fn install(window: &WebviewWindow) -> tauri::Result<()> {
 
     let emitter = window.clone();
     window.with_webview(move |webview| {
-        webview
-            .inner()
-            .connect_context_menu(move |_, menu, _, hit| {
-                for item in menu.items() {
-                    let action = item.stock_action();
-                    if HIDDEN.contains(&action) || action == ContextMenuAction::Unicode {
-                        menu.remove(&item);
-                    }
+        let webview = webview.inner();
+        if let Some(context) = webview.context() {
+            let languages = spell_checking_languages();
+            context.set_spell_checking_languages(
+                &languages.iter().map(String::as_str).collect::<Vec<_>>(),
+            );
+            context.set_spell_checking_enabled(true);
+        }
+        webview.connect_context_menu(move |_, menu, _, hit| {
+            for item in menu.items() {
+                let action = item.stock_action();
+                if HIDDEN.contains(&action) || action == ContextMenuAction::Unicode {
+                    menu.remove(&item);
                 }
-                let actions = actions(hit.context_is_link(), hit.context_is_editable());
-                if !actions.is_empty() && !menu.items().is_empty() {
-                    menu.append(&ContextMenuItem::new_separator());
-                }
-                for (id, label) in actions {
-                    let action = SimpleAction::new(id, None);
-                    let emitter = emitter.clone();
-                    action.connect_activate(move |_, _| {
-                        let _ = emitter.emit(CONTEXT_MENU_ACTION, id);
-                    });
-                    menu.append(&ContextMenuItem::from_gaction(&action, label, None));
-                }
-                false
-            });
+            }
+            let actions = actions(hit.context_is_link(), hit.context_is_editable());
+            if !actions.is_empty() && !menu.items().is_empty() {
+                menu.append(&ContextMenuItem::new_separator());
+            }
+            for (id, label) in actions {
+                let action = SimpleAction::new(id, None);
+                let emitter = emitter.clone();
+                action.connect_activate(move |_, _| {
+                    let _ = emitter.emit(CONTEXT_MENU_ACTION, id);
+                });
+                menu.append(&ContextMenuItem::from_gaction(&action, label, None));
+            }
+            false
+        });
     })
+}
+
+#[cfg(target_os = "linux")]
+fn spell_checking_languages() -> Vec<String> {
+    webkit2gtk::glib::language_names()
+        .into_iter()
+        .map(String::from)
+        .filter(|name| name != "C" && name != "POSIX" && !name.contains(['.', '@']))
+        .collect()
 }
 
 #[cfg(windows)]

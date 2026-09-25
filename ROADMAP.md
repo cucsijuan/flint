@@ -59,9 +59,13 @@ With M5, the MVP is complete. [v0.1.0](https://github.com/cucsijuan/flint/releas
 - Drag tabs to reorder them, move them between panes, or drop them on a pane's edge to split it.
 - The graph opens in its own tab; tabs and splits are restored when the vault is reopened.
 
-### M8: Rich content
+### M8: Rich content ✅
 
-Images and attachments (paste or drop to save), embedded notes (`![[note]]`), tables, reading view, and an editor context menu.
+- Attachments (images, PDFs, audio, video) in the file tree; images open in their own tab, other files in the system app.
+- Paste or drop images into a note, from screenshots, the file manager or copied files; the attachment folder is configurable.
+- Live preview renders images, tables and embedded notes (`![[note]]`, `![[note#heading]]`); the source shows above them while editing.
+- Reading view (Ctrl+E) with syntax-highlighted code blocks.
+- Editor context menu with formatting actions (bold, italic, strikethrough, code, link) and spell checking.
 
 ### M9: Core workflows
 
@@ -83,6 +87,7 @@ Features that are not scheduled in a milestone yet.
 - **Links:** block references (`[[note#^id]]`).
 - **Search:** parentheses for grouping terms, more operators (`line:`, `section:`, `content:`), sort options.
 - **Graph:** force settings.
+- **Rich content:** editing tables as a grid in live preview, pasting or dropping non-image attachments, dropping images on the reading view.
 - **Distribution:** macOS builds, Windows code signing.
 - **Testing:** run the end-to-end tests on Windows too (`msedgedriver` can't attach to WebView2 in CI yet).
 - **Later:** sync, canvas, mobile.

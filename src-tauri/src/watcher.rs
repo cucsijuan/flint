@@ -21,6 +21,7 @@ pub fn watch(app: AppHandle, vault: Vault, index: Arc<RwLock<Index>>) -> Result<
         let Ok(events) = result else { return };
         let paths: BTreeSet<String> = events
             .iter()
+            .filter(|event| !event.kind.is_access())
             .flat_map(|event| &event.paths)
             .filter_map(|path| vault.relative(path))
             .filter(|path| !is_hidden(path))

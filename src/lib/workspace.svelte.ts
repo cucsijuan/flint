@@ -3,8 +3,14 @@ import { documents } from './documents'
 import { noteOpened, vaultChanged } from './events'
 import type { GraphFilters } from './graph'
 import * as layouts from './layout'
-import { NOTE_EXTENSION, basename, isImage, join, parentOf, uniqueName } from './paths'
-import { getSetting, setSetting, type EditorMode, type LinkUpdate } from './settings'
+import { NOTE_EXTENSION, basename, extensionOf, isImage, join, parentOf, uniqueName } from './paths'
+import {
+  type AttachmentFolder,
+  type EditorMode,
+  getSetting,
+  type LinkUpdate,
+  setSetting,
+} from './settings'
 import { buildTree } from './tree'
 import * as vault from './vault'
 
@@ -12,6 +18,9 @@ const SEARCH_DELAY_MS = 200
 const LAYOUT_SAVE_DELAY_MS = 500
 const NOTICE_MS = 5000
 const LAYOUT_CONFIG = 'workspace'
+const ATTACHMENTS_FOLDER = 'attachments'
+
+const timestamp = () => new Date().toISOString().replace(/\D/g, '').slice(0, 14)
 
 export type LeftTab = 'files' | 'search'
 export type RightTab = 'backlinks' | 'tags' | 'graph' | (string & {})
@@ -45,6 +54,7 @@ class Workspace {
   showRightPanel = $state(true)
   linkUpdate = $state<LinkUpdate>('ask')
   checkForUpdates = $state(true)
+  attachmentFolder = $state<AttachmentFolder>('root')
   isSettingsOpen = $state(false)
   isQuickSwitcherOpen = $state(false)
   isCommandPaletteOpen = $state(false)
@@ -75,6 +85,7 @@ class Workspace {
     this.showRightPanel = (await getSetting('showRightPanel')) ?? true
     this.linkUpdate = (await getSetting('linkUpdate')) ?? 'ask'
     this.checkForUpdates = (await getSetting('checkForUpdates')) ?? true
+    this.attachmentFolder = (await getSetting('attachmentFolder')) ?? 'root'
     const vaultPath = (await vault.launchVault()) ?? (await getSetting('lastVault'))
     if (vaultPath) await this.openVault(vaultPath)
   }
@@ -201,6 +212,28 @@ class Workspace {
   setCheckForUpdates(isEnabled: boolean) {
     this.checkForUpdates = isEnabled
     void setSetting('checkForUpdates', isEnabled)
+  }
+
+  setAttachmentFolder(value: AttachmentFolder) {
+    this.attachmentFolder = value
+    void setSetting('attachmentFolder', value)
+  }
+
+  async saveAttachment(file: File, notePath: string) {
+    const folder = {
+      root: '',
+      same: parentOf(notePath),
+      attachments: ATTACHMENTS_FOLDER,
+    }[this.attachmentFolder]
+    const taken = this.#takenPaths()
+    if (folder && !taken.has(folder)) await vault.createFolder(folder)
+    const extension = extensionOf(file.name) || file.type.split('/')[1] || 'png'
+    const isGenericName = !file.name || /^image\.\w+$/i.test(file.name)
+    const base = isGenericName ? `Pasted image ${timestamp()}` : file.name.replace(/\.[^.]+$/, '')
+    const path = uniqueName(taken, folder, base, `.${extension}`)
+    await vault.saveAttachment(path, new Uint8Array(await file.arrayBuffer()))
+    await this.#refresh()
+    return this.linkTargets.find((target) => target.path === path)?.linkText ?? basename(path)
   }
 
   setLinkUpdate(value: LinkUpdate) {

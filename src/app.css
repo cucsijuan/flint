@@ -515,3 +515,23 @@ button.primary {
   color: var(--text-muted);
   font-size: 0.85em;
 }
+
+.cm-live-image {
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.cm-live-block {
+  margin: 4px 0;
+  font-family: var(--font-text);
+  white-space: normal;
+  cursor: text;
+}
+
+.cm-live-block table {
+  margin: 0;
+}
+
+.cm-live-embed .note-embed {
+  margin: 0;
+}

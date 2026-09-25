@@ -6,6 +6,17 @@ import { wikiLinkParts } from './wikilink'
 export type LinkResolver = (targets: string[]) => Promise<(string | null)[]>
 
 const RESOLVE_DELAY_MS = 150
+const EXTERNAL = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i
+
+export function imageTarget(url: string) {
+  try {
+    return decodeURI(url).replace(/^\.\//, '')
+  } catch {
+    return url
+  }
+}
+
+export const isExternalUrl = (url: string) => EXTERNAL.test(url)
 
 const addResolved = StateEffect.define<Map<string, string | null>>()
 const clearResolved = StateEffect.define<null>()
@@ -26,8 +37,12 @@ export const refreshLinks = (view: EditorView) => view.dispatch({ effects: clear
 function linkTargets(state: EditorState) {
   const targets = new Set<string>()
   syntaxTree(state).iterate({
-    enter: ({ name, from, to }) => {
+    enter: ({ name, from, to, node }) => {
       if (name === 'WikiLinkTarget') targets.add(state.sliceDoc(from, to))
+      if (name === 'URL' && node.parent?.name === 'Image') {
+        const url = state.sliceDoc(from, to)
+        if (!EXTERNAL.test(url)) targets.add(imageTarget(url))
+      }
     },
   })
   return targets

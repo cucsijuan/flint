@@ -1,12 +1,18 @@
 <script lang="ts">
   import { Dialog } from 'bits-ui'
-  import type { EditorMode, LinkUpdate } from '../lib/settings'
+  import type { AttachmentFolder, EditorMode, LinkUpdate } from '../lib/settings'
   import { workspace } from '../lib/workspace.svelte'
   import PluginSettings from './PluginSettings.svelte'
 
   const editorModeOptions: { value: EditorMode; label: string }[] = [
     { value: 'live', label: 'Live preview' },
     { value: 'source', label: 'Source mode' },
+  ]
+
+  const attachmentFolderOptions: { value: AttachmentFolder; label: string }[] = [
+    { value: 'root', label: 'Vault root' },
+    { value: 'same', label: 'Same folder as the note' },
+    { value: 'attachments', label: '"attachments" folder' },
   ]
 
   const linkUpdateOptions: { value: LinkUpdate; label: string }[] = [
@@ -47,6 +53,21 @@
           onchange={(event) => workspace.setLinkUpdate(event.currentTarget.value as LinkUpdate)}
         >
           {#each linkUpdateOptions as option (option.value)}
+            <option value={option.value}>{option.label}</option>
+          {/each}
+        </select>
+      </label>
+      <label class="setting">
+        <span>
+          <strong>Attachment location</strong>
+          <small>Where pasted or dropped images are saved.</small>
+        </span>
+        <select
+          value={workspace.attachmentFolder}
+          onchange={(event) =>
+            workspace.setAttachmentFolder(event.currentTarget.value as AttachmentFolder)}
+        >
+          {#each attachmentFolderOptions as option (option.value)}
             <option value={option.value}>{option.label}</option>
           {/each}
         </select>

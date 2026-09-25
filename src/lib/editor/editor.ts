@@ -16,10 +16,13 @@ import { EditorView, keymap } from '@codemirror/view'
 import { classHighlighter, tags } from '@lezer/highlight'
 import { minimalSetup } from 'codemirror'
 import type { EditorMode } from '../settings'
+import { attachmentInput, type SaveAttachment } from './attachments'
+import { blockPreview } from './blocks'
 import { completion, type CompletionSources } from './completion'
 import { hashtagSyntax } from './hashtag'
 import { type LinkResolver, type Navigation, navigation } from './links'
 import { livePreview } from './live-preview'
+import { type PreviewContext, previewContext } from './preview-context'
 import { wikiLinkSyntax } from './wikilink'
 
 const markdownStyle = HighlightStyle.define([
@@ -44,7 +47,7 @@ const pluginExtensions = new Compartment()
 const remoteChange = Annotation.define<boolean>()
 
 const modeExtension = (editorMode: EditorMode): Extension =>
-  editorMode === 'live' ? livePreview : []
+  editorMode === 'live' ? [livePreview, blockPreview] : []
 
 export interface EditorOptions {
   doc: string
@@ -55,6 +58,8 @@ export interface EditorOptions {
   navigation: Navigation
   completion: CompletionSources
   plugins: Extension[]
+  preview: PreviewContext
+  saveAttachment: SaveAttachment
 }
 
 export function createEditorState({
@@ -66,6 +71,8 @@ export function createEditorState({
   navigation: handlers,
   completion: sources,
   plugins,
+  preview,
+  saveAttachment,
 }: EditorOptions) {
   return EditorState.create({
     doc,
@@ -86,6 +93,8 @@ export function createEditorState({
       EditorView.contentAttributes.of({ spellcheck: 'true' }),
       mode.of(modeExtension(editorMode)),
       pluginExtensions.of(plugins),
+      previewContext.of(preview),
+      attachmentInput(saveAttachment),
       EditorView.updateListener.of((update) => {
         const isLocalEdit = !update.transactions.some((tr) => tr.annotation(remoteChange))
         if (update.docChanged && isLocalEdit) onChange(update.changes, update.state.doc.toString())

@@ -9,7 +9,9 @@ import {
   WidgetType,
 } from '@codemirror/view'
 import type { SyntaxNode, Tree } from '@lezer/common'
-import { resolvedLinks } from './links'
+import { isImage } from '../paths'
+import { imageTarget, isExternalUrl, resolvedLinks } from './links'
+import { previewContext } from './preview-context'
 import { wikiLinkParts } from './wikilink'
 
 class BulletWidget extends WidgetType {
@@ -18,6 +20,27 @@ class BulletWidget extends WidgetType {
     bullet.className = 'cm-live-bullet'
     bullet.textContent = '•'
     return bullet
+  }
+}
+
+export class ImageWidget extends WidgetType {
+  constructor(
+    readonly src: string,
+    readonly width: string,
+  ) {
+    super()
+  }
+
+  eq(other: ImageWidget) {
+    return other.src === this.src && other.width === this.width
+  }
+
+  toDOM() {
+    const image = document.createElement('img')
+    image.className = 'cm-live-image'
+    image.src = this.src
+    if (/^\d+$/.test(this.width)) image.width = Number(this.width)
+    return image
   }
 }
 
@@ -102,6 +125,13 @@ export function previewDecorations(
 ): DecorationSet {
   const { doc, selection } = state
   const resolved = state.field(resolvedLinks, false)
+  const context = state.facet(previewContext)
+  const imageAt = (from: number, to: number, path: string | null | undefined, width = '') => {
+    if (!path || !context) return false
+    const src = isExternalUrl(path) ? path : context.assetUrl(path)
+    decorations.push(Decoration.replace({ widget: new ImageWidget(src, width) }).range(from, to))
+    return true
+  }
   const decorations: Range<Decoration>[] = []
 
   const touchesSelection = (start: number, end: number) =>
@@ -157,6 +187,11 @@ export function previewDecorations(
             state,
             node,
           )
+          const isEmbed = doc.sliceString(node.from, node.from + 1) === '!'
+          if (isEmbed && isImage(target)) {
+            const alias = aliasNode ? doc.sliceString(aliasNode.from, aliasNode.to) : ''
+            if (imageAt(node.from, node.to, resolved?.get(target), alias)) break
+          }
           const shown = aliasNode ?? {
             from: (targetNode ?? subpathNode)?.from ?? node.from,
             to: (subpathNode ?? targetNode)?.to ?? node.to,
@@ -180,6 +215,13 @@ export function previewDecorations(
             }).range(node.from, node.to),
           )
           break
+        case 'Image': {
+          const url = node.getChild('URL')
+          if (!url || touchesSelection(node.from, node.to)) break
+          const text = doc.sliceString(url.from, url.to)
+          imageAt(node.from, node.to, isExternalUrl(text) ? text : resolved?.get(imageTarget(text)))
+          return false
+        }
         case 'Blockquote':
           eachLine(node, quoteLine)
           break
@@ -250,7 +292,8 @@ export const livePreview = ViewPlugin.fromClass(
         update.docChanged ||
         update.selectionSet ||
         update.viewportChanged ||
-        syntaxTree(update.startState) !== syntaxTree(update.state)
+        syntaxTree(update.startState) !== syntaxTree(update.state) ||
+        update.startState.field(resolvedLinks, false) !== update.state.field(resolvedLinks, false)
       ) {
         this.decorations = this.build(update.view)
       }

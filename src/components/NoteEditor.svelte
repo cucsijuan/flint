@@ -14,6 +14,7 @@
   import { refreshLinks } from '../lib/editor/links'
   import type { Tab } from '../lib/layout'
   import { pluginHost } from '../lib/plugins/host.svelte'
+  import * as vault from '../lib/vault'
   import { workspace } from '../lib/workspace.svelte'
   import NoteHeader from './NoteHeader.svelte'
 
@@ -49,6 +50,13 @@
               tags: () => workspace.tags,
             },
             plugins: pluginHost.editorExtensions,
+            preview: {
+              source: path,
+              resolve: (targets, source) => workspace.resolveLinks(targets, source),
+              assetUrl: (asset) => workspace.assetUrl(asset),
+              readNote: vault.readNote,
+            },
+            saveAttachment: (file) => workspace.saveAttachment(file, path),
           }),
         })
         documents.attach(path, editor)

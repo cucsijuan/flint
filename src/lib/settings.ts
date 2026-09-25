@@ -2,6 +2,7 @@ import { LazyStore } from '@tauri-apps/plugin-store'
 
 export type EditorMode = 'live' | 'source'
 export type LinkUpdate = 'ask' | 'always' | 'never'
+export type AttachmentFolder = 'root' | 'same' | 'attachments'
 
 interface Settings {
   lastVault: string
@@ -9,6 +10,7 @@ interface Settings {
   linkUpdate: LinkUpdate
   showRightPanel: boolean
   checkForUpdates: boolean
+  attachmentFolder: AttachmentFolder
 }
 
 const store = new LazyStore('settings.json')

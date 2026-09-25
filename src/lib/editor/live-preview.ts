@@ -10,7 +10,9 @@ import {
 } from '@codemirror/view'
 import type { SyntaxNode, Tree } from '@lezer/common'
 import { isImage } from '../paths'
+import { isAloneOnLine } from './blocks'
 import { imageTarget, isExternalUrl, resolvedLinks } from './links'
+import { pointerDown, pointerReleased } from './pointer'
 import { previewContext } from './preview-context'
 import { wikiLinkParts } from './wikilink'
 
@@ -35,11 +37,12 @@ export class ImageWidget extends WidgetType {
     return other.src === this.src && other.width === this.width
   }
 
-  toDOM() {
+  toDOM(view: EditorView) {
     const image = document.createElement('img')
     image.className = 'cm-live-image'
     image.src = this.src
     if (/^\d+$/.test(this.width)) image.width = Number(this.width)
+    image.addEventListener('load', () => view.requestMeasure())
     return image
   }
 }
@@ -189,6 +192,7 @@ export function previewDecorations(
           )
           const isEmbed = doc.sliceString(node.from, node.from + 1) === '!'
           if (isEmbed && isImage(target)) {
+            if (isAloneOnLine(state, node.from, node.to)) break
             const alias = aliasNode ? doc.sliceString(aliasNode.from, aliasNode.to) : ''
             if (imageAt(node.from, node.to, resolved?.get(target), alias)) break
           }
@@ -219,6 +223,7 @@ export function previewDecorations(
         case 'Image': {
           const url = node.getChild('URL')
           if (!url || touchesSelection(node.from, node.to)) break
+          if (isAloneOnLine(state, node.from, node.to)) return false
           const text = doc.sliceString(url.from, url.to)
           imageAt(node.from, node.to, isExternalUrl(text) ? text : resolved?.get(imageTarget(text)))
           return false
@@ -289,9 +294,11 @@ export const livePreview = ViewPlugin.fromClass(
     }
 
     update(update: ViewUpdate) {
+      const isPointerDown = update.state.field(pointerDown, false)
       if (
         update.docChanged ||
-        update.selectionSet ||
+        (update.selectionSet && !isPointerDown) ||
+        update.transactions.some(pointerReleased) ||
         update.viewportChanged ||
         syntaxTree(update.startState) !== syntaxTree(update.state) ||
         update.startState.field(resolvedLinks, false) !== update.state.field(resolvedLinks, false)

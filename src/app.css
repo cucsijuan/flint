@@ -97,6 +97,11 @@ button.primary {
   caret-color: var(--text);
 }
 
+.cm-editor .cm-cursor,
+.cm-editor .cm-dropCursor {
+  border-left-color: var(--text);
+}
+
 .cm-h {
   font-weight: 700;
   text-decoration: none;
@@ -519,6 +524,11 @@ button.primary {
 .cm-live-image {
   max-width: 100%;
   vertical-align: middle;
+}
+
+.cm-live-image-block img {
+  display: block;
+  max-width: 100%;
 }
 
 .cm-live-block {

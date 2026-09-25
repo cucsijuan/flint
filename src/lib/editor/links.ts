@@ -19,20 +19,28 @@ export function imageTarget(url: string) {
 export const isExternalUrl = (url: string) => EXTERNAL.test(url)
 
 const addResolved = StateEffect.define<Map<string, string | null>>()
-const clearResolved = StateEffect.define<null>()
+const setResolved = StateEffect.define<Map<string, string | null>>()
+const refreshResolved = StateEffect.define<null>()
 
 export const resolvedLinks = StateField.define<Map<string, string | null>>({
   create: () => new Map(),
   update(resolved, transaction) {
     for (const effect of transaction.effects) {
-      if (effect.is(clearResolved)) resolved = new Map()
+      if (effect.is(setResolved)) resolved = effect.value
       if (effect.is(addResolved)) resolved = new Map([...resolved, ...effect.value])
     }
     return resolved
   },
 })
 
-export const refreshLinks = (view: EditorView) => view.dispatch({ effects: clearResolved.of(null) })
+export const linkRevision = StateField.define<number>({
+  create: () => 0,
+  update: (revision, transaction) =>
+    transaction.effects.some((effect) => effect.is(setResolved)) ? revision + 1 : revision,
+})
+
+export const refreshLinks = (view: EditorView) =>
+  view.dispatch({ effects: refreshResolved.of(null) })
 
 function linkTargets(state: EditorState) {
   const targets = new Set<string>()
@@ -52,37 +60,42 @@ function linkResolution(resolve: LinkResolver) {
   return ViewPlugin.fromClass(
     class {
       timer: ReturnType<typeof setTimeout> | undefined
+      isRefreshing = false
 
       constructor(readonly view: EditorView) {
         this.schedule()
       }
 
       update(update: ViewUpdate) {
-        const cleared = update.transactions.some((tr) =>
-          tr.effects.some((e) => e.is(clearResolved)),
+        const isRefresh = update.transactions.some((tr) =>
+          tr.effects.some((e) => e.is(refreshResolved)),
         )
         if (
           update.docChanged ||
-          cleared ||
+          isRefresh ||
           syntaxTree(update.startState) !== syntaxTree(update.state)
         ) {
+          this.isRefreshing ||= isRefresh
           this.schedule()
         }
       }
 
       schedule() {
         clearTimeout(this.timer)
-        this.timer = setTimeout(() => void this.resolveMissing(), RESOLVE_DELAY_MS)
+        this.timer = setTimeout(() => void this.resolve(), RESOLVE_DELAY_MS)
       }
 
-      async resolveMissing() {
+      async resolve() {
+        const isRefresh = this.isRefreshing
+        this.isRefreshing = false
         const known = this.view.state.field(resolvedLinks)
-        const missing = [...linkTargets(this.view.state)].filter((target) => !known.has(target))
-        if (!missing.length) return
-        const paths = await resolve(missing)
-        this.view.dispatch({
-          effects: addResolved.of(new Map(missing.map((target, i) => [target, paths[i]]))),
-        })
+        const targets = [...linkTargets(this.view.state)].filter(
+          (target) => isRefresh || !known.has(target),
+        )
+        if (!targets.length && !isRefresh) return
+        const paths = targets.length ? await resolve(targets) : []
+        const resolved = new Map(targets.map((target, i) => [target, paths[i]]))
+        this.view.dispatch({ effects: (isRefresh ? setResolved : addResolved).of(resolved) })
       }
 
       destroy() {
@@ -140,6 +153,7 @@ function clicks({ openLink, openTag }: Navigation) {
 
 export const navigation = (resolve: LinkResolver, handlers: Navigation) => [
   resolvedLinks,
+  linkRevision,
   linkResolution(resolve),
   clicks(handlers),
 ]

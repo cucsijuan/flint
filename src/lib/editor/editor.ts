@@ -22,6 +22,7 @@ import { completion, type CompletionSources } from './completion'
 import { hashtagSyntax } from './hashtag'
 import { type LinkResolver, type Navigation, navigation } from './links'
 import { livePreview } from './live-preview'
+import { pointer } from './pointer'
 import { type PreviewContext, previewContext } from './preview-context'
 import { wikiLinkSyntax } from './wikilink'
 
@@ -47,7 +48,7 @@ const pluginExtensions = new Compartment()
 const remoteChange = Annotation.define<boolean>()
 
 const modeExtension = (editorMode: EditorMode): Extension =>
-  editorMode === 'live' ? [livePreview, blockPreview] : []
+  editorMode === 'live' ? [pointer, livePreview, blockPreview] : []
 
 export interface EditorOptions {
   doc: string

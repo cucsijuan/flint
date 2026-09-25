@@ -200,8 +200,9 @@ export function previewDecorations(
           if (shown.from > node.from) decorations.push(hide.range(node.from, shown.from))
           decorations.push(
             Decoration.mark({
+              tagName: 'a',
               class: isUnresolved ? 'cm-live-link cm-live-unresolved' : 'cm-live-link',
-              attributes: { 'data-link': destination },
+              attributes: { href: '#', 'data-link': destination },
             }).range(shown.from, shown.to),
           )
           if (node.to > shown.to) decorations.push(hide.range(shown.to, node.to))

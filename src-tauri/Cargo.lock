@@ -1123,6 +1123,10 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.21",
  "trash",
+ "webkit2gtk",
+ "webview2-com",
+ "windows 0.61.3",
+ "windows-core 0.61.2",
  "yaml-rust2",
 ]
 

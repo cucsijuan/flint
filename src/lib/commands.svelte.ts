@@ -39,6 +39,11 @@ class CommandRegistry {
     return this.#commands.filter((command) => command.isAvailable?.() ?? true)
   }
 
+  run(id: string) {
+    const command = this.available().find((candidate) => candidate.id === id)
+    if (command) void command.run()
+  }
+
   handleKeydown(event: KeyboardEvent) {
     if (event.defaultPrevented) return false
     const hotkey = hotkeyOf(event)

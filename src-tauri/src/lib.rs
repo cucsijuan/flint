@@ -1,5 +1,6 @@
 mod commands;
 mod config;
+mod context_menu;
 mod error;
 mod index;
 mod markdown;
@@ -9,6 +10,7 @@ mod vault;
 mod watcher;
 
 use commands::AppState;
+use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -50,6 +52,9 @@ pub fn run() {
             commands::set_enabled_plugins,
         ])
         .setup(|app| {
+            if let Some(window) = app.get_webview_window("main") {
+                context_menu::install(&window)?;
+            }
             if cfg!(debug_assertions) {
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()

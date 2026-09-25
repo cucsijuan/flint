@@ -9,7 +9,8 @@
   import SettingsDialog from './components/SettingsDialog.svelte'
   import Sidebar from './components/Sidebar.svelte'
   import Welcome from './components/Welcome.svelte'
-  import { registerAppCommands } from './lib/app-commands'
+  import { listen } from '@tauri-apps/api/event'
+  import { registerAppCommands, rememberContextTarget } from './lib/app-commands'
   import { checkForUpdates } from './lib/updates'
   import { commands } from './lib/commands.svelte'
   import { pluginHost } from './lib/plugins/host.svelte'
@@ -27,7 +28,13 @@
       }
     })
     const closing = getCurrentWindow().onCloseRequested(() => workspace.flush())
-    return () => void closing.then((unlisten) => unlisten())
+    const menuActions = listen<string>('context-menu-action', ({ payload }) =>
+      commands.run(payload),
+    )
+    return () => {
+      void closing.then((unlisten) => unlisten())
+      void menuActions.then((unlisten) => unlisten())
+    }
   })
 
   $effect(() => {
@@ -35,7 +42,10 @@
   })
 
   function onContextMenu(event: MouseEvent) {
-    const allowsNativeMenu = (event.target as Element).closest('.cm-editor, input, textarea')
+    rememberContextTarget(event.target)
+    const allowsNativeMenu = (event.target as Element).closest(
+      '.cm-editor, .markdown, input, textarea',
+    )
     if (!allowsNativeMenu) event.preventDefault()
   }
 </script>

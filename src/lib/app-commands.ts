@@ -1,10 +1,24 @@
 import { commands } from './commands.svelte'
+import { activeView } from './editor/active'
+import { insertLink, toggleWrap } from './editor/formatting'
 import * as layouts from './layout'
 import { checkForUpdates } from './updates'
 import { workspace } from './workspace.svelte'
 
 const hasVault = () => workspace.info !== null
 const hasNote = () => workspace.notePath !== null
+const isEditing = () => hasNote() && !workspace.activeTab.isReading && activeView() !== null
+
+let contextTarget: Element | null = null
+
+export function rememberContextTarget(target: EventTarget | null) {
+  contextTarget = target instanceof Element ? target : null
+}
+
+function wrap(marker: string) {
+  const view = activeView()
+  if (view) toggleWrap(view, marker)
+}
 
 export function registerAppCommands() {
   commands.register(
@@ -142,6 +156,52 @@ export function registerAppCommands() {
       name: 'Delete current note',
       isAvailable: hasNote,
       run: () => workspace.notePath && workspace.trash(workspace.notePath),
+    },
+    {
+      id: 'toggle-bold',
+      name: 'Toggle bold',
+      hotkey: 'Mod+B',
+      isAvailable: isEditing,
+      run: () => wrap('**'),
+    },
+    {
+      id: 'toggle-italic',
+      name: 'Toggle italic',
+      hotkey: 'Mod+I',
+      isAvailable: isEditing,
+      run: () => wrap('*'),
+    },
+    {
+      id: 'toggle-strikethrough',
+      name: 'Toggle strikethrough',
+      isAvailable: isEditing,
+      run: () => wrap('~~'),
+    },
+    {
+      id: 'toggle-inline-code',
+      name: 'Toggle inline code',
+      isAvailable: isEditing,
+      run: () => wrap('`'),
+    },
+    {
+      id: 'insert-link',
+      name: 'Insert internal link',
+      hotkey: 'Mod+K',
+      isAvailable: isEditing,
+      run: () => {
+        const view = activeView()
+        if (view) insertLink(view)
+      },
+    },
+    {
+      id: 'open-link-in-new-tab',
+      name: 'Open link under the cursor in a new tab',
+      isAvailable: () => contextTarget?.closest('[data-link]') != null,
+      run: () => {
+        const link = contextTarget?.closest<HTMLElement>('[data-link]')?.dataset.link
+        if (link !== undefined)
+          void workspace.openLink(link, workspace.notePath ?? '', { newTab: true })
+      },
     },
     {
       id: 'toggle-reading',

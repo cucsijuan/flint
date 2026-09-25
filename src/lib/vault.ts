@@ -102,6 +102,11 @@ function toBase64(bytes: Uint8Array) {
 
 export const saveAttachment = (path: string, bytes: Uint8Array) =>
   invoke('save_attachment', { path, data: toBase64(bytes) })
+export const importAttachment = (source: string, path: string) =>
+  invoke('import_attachment', { source, path })
+export const saveClipboardImage = (path: string) =>
+  invoke<boolean>('save_clipboard_image', { path })
+export const clipboardFiles = () => invoke<string[]>('clipboard_files')
 export const openExternally = (path: string) => invoke('open_externally', { path })
 export const assetUrl = (root: string, path: string) => convertFileSrc(`${root}/${path}`)
 

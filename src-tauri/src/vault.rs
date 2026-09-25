@@ -1,5 +1,5 @@
-use std::fs::{self, OpenOptions};
-use std::io::Write;
+use std::fs::{self, File, OpenOptions};
+use std::io::{self, Write};
 use std::path::{Component, Path, PathBuf};
 
 use ignore::WalkBuilder;
@@ -99,14 +99,26 @@ impl Vault {
     }
 
     pub fn create_file(&self, path: &str, contents: &[u8]) -> Result<()> {
+        self.new_file(path)?.write_all(contents)?;
+        Ok(())
+    }
+
+    pub fn import_file(&self, source: &Path, path: &str) -> Result<()> {
+        let mut input = File::open(source)?;
+        io::copy(&mut input, &mut self.new_file(path)?)?;
+        Ok(())
+    }
+
+    fn new_file(&self, path: &str) -> Result<File> {
         let target = self.resolve(path)?;
-        let mut file = OpenOptions::new()
+        if let Some(parent) = target.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        OpenOptions::new()
             .write(true)
             .create_new(true)
             .open(&target)
-            .map_err(|e| already_exists_or(e, path))?;
-        file.write_all(contents)?;
-        Ok(())
+            .map_err(|e| already_exists_or(e, path))
     }
 
     pub fn create_note(&self, path: &str) -> Result<()> {
@@ -234,6 +246,22 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let vault = Vault::open(dir.path()).unwrap();
         (dir, vault)
+    }
+
+    #[test]
+    fn imports_files_into_new_folders_without_overwriting() {
+        let (dir, vault) = vault();
+        let source = dir.path().join("outside.png");
+        fs::write(&source, "pixels").unwrap();
+
+        vault.import_file(&source, "attachments/pic.png").unwrap();
+
+        let imported = dir.path().join("attachments/pic.png");
+        assert_eq!(fs::read_to_string(imported).unwrap(), "pixels");
+        assert!(matches!(
+            vault.import_file(&source, "attachments/pic.png"),
+            Err(Error::AlreadyExists(_))
+        ));
     }
 
     #[test]

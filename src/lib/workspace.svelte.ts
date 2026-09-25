@@ -11,6 +11,7 @@ import {
   type LinkUpdate,
   setSetting,
 } from './settings'
+import type { AttachmentSource } from './editor/attachments'
 import { buildTree } from './tree'
 import * as vault from './vault'
 
@@ -219,19 +220,19 @@ class Workspace {
     void setSetting('attachmentFolder', value)
   }
 
-  async saveAttachment(file: File, notePath: string) {
+  async saveAttachment(source: AttachmentSource, notePath: string) {
     const folder = {
       root: '',
       same: parentOf(notePath),
       attachments: ATTACHMENTS_FOLDER,
     }[this.attachmentFolder]
-    const taken = this.#takenPaths()
-    if (folder && !taken.has(folder)) await vault.createFolder(folder)
-    const extension = extensionOf(file.name) || file.type.split('/')[1] || 'png'
-    const isGenericName = !file.name || /^image\.\w+$/i.test(file.name)
-    const base = isGenericName ? `Pasted image ${timestamp()}` : file.name.replace(/\.[^.]+$/, '')
-    const path = uniqueName(taken, folder, base, `.${extension}`)
-    await vault.saveAttachment(path, new Uint8Array(await file.arrayBuffer()))
+    const dot = source.name.lastIndexOf('.')
+    const stem = dot > 0 ? source.name.slice(0, dot) : source.name
+    const extension = extensionOf(source.name) || 'png'
+    const isGenericName = !stem || /^image$/i.test(stem)
+    const base = isGenericName ? `Pasted image ${timestamp()}` : stem
+    const path = uniqueName(this.#takenPaths(), folder, base, `.${extension}`)
+    if (!(await source.write(path))) return null
     await this.#refresh()
     return this.linkTargets.find((target) => target.path === path)?.linkText ?? basename(path)
   }

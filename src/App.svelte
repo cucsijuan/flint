@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { getCurrentWebview } from '@tauri-apps/api/webview'
   import { getCurrentWindow } from '@tauri-apps/api/window'
   import { Pane, PaneGroup, PaneResizer } from 'paneforge'
   import { onMount } from 'svelte'
@@ -10,6 +11,7 @@
   import Sidebar from './components/Sidebar.svelte'
   import Welcome from './components/Welcome.svelte'
   import { listen } from '@tauri-apps/api/event'
+  import { dropFiles } from './lib/editor/attachments'
   import { registerAppCommands, rememberContextTarget } from './lib/app-commands'
   import { checkForUpdates } from './lib/updates'
   import { commands } from './lib/commands.svelte'
@@ -31,8 +33,13 @@
     const menuActions = listen<string>('context-menu-action', ({ payload }) =>
       commands.run(payload),
     )
+    // Only Linux enables native file drops; WebKitGTK reports their position in CSS pixels.
+    const fileDrops = getCurrentWebview().onDragDropEvent(({ payload }) => {
+      if (payload.type === 'drop') dropFiles(payload.paths, payload.position.x, payload.position.y)
+    })
     return () => {
       void closing.then((unlisten) => unlisten())
+      void fileDrops.then((unlisten) => unlisten())
       void menuActions.then((unlisten) => unlisten())
     }
   })
@@ -48,9 +55,22 @@
     )
     if (!allowsNativeMenu) event.preventDefault()
   }
+
+  function preventFileDrop(event: DragEvent) {
+    const types = event.dataTransfer?.types ?? []
+    const isFileDrag = types.includes('Files') || types.includes('text/uri-list')
+    if (!isFileDrag || (event.target as Element).closest('.cm-editor')) return
+    event.preventDefault()
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'none'
+  }
 </script>
 
-<svelte:window onkeydown={(event) => commands.handleKeydown(event)} oncontextmenu={onContextMenu} />
+<svelte:window
+  onkeydown={(event) => commands.handleKeydown(event)}
+  oncontextmenu={onContextMenu}
+  ondragover={preventFileDrop}
+  ondrop={preventFileDrop}
+/>
 
 {#if restored}
   {#if workspace.info}

@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::sync::{Arc, Mutex, RwLock};
 
 use base64::Engine;
@@ -12,7 +13,7 @@ use crate::index::{Backlink, Graph, Index, LinkTarget, TagCount};
 use crate::markdown::Heading;
 use crate::plugins::{self, PluginListing};
 use crate::search::SearchResult;
-use crate::vault::{Entry, Vault};
+use crate::vault::{Entry, Vault, is_attachment_name};
 use crate::watcher::{VaultWatcher, watch};
 
 #[derive(Default)]
@@ -222,6 +223,45 @@ pub fn write_config(state: State<AppState>, name: String, contents: String) -> R
 pub fn save_attachment(state: State<AppState>, path: String, data: String) -> Result<()> {
     let bytes = BASE64.decode(data).map_err(|_| Error::InvalidAttachment)?;
     state.vault()?.create_file(&path, &bytes)
+}
+
+#[tauri::command(async)]
+pub fn import_attachment(state: State<AppState>, source: String, path: String) -> Result<()> {
+    if !is_attachment_name(&source) {
+        return Err(Error::InvalidAttachment);
+    }
+    state.vault()?.import_file(Path::new(&source), &path)
+}
+
+#[tauri::command(async)]
+pub fn save_clipboard_image(state: State<AppState>, path: String) -> Result<bool> {
+    let Ok(image) = arboard::Clipboard::new().and_then(|mut clipboard| clipboard.get_image())
+    else {
+        return Ok(false);
+    };
+    let mut bytes = Vec::new();
+    let width = u32::try_from(image.width).map_err(|_| Error::InvalidAttachment)?;
+    let height = u32::try_from(image.height).map_err(|_| Error::InvalidAttachment)?;
+    let mut encoder = png::Encoder::new(&mut bytes, width, height);
+    encoder.set_color(png::ColorType::Rgba);
+    encoder.set_depth(png::BitDepth::Eight);
+    encoder
+        .write_header()
+        .and_then(|mut writer| writer.write_image_data(&image.bytes))
+        .map_err(|_| Error::InvalidAttachment)?;
+    state.vault()?.create_file(&path, &bytes)?;
+    Ok(true)
+}
+
+#[tauri::command(async)]
+pub fn clipboard_files() -> Vec<String> {
+    arboard::Clipboard::new()
+        .and_then(|mut clipboard| clipboard.get().file_list())
+        .unwrap_or_default()
+        .into_iter()
+        // arboard keeps the \r of each text/uri-list line
+        .filter_map(|path| path.to_str().map(|path| path.trim_end().to_owned()))
+        .collect()
 }
 
 #[tauri::command(async)]

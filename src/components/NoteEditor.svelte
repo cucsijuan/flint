@@ -56,7 +56,7 @@
               assetUrl: (asset) => workspace.assetUrl(asset),
               readNote: vault.readNote,
             },
-            saveAttachment: (file) => workspace.saveAttachment(file, path),
+            saveAttachment: (source) => workspace.saveAttachment(source, path),
           }),
         })
         documents.attach(path, editor)

@@ -1,7 +1,7 @@
-import { invoke } from '@tauri-apps/api/core'
+import { convertFileSrc, invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 
-export type EntryKind = 'file' | 'folder'
+export type EntryKind = 'file' | 'folder' | 'attachment'
 
 export interface Entry {
   path: string
@@ -91,6 +91,19 @@ export interface PluginListing {
   manifest: PluginManifest | null
   error: string | null
 }
+
+function toBase64(bytes: Uint8Array) {
+  let binary = ''
+  for (let index = 0; index < bytes.length; index += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000))
+  }
+  return btoa(binary)
+}
+
+export const saveAttachment = (path: string, bytes: Uint8Array) =>
+  invoke('save_attachment', { path, data: toBase64(bytes) })
+export const openExternally = (path: string) => invoke('open_externally', { path })
+export const assetUrl = (root: string, path: string) => convertFileSrc(`${root}/${path}`)
 
 export const readConfig = (name: string) => invoke<string | null>('read_config', { name })
 export const writeConfig = (name: string, contents: string) =>

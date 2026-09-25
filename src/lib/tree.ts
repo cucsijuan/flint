@@ -10,8 +10,10 @@ export interface TreeNode {
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
 
+const rank = (node: TreeNode) => (node.kind === 'folder' ? 0 : 1)
+
 const compareNodes = (a: TreeNode, b: TreeNode) =>
-  a.kind === b.kind ? collator.compare(a.name, b.name) : a.kind === 'folder' ? -1 : 1
+  rank(a) - rank(b) || collator.compare(a.name, b.name)
 
 export function buildTree(entries: Entry[]): TreeNode[] {
   const nodes = new Map<string, TreeNode>(

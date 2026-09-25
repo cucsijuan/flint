@@ -1,6 +1,10 @@
 import { isWithin, replacePrefix } from './paths'
 
-export type TabView = { kind: 'empty' } | { kind: 'note'; path: string } | { kind: 'graph' }
+export type TabView =
+  | { kind: 'empty' }
+  | { kind: 'note'; path: string }
+  | { kind: 'file'; path: string }
+  | { kind: 'graph' }
 
 export interface Tab {
   id: string
@@ -71,8 +75,9 @@ export function activeTab(layout: Layout) {
   return group.tabs.find((tab) => tab.id === group.activeTabId) ?? group.tabs[0]
 }
 
-export const sameView = (a: TabView, b: TabView) =>
-  a.kind === b.kind && (a.kind !== 'note' || (b.kind === 'note' && a.path === b.path))
+const pathOf = (view: TabView) => ('path' in view ? view.path : null)
+
+export const sameView = (a: TabView, b: TabView) => a.kind === b.kind && pathOf(a) === pathOf(b)
 
 function mapNodes(node: LayoutNode, map: (group: Group) => LayoutNode | null): LayoutNode | null {
   if (node.type === 'group') return map(node)
@@ -273,18 +278,18 @@ function mapViews(layout: Layout, map: (view: TabView) => TabView): Layout {
 
 export const renamePaths = (layout: Layout, from: string, to: string) =>
   mapViews(layout, (view) =>
-    view.kind === 'note' ? { ...view, path: replacePrefix(view.path, from, to) } : view,
+    'path' in view ? { ...view, path: replacePrefix(view.path, from, to) } : view,
   )
 
 export function closePaths(layout: Layout, path: string): Layout {
-  const isGone = (view: TabView) => view.kind === 'note' && isWithin(view.path, path)
+  const isGone = (view: TabView) => 'path' in view && isWithin(view.path, path)
   return mapViews(layout, (view) => (isGone(view) ? EMPTY : view))
 }
 
 export function openPaths(layout: Layout) {
   return new Set(
     groups(layout.root).flatMap((group) =>
-      group.tabs.flatMap((tab) => (tab.view.kind === 'note' ? [tab.view.path] : [])),
+      group.tabs.flatMap((tab) => ('path' in tab.view ? [tab.view.path] : [])),
     ),
   )
 }

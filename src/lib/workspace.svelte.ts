@@ -3,7 +3,7 @@ import { documents } from './documents'
 import { noteOpened, vaultChanged } from './events'
 import type { GraphFilters } from './graph'
 import * as layouts from './layout'
-import { NOTE_EXTENSION, basename, join, parentOf, uniqueName } from './paths'
+import { NOTE_EXTENSION, basename, isImage, join, parentOf, uniqueName } from './paths'
 import { getSetting, setSetting, type EditorMode, type LinkUpdate } from './settings'
 import { buildTree } from './tree'
 import * as vault from './vault'
@@ -118,6 +118,21 @@ class Workspace {
     this.updateLayout((layout) =>
       newTab ? layouts.addTab(layout, view) : layouts.navigate(layout, view),
     )
+  }
+
+  async openFile(path: string, { newTab = false }: OpenOptions = {}) {
+    if (!isImage(path)) {
+      await this.#run(() => vault.openExternally(path))
+      return
+    }
+    const view: layouts.TabView = { kind: 'file', path }
+    this.updateLayout((layout) =>
+      newTab ? layouts.addTab(layout, view) : layouts.navigate(layout, view),
+    )
+  }
+
+  assetUrl(path: string) {
+    return this.info ? vault.assetUrl(this.info.root, path) : ''
   }
 
   openNoteAt(path: string, target: Omit<Jump, 'tabId'>, options?: OpenOptions) {

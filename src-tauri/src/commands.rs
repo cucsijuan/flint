@@ -1,7 +1,10 @@
 use std::sync::{Arc, Mutex, RwLock};
 
+use base64::Engine;
+use base64::engine::general_purpose::STANDARD as BASE64;
 use serde::Serialize;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
+use tauri_plugin_opener::OpenerExt;
 
 use crate::config;
 use crate::error::{Error, Result};
@@ -55,6 +58,7 @@ pub fn open_vault(app: AppHandle, state: State<AppState>, path: String) -> Resul
             .file_name()
             .map_or_else(String::new, |name| name.to_string_lossy().into_owned()),
     };
+    app.asset_protocol_scope().allow_directory(root, true)?;
     let index = Arc::new(RwLock::new(Index::build(&vault)?));
     let watcher = watch(app, vault.clone(), index.clone())?;
     *state.0.lock().unwrap_or_else(|e| e.into_inner()) = Some(OpenVault {
@@ -212,4 +216,18 @@ pub fn read_config(state: State<AppState>, name: String) -> Result<Option<String
 #[tauri::command(async)]
 pub fn write_config(state: State<AppState>, name: String, contents: String) -> Result<()> {
     config::write(&state.vault()?, &name, &contents)
+}
+
+#[tauri::command(async)]
+pub fn save_attachment(state: State<AppState>, path: String, data: String) -> Result<()> {
+    let bytes = BASE64.decode(data).map_err(|_| Error::InvalidAttachment)?;
+    state.vault()?.create_file(&path, &bytes)
+}
+
+#[tauri::command(async)]
+pub fn open_externally(app: AppHandle, state: State<AppState>, path: String) -> Result<()> {
+    let absolute = state.vault()?.absolute(&path)?;
+    Ok(app
+        .opener()
+        .open_path(absolute.to_string_lossy(), None::<&str>)?)
 }

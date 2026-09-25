@@ -6,7 +6,7 @@ use serde::Serialize;
 use crate::error::Result;
 use crate::markdown::{Heading, WikiLink, summarize};
 use crate::search::{Note, Query, SearchResult};
-use crate::vault::{EntryKind, Vault, is_within, parent_of};
+use crate::vault::{EntryKind, Vault, is_attachment_name, is_within, parent_of};
 
 const NOTE_EXTENSION: &str = ".md";
 
@@ -77,6 +77,7 @@ pub struct TagCount {
 #[derive(Debug, Default)]
 pub struct Index {
     notes: BTreeMap<String, IndexedNote>,
+    attachments: BTreeSet<String>,
 }
 
 impl Index {
@@ -88,10 +89,18 @@ impl Index {
 
     pub fn refresh(&mut self, vault: &Vault, path: &str) -> Result<()> {
         self.notes.retain(|note, _| !is_within(note, path));
+        self.attachments
+            .retain(|attachment| !is_within(attachment, path));
         for entry in vault.entries_under(path)? {
-            if entry.kind == EntryKind::File {
-                let text = vault.read(&entry.path)?;
-                self.insert(entry.path, &text);
+            match entry.kind {
+                EntryKind::File => {
+                    let text = vault.read(&entry.path)?;
+                    self.insert(entry.path, &text);
+                }
+                EntryKind::Attachment => {
+                    self.attachments.insert(entry.path);
+                }
+                EntryKind::Folder => {}
             }
         }
         Ok(())
@@ -127,7 +136,11 @@ impl Index {
     }
 
     pub fn resolve(&self, source: &str, target: &str) -> Option<String> {
-        let wanted = note_key(target.trim().trim_start_matches('/'));
+        let target = target.trim().trim_start_matches('/');
+        if is_attachment_name(target) {
+            return self.resolve_attachment(source, target);
+        }
+        let wanted = note_key(target);
         if wanted.is_empty() {
             return self.notes.contains_key(source).then(|| source.to_owned());
         }
@@ -162,7 +175,36 @@ impl Index {
         })
     }
 
+    fn resolve_attachment(&self, source: &str, target: &str) -> Option<String> {
+        let wanted = target.to_lowercase();
+        let suffix = format!("/{wanted}");
+        let source_folder = parent_of(source);
+        self.attachments
+            .iter()
+            .filter(|path| {
+                let path = path.to_lowercase();
+                path == wanted || path.ends_with(&suffix)
+            })
+            .min_by_key(|path| (Reverse(parent_of(path) == source_folder), path.len(), *path))
+            .cloned()
+    }
+
     pub fn link_text(&self, path: &str) -> String {
+        if self.attachments.contains(path) {
+            let name = path.rsplit('/').next().unwrap_or(path);
+            let shares_name = self
+                .attachments
+                .iter()
+                .filter(|other| {
+                    other
+                        .rsplit('/')
+                        .next()
+                        .is_some_and(|other| other.eq_ignore_ascii_case(name))
+                })
+                .count()
+                > 1;
+            return if shares_name { path } else { name }.to_owned();
+        }
         let without_extension = strip_note_extension(path);
         let name = without_extension
             .rsplit('/')
@@ -192,6 +234,11 @@ impl Index {
                         alias,
                     })
             })
+            .chain(self.attachments.iter().map(|path| LinkTarget {
+                path: path.clone(),
+                link_text: self.link_text(path),
+                alias: None,
+            }))
             .collect()
     }
 
@@ -249,15 +296,19 @@ impl Index {
                 if link.link.target.is_empty() {
                     continue;
                 }
-                let target = self.resolve(source, &link.link.target).unwrap_or_else(|| {
-                    let id = format!("?{}", note_key(link.link.target.trim()));
-                    nodes.entry(id.clone()).or_insert_with(|| GraphNode {
-                        id: id.clone(),
-                        label: link.link.target.trim().to_owned(),
-                        kind: NodeKind::Unresolved,
-                    });
-                    id
-                });
+                let target = match self.resolve(source, &link.link.target) {
+                    Some(target) if self.attachments.contains(&target) => continue,
+                    Some(target) => target,
+                    None => {
+                        let id = format!("?{}", note_key(link.link.target.trim()));
+                        nodes.entry(id.clone()).or_insert_with(|| GraphNode {
+                            id: id.clone(),
+                            label: link.link.target.trim().to_owned(),
+                            kind: NodeKind::Unresolved,
+                        });
+                        id
+                    }
+                };
                 connect(source, target);
             }
             for tag in &note.tags {
@@ -329,6 +380,7 @@ impl Index {
         let moves: HashMap<String, String> = self
             .notes
             .keys()
+            .chain(&self.attachments)
             .filter(|path| is_within(path, from))
             .map(|path| (path.clone(), format!("{to}{}", &path[from.len()..])))
             .collect();
@@ -346,6 +398,9 @@ impl Index {
         for (old, new) in &moves {
             if let Some(note) = self.notes.remove(old) {
                 self.notes.insert(new.clone(), note);
+            }
+            if self.attachments.remove(old) {
+                self.attachments.insert(new.clone());
             }
         }
 
@@ -525,6 +580,45 @@ mod tests {
                 ("a.md", "folder/b.md"),
                 ("folder/b.md", "#topic"),
             ]
+        );
+    }
+
+    #[test]
+    fn resolves_and_renames_attachments() {
+        let dir = TempDir::new().unwrap();
+        let vault = Vault::open(dir.path()).unwrap();
+        vault.create_folder("assets").unwrap();
+        vault.create_file("assets/Photo.PNG", b"png").unwrap();
+        vault.create_file("other.png", b"png").unwrap();
+        vault
+            .write(
+                "Note.md",
+                "![[photo.png]] ![[assets/Photo.PNG|small]] [[Missing.png]]",
+            )
+            .unwrap();
+        let mut index = Index::build(&vault).unwrap();
+
+        assert_eq!(
+            index.resolve("Note.md", "photo.png").as_deref(),
+            Some("assets/Photo.PNG")
+        );
+        assert_eq!(index.resolve("Note.md", "Missing.png"), None);
+        assert_eq!(index.link_text("assets/Photo.PNG"), "Photo.PNG");
+        assert!(
+            index
+                .graph()
+                .links
+                .iter()
+                .all(|link| link.target != "assets/Photo.PNG")
+        );
+
+        let updated = index
+            .update_links_for_rename(&vault, "assets/Photo.PNG", "assets/Cover.png")
+            .unwrap();
+        assert_eq!(updated, 2);
+        assert_eq!(
+            vault.read("Note.md").unwrap(),
+            "![[Cover.png]] ![[Cover.png|small]] [[Missing.png]]"
         );
     }
 

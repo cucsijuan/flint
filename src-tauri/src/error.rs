@@ -10,6 +10,12 @@ pub enum Error {
     AlreadyExists(String),
     #[error("invalid search: {0}")]
     InvalidQuery(String),
+    #[error("invalid attachment data")]
+    InvalidAttachment,
+    #[error(transparent)]
+    Tauri(#[from] tauri::Error),
+    #[error(transparent)]
+    Opener(#[from] tauri_plugin_opener::Error),
     #[error(transparent)]
     Io(#[from] std::io::Error),
     #[error(transparent)]

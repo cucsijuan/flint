@@ -25,7 +25,7 @@ export interface SidebarTab {
 
 export interface NoteEntry {
   path: string
-  kind: 'file' | 'folder'
+  kind: 'file' | 'folder' | 'attachment'
 }
 
 export interface FlintApi {

@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { ChevronRight, FileText } from '@lucide/svelte'
+  import { ChevronRight, File, FileText, Image } from '@lucide/svelte'
   import { ContextMenu } from 'bits-ui'
   import { SvelteSet } from 'svelte/reactivity'
-  import { noteTitle } from '../lib/paths'
+  import { isImage, noteTitle } from '../lib/paths'
   import type { TreeNode } from '../lib/tree'
   import { workspace } from '../lib/workspace.svelte'
 
@@ -18,6 +18,7 @@
   function toggle(node: TreeNode, event: MouseEvent) {
     const newTab = event.ctrlKey || event.metaKey || event.button === 1
     if (node.kind === 'file') workspace.openNote(node.path, { newTab })
+    else if (node.kind === 'attachment') void workspace.openFile(node.path, { newTab })
     else if (expanded.has(node.path)) expanded.delete(node.path)
     else expanded.add(node.path)
   }
@@ -65,8 +66,12 @@
             <span class="chevron" class:open={expanded.has(node.path)}>
               <ChevronRight size={14} />
             </span>
-          {:else}
+          {:else if node.kind === 'file'}
             <FileText size={14} />
+          {:else if isImage(node.path)}
+            <Image size={14} />
+          {:else}
+            <File size={14} />
           {/if}
           <span class="name">{displayName(node)}</span>
         </button>
@@ -84,7 +89,7 @@
   </ContextMenu.Trigger>
   <ContextMenu.Portal>
     <ContextMenu.Content class="menu">
-      {#if target?.kind !== 'file'}
+      {#if !target || target.kind === 'folder'}
         <ContextMenu.Item
           class="menu-item"
           onSelect={() => expandThen(targetFolder, () => workspace.createNote(targetFolder))}

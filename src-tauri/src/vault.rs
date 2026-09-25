@@ -9,12 +9,17 @@ use tempfile::NamedTempFile;
 use crate::error::{Error, Result};
 
 const NOTE_EXTENSION: &str = "md";
+const ATTACHMENT_EXTENSIONS: [&str; 16] = [
+    "png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "avif", "pdf", "mp3", "wav", "ogg", "m4a",
+    "mp4", "webm", "mov",
+];
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum EntryKind {
     File,
     Folder,
+    Attachment,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -68,6 +73,8 @@ impl Vault {
                 EntryKind::Folder
             } else if is_note(item.path()) {
                 EntryKind::File
+            } else if is_attachment(item.path()) {
+                EntryKind::Attachment
             } else {
                 continue;
             };
@@ -88,6 +95,17 @@ impl Vault {
         let mut file = NamedTempFile::new_in(parent)?;
         file.write_all(contents.as_bytes())?;
         file.persist(&target).map_err(|e| e.error)?;
+        Ok(())
+    }
+
+    pub fn create_file(&self, path: &str, contents: &[u8]) -> Result<()> {
+        let target = self.resolve(path)?;
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&target)
+            .map_err(|e| already_exists_or(e, path))?;
+        file.write_all(contents)?;
         Ok(())
     }
 
@@ -138,6 +156,10 @@ impl Vault {
         Ok(trash::delete(self.resolve(path)?)?)
     }
 
+    pub fn absolute(&self, path: &str) -> Result<PathBuf> {
+        self.resolve(path)
+    }
+
     pub fn relative(&self, absolute: &Path) -> Option<String> {
         let relative = absolute.strip_prefix(&self.root).ok()?;
         let parts: Option<Vec<&str>> = relative.iter().map(|part| part.to_str()).collect();
@@ -171,6 +193,23 @@ pub fn parent_of(path: &str) -> &str {
 
 pub fn is_hidden(relative: &str) -> bool {
     relative.split('/').any(|part| part.starts_with('.'))
+}
+
+fn is_attachment(path: &Path) -> bool {
+    path.extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(is_attachment_extension)
+}
+
+pub fn is_attachment_name(name: &str) -> bool {
+    name.rsplit_once('.')
+        .is_some_and(|(_, extension)| is_attachment_extension(extension))
+}
+
+fn is_attachment_extension(extension: &str) -> bool {
+    ATTACHMENT_EXTENSIONS
+        .iter()
+        .any(|known| extension.eq_ignore_ascii_case(known))
 }
 
 fn is_note(path: &Path) -> bool {
@@ -223,14 +262,15 @@ mod tests {
     }
 
     #[test]
-    fn lists_folders_and_notes_but_skips_hidden_and_other_files() {
+    fn lists_folders_notes_and_attachments_but_skips_hidden_and_other_files() {
         let (dir, vault) = vault();
         fs::create_dir_all(dir.path().join("folder")).unwrap();
         fs::create_dir_all(dir.path().join(".obsidian")).unwrap();
         for file in [
             "folder/nested.md",
             "root.MD",
-            "image.png",
+            "image.PNG",
+            "archive.zip",
             ".obsidian/app.md",
         ] {
             fs::write(dir.path().join(file), "").unwrap();
@@ -242,6 +282,7 @@ mod tests {
         let expected = [
             ("folder", EntryKind::Folder),
             ("folder/nested.md", EntryKind::File),
+            ("image.PNG", EntryKind::Attachment),
             ("root.MD", EntryKind::File),
         ]
         .map(|(path, kind)| Entry {

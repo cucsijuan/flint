@@ -18,6 +18,7 @@ pub fn run() {
         .plugin(tauri_plugin_window_state::Builder::new().build())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_opener::init())
         .manage(AppState::default())
         .invoke_handler(tauri::generate_handler![
             commands::launch_vault,
@@ -37,6 +38,8 @@ pub fn run() {
             commands::search,
             commands::tags,
             commands::graph,
+            commands::save_attachment,
+            commands::open_externally,
             commands::read_config,
             commands::write_config,
             commands::list_plugins,

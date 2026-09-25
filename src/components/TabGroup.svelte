@@ -9,12 +9,13 @@
     draggable,
     dropTargetForElements,
   } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
-  import { FileText, Plus, Waypoints, X } from '@lucide/svelte'
+  import { FileText, Image, Plus, Waypoints, X } from '@lucide/svelte'
   import { ContextMenu } from 'bits-ui'
   import * as layouts from '../lib/layout'
-  import { noteTitle } from '../lib/paths'
+  import { basename, noteTitle } from '../lib/paths'
   import { workspace } from '../lib/workspace.svelte'
   import EmptyTab from './EmptyTab.svelte'
+  import FileView from './FileView.svelte'
   import GraphPanel from './GraphPanel.svelte'
   import NoteEditor from './NoteEditor.svelte'
 
@@ -35,6 +36,7 @@
 
   function title(view: layouts.TabView) {
     if (view.kind === 'note') return noteTitle(view.path)
+    if (view.kind === 'file') return basename(view.path)
     return view.kind === 'graph' ? 'Graph view' : 'New tab'
   }
 
@@ -161,14 +163,20 @@
             role="tab"
             tabindex="0"
             aria-selected={isCurrent}
-            title={tab.view.kind === 'note' ? tab.view.path : undefined}
+            title={'path' in tab.view ? tab.view.path : undefined}
             onclick={() => activate(tab.id)}
             onkeydown={(event) => event.key === 'Enter' && activate(tab.id)}
             onmouseup={(event) => onTabMouseUp(event, tab)}
             oncontextmenu={() => (menuTab = tab)}
             {@attach tabDragAndDrop(tab, index)}
           >
-            {#if tab.view.kind === 'graph'}<Waypoints size={13} />{:else}<FileText size={13} />{/if}
+            {#if tab.view.kind === 'graph'}
+              <Waypoints size={13} />
+            {:else if tab.view.kind === 'file'}
+              <Image size={13} />
+            {:else}
+              <FileText size={13} />
+            {/if}
             <span class="title">{title(tab.view)}</span>
             <button
               class="close"
@@ -231,6 +239,8 @@
           {#key tab.view.path}
             <NoteEditor {tab} path={tab.view.path} isActive={isActiveGroup && isCurrent} />
           {/key}
+        {:else if tab.view.kind === 'file'}
+          <FileView path={tab.view.path} />
         {:else if tab.view.kind === 'graph'}
           <GraphPanel />
         {:else}

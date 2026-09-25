@@ -11,6 +11,16 @@ export const noteTitle = (path: string) => {
   return name.toLowerCase().endsWith(NOTE_EXTENSION) ? name.slice(0, -NOTE_EXTENSION.length) : name
 }
 
+export const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'avif'])
+
+export const extensionOf = (path: string) => {
+  const name = basename(path)
+  const dot = name.lastIndexOf('.')
+  return dot === -1 ? '' : name.slice(dot + 1).toLowerCase()
+}
+
+export const isImage = (path: string) => IMAGE_EXTENSIONS.has(extensionOf(path))
+
 export const isWithin = (path: string, folder: string) =>
   path === folder || path.startsWith(`${folder}/`)
 

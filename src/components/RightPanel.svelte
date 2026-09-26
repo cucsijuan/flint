@@ -1,10 +1,11 @@
 <script lang="ts">
-  import { Link, Tags, Waypoints } from '@lucide/svelte'
+  import { Link, ListTree, Tags, Waypoints } from '@lucide/svelte'
   import { Tabs } from 'bits-ui'
   import { pluginHost } from '../lib/plugins/host.svelte'
   import { workspace } from '../lib/workspace.svelte'
   import BacklinksPanel from './BacklinksPanel.svelte'
   import GraphPanel from './GraphPanel.svelte'
+  import OutlinePanel from './OutlinePanel.svelte'
   import PluginTab from './PluginTab.svelte'
   import TagsPanel from './TagsPanel.svelte'
 </script>
@@ -14,6 +15,9 @@
     <Tabs.List class="tab-list">
       <Tabs.Trigger class="tab" value="backlinks" title="Backlinks"><Link size={16} /></Tabs.Trigger
       >
+      <Tabs.Trigger class="tab" value="outline" title="Outline">
+        <ListTree size={16} />
+      </Tabs.Trigger>
       <Tabs.Trigger class="tab" value="tags" title="Tags"><Tags size={16} /></Tabs.Trigger>
       <Tabs.Trigger class="tab" value="graph" title="Local graph">
         <Waypoints size={16} />
@@ -27,6 +31,13 @@
     <Tabs.Content class="tab-content" value="backlinks">
       {#if workspace.notePath}
         <BacklinksPanel path={workspace.notePath} />
+      {:else}
+        <p class="empty">No note is open.</p>
+      {/if}
+    </Tabs.Content>
+    <Tabs.Content class="tab-content" value="outline">
+      {#if workspace.notePath}
+        <OutlinePanel path={workspace.notePath} />
       {:else}
         <p class="empty">No note is open.</p>
       {/if}

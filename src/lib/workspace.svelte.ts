@@ -57,7 +57,7 @@ const writeJsonConfig = (name: string, value: object) =>
 const timestamp = () => new Date().toISOString().replace(/\D/g, '').slice(0, 14)
 
 export type LeftTab = 'files' | 'search'
-export type RightTab = 'backlinks' | 'tags' | 'graph' | (string & {})
+export type RightTab = 'backlinks' | 'outline' | 'tags' | 'graph' | (string & {})
 
 export interface Jump {
   tabId: string

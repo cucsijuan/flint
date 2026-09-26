@@ -118,6 +118,12 @@ export function registerAppCommands() {
       run: () => workspace.updateLayout(layouts.goForward),
     },
     {
+      id: 'show-outline',
+      name: 'Show outline',
+      isAvailable: hasVault,
+      run: () => workspace.showRightTab('outline'),
+    },
+    {
       id: 'show-local-graph',
       name: 'Show local graph',
       isAvailable: hasVault,

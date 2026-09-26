@@ -3,7 +3,7 @@
   import { onMount } from 'svelte'
   import { commands } from '../lib/commands.svelte'
   import { documents } from '../lib/documents'
-  import { setActiveView } from '../lib/editor/active'
+  import { activeView, setActiveView } from '../lib/editor/active'
   import {
     createEditorState,
     scrollToHeading,
@@ -69,7 +69,7 @@
       isMounted = false
       if (!editor) return
       documents.detach(path, editor)
-      if (isActive) setActiveView(null)
+      if (activeView() === editor) setActiveView(null)
       editor.destroy()
     }
   })

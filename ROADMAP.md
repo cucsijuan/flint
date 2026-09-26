@@ -71,11 +71,15 @@ With M5, the MVP is complete. [v0.1.0](https://github.com/cucsijuan/flint/releas
 
 Interactive rendered content (tasks you can check in reading view and in embedded notes, foldable callouts and headings, a copy button on code blocks, and a plugin API to render and handle custom elements), daily notes, templates, outline, bookmarks, a properties editor for frontmatter, and standard Markdown links to notes.
 
-### M10: Customization
+### M10: macOS
+
+Builds, installers and automatic updates for macOS (Intel and Apple Silicon), with everything from M0 to M9 working as it does on Linux and Windows: pasting and dropping images, the editor context menu with formatting actions, spell checking, and hotkeys with ⌘.
+
+### M11: Customization
 
 Appearance (theme, fonts), customizable hotkeys, per-vault settings, and graph color groups.
 
-### M11: Plugin ecosystem
+### M12: Plugin ecosystem
 
 Browsing and installing community plugins, hot reload, a settings-page API, tab icons, and published API types.
 
@@ -88,7 +92,7 @@ Features that are not scheduled in a milestone yet.
 - **Search:** parentheses for grouping terms, more operators (`line:`, `section:`, `content:`), sort options.
 - **Graph:** force settings.
 - **Rich content:** editing tables as a grid in live preview, pasting or dropping non-image attachments, dropping images on the reading view.
-- **Distribution:** macOS builds, Windows code signing.
+- **Distribution:** Windows code signing.
 - **Testing:** run the end-to-end tests on Windows too (`msedgedriver` can't attach to WebView2 in CI yet).
 - **Later:** sync, canvas, mobile.
 - **Testing:** verify light/dark theme switching (graph colors in particular).

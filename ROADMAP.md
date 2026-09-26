@@ -69,7 +69,7 @@ With M5, the MVP is complete. [v0.1.0](https://github.com/cucsijuan/flint/releas
 
 ### M9: Core workflows
 
-Daily notes, templates, outline, bookmarks, a properties editor for frontmatter, and standard Markdown links to notes.
+Interactive rendered content (tasks you can check in reading view and in embedded notes, foldable callouts and headings, a copy button on code blocks, and a plugin API to render and handle custom elements), daily notes, templates, outline, bookmarks, a properties editor for frontmatter, and standard Markdown links to notes.
 
 ### M10: Customization
 

@@ -137,6 +137,36 @@ export function registerAppCommands() {
       run: () => workspace.createNote(),
     },
     {
+      id: 'open-daily-note',
+      name: "Open today's daily note",
+      isAvailable: hasVault,
+      run: () => workspace.openDailyNote(),
+    },
+    {
+      id: 'open-previous-daily-note',
+      name: 'Open previous daily note',
+      hotkey: 'Mod+Alt+ArrowLeft',
+      isAvailable: hasVault,
+      run: () => workspace.openDailyNote(-1),
+    },
+    {
+      id: 'open-next-daily-note',
+      name: 'Open next daily note',
+      hotkey: 'Mod+Alt+ArrowRight',
+      isAvailable: hasVault,
+      run: () => workspace.openDailyNote(1),
+    },
+    {
+      id: 'insert-template',
+      name: 'Insert template',
+      hotkey: 'Mod+Shift+T',
+      isAvailable: isEditing,
+      run: () => {
+        if (workspace.templateNotes.length) workspace.isTemplatePickerOpen = true
+        else workspace.notify(`No templates in the "${workspace.templates.folder}" folder`)
+      },
+    },
+    {
       id: 'new-folder',
       name: 'Create new folder',
       isAvailable: hasVault,

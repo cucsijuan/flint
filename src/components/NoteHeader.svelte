@@ -1,10 +1,21 @@
 <script lang="ts">
-  import { ArrowLeft, ArrowRight, BookOpen, PanelRight, Pencil } from '@lucide/svelte'
+  import {
+    ArrowLeft,
+    ArrowRight,
+    BookOpen,
+    ChevronLeft,
+    ChevronRight,
+    PanelRight,
+    Pencil,
+  } from '@lucide/svelte'
+  import { dailyNoteDate } from '../lib/dates'
   import { goBack, goForward, type Tab, toggleReading } from '../lib/layout'
   import { noteTitle } from '../lib/paths'
   import { workspace } from '../lib/workspace.svelte'
 
   let { tab, path }: { tab: Tab; path: string } = $props()
+
+  const isDailyNote = $derived(dailyNoteDate(path, workspace.dailyNotes) !== null)
 </script>
 
 <header>
@@ -26,7 +37,27 @@
       <ArrowRight size={16} />
     </button>
   </div>
-  <h1>{noteTitle(path)}</h1>
+  <div class="title">
+    {#if isDailyNote}
+      <button
+        class="icon"
+        title="Previous daily note (Ctrl+Alt+←)"
+        onclick={() => workspace.openDailyNote(-1)}
+      >
+        <ChevronLeft size={16} />
+      </button>
+    {/if}
+    <h1>{noteTitle(path)}</h1>
+    {#if isDailyNote}
+      <button
+        class="icon"
+        title="Next daily note (Ctrl+Alt+→)"
+        onclick={() => workspace.openDailyNote(1)}
+      >
+        <ChevronRight size={16} />
+      </button>
+    {/if}
+  </div>
   <div class="actions">
     <button
       class="icon"
@@ -56,8 +87,17 @@
     border-bottom: 1px solid var(--border);
   }
 
-  h1 {
+  .title {
+    display: flex;
     flex: 1;
+    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  h1 {
+    min-width: 0;
     margin: 0;
     overflow: hidden;
     color: var(--text-muted);

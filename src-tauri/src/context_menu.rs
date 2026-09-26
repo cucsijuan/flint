@@ -3,12 +3,13 @@ use tauri::{Emitter, WebviewWindow};
 pub const CONTEXT_MENU_ACTION: &str = "context-menu-action";
 
 const LINK_ACTIONS: [(&str, &str); 1] = [("open-link-in-new-tab", "Open link in new tab")];
-const EDIT_ACTIONS: [(&str, &str); 5] = [
+const EDIT_ACTIONS: [(&str, &str); 6] = [
     ("toggle-bold", "Bold"),
     ("toggle-italic", "Italic"),
     ("toggle-strikethrough", "Strikethrough"),
     ("toggle-inline-code", "Code"),
     ("insert-link", "Insert link"),
+    ("insert-template", "Insert template"),
 ];
 
 fn actions(is_link: bool, is_editable: bool) -> Vec<(&'static str, &'static str)> {

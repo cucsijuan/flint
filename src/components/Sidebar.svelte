@@ -1,5 +1,13 @@
 <script lang="ts">
-  import { FilePlus, Files, FolderOpen, FolderPlus, Search, Settings } from '@lucide/svelte'
+  import {
+    CalendarDays,
+    FilePlus,
+    Files,
+    FolderOpen,
+    FolderPlus,
+    Search,
+    Settings,
+  } from '@lucide/svelte'
   import { Tabs } from 'bits-ui'
   import { workspace } from '../lib/workspace.svelte'
   import FileTree from './FileTree.svelte'
@@ -11,6 +19,9 @@
     <span class="vault" title={workspace.info?.root}>{workspace.info?.name}</span>
     <button class="icon" title="New note (Ctrl+N)" onclick={() => workspace.createNote()}>
       <FilePlus size={16} />
+    </button>
+    <button class="icon" title="Open today's daily note" onclick={() => workspace.openDailyNote()}>
+      <CalendarDays size={16} />
     </button>
     <button class="icon" title="New folder" onclick={() => workspace.createFolder()}>
       <FolderPlus size={16} />

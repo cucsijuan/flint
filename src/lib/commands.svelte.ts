@@ -20,8 +20,18 @@ export function hotkeyOf(event: KeyboardEvent) {
     .join('+')
 }
 
+const KEY_SYMBOLS: Record<string, string> = {
+  ArrowLeft: '←',
+  ArrowRight: '→',
+  ArrowUp: '↑',
+  ArrowDown: '↓',
+}
+
 export const displayHotkey = (hotkey: string) =>
-  hotkey.replace('Mod', isMac ? '⌘' : 'Ctrl').replaceAll('+', isMac ? '' : '+')
+  hotkey
+    .replace('Mod', isMac ? '⌘' : 'Ctrl')
+    .replace(/Arrow\w+/, (key) => KEY_SYMBOLS[key] ?? key)
+    .replaceAll('+', isMac ? '' : '+')
 
 class CommandRegistry {
   #commands = $state<Command[]>([])

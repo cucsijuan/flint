@@ -9,6 +9,7 @@
   import RightPanel from './components/RightPanel.svelte'
   import SettingsDialog from './components/SettingsDialog.svelte'
   import Sidebar from './components/Sidebar.svelte'
+  import TemplatePicker from './components/TemplatePicker.svelte'
   import Welcome from './components/Welcome.svelte'
   import { listen } from '@tauri-apps/api/event'
   import { dropFiles } from './lib/editor/attachments'
@@ -97,6 +98,7 @@
 <SettingsDialog />
 <QuickSwitcher />
 <CommandPalette />
+<TemplatePicker />
 
 {#if workspace.notice}
   <div class="notice" role="alert">{workspace.notice}</div>

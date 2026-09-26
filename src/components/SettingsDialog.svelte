@@ -1,6 +1,8 @@
 <script lang="ts">
   import { Dialog } from 'bits-ui'
   import type { AttachmentFolder, EditorMode, LinkUpdate } from '../lib/settings'
+  import { dayjs } from '../lib/dates'
+  import { NOTE_EXTENSION } from '../lib/paths'
   import { workspace } from '../lib/workspace.svelte'
   import PluginSettings from './PluginSettings.svelte'
 
@@ -83,7 +85,68 @@
           onchange={(event) => workspace.setCheckForUpdates(event.currentTarget.checked)}
         />
       </label>
-      {#if workspace.info}<PluginSettings />{/if}
+      {#if workspace.info}
+        <h3>Daily notes</h3>
+        <label class="setting">
+          <span>
+            <strong>Folder</strong>
+            <small>Where new daily notes go. Empty means the vault root.</small>
+          </span>
+          <input
+            value={workspace.dailyNotes.folder}
+            placeholder="Vault root"
+            onchange={(event) =>
+              workspace.setDailyNotes({ folder: event.currentTarget.value.trim() })}
+          />
+        </label>
+        <label class="setting">
+          <span>
+            <strong>Date format</strong>
+            <small>Today: {dayjs().format(workspace.dailyNotes.format || 'YYYY-MM-DD')}</small>
+          </span>
+          <input
+            value={workspace.dailyNotes.format}
+            placeholder="YYYY-MM-DD"
+            oninput={(event) =>
+              workspace.setDailyNotes({ format: event.currentTarget.value.trim() })}
+          />
+        </label>
+        <label class="setting">
+          <span>
+            <strong>Template</strong>
+            <small>A note whose contents start every new daily note.</small>
+          </span>
+          <input
+            value={workspace.dailyNotes.template}
+            placeholder="Templates/Daily"
+            list="template-notes"
+            onchange={(event) =>
+              workspace.setDailyNotes({ template: event.currentTarget.value.trim() })}
+          />
+        </label>
+        <h3>Templates</h3>
+        <label class="setting">
+          <span>
+            <strong>Folder</strong>
+            <small>
+              Notes here can be inserted with "Insert template". Use {'{{title}}'}, {'{{date}}'},
+              {'{{time}}'} or {'{{date:YYYY-MM-DD}}'}.
+            </small>
+          </span>
+          <input
+            value={workspace.templates.folder}
+            placeholder="Templates"
+            onchange={(event) =>
+              workspace.setTemplates({ folder: event.currentTarget.value.trim() })}
+          />
+        </label>
+        <datalist id="template-notes">
+          {#each workspace.templateNotes as entry (entry.path)}
+            <option value={entry.path.slice(0, -NOTE_EXTENSION.length)}></option>
+          {/each}
+        </datalist>
+        <PluginSettings />
+      {/if}
     </Dialog.Content>
   </Dialog.Portal>
 </Dialog.Root>
@@ -106,8 +169,17 @@
     border: 1px solid var(--border);
     border-radius: 8px;
     background: var(--background);
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
     transform: translate(-50%, -50%);
     box-shadow: 0 8px 32px rgb(0 0 0 / 0.3);
+  }
+
+  h3 {
+    margin: 24px 0 12px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 14px;
   }
 
   :global(.dialog-title) {
@@ -141,7 +213,8 @@
     color: var(--text-muted);
   }
 
-  select {
+  select,
+  .setting input:not([type='checkbox']) {
     padding: 4px 8px;
     border: 1px solid var(--border);
     border-radius: 4px;

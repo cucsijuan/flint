@@ -1,9 +1,32 @@
 import { ask, open } from '@tauri-apps/plugin-dialog'
+import {
+  adjacentDailyNote,
+  applyTemplate,
+  dailyNoteDate,
+  dailyNotePath,
+  type DailyNoteSettings,
+  type Dayjs,
+  dayjs,
+  DEFAULT_DAILY_NOTES,
+  DEFAULT_TEMPLATES,
+  type TemplateSettings,
+} from './dates'
 import { documents } from './documents'
+import { activeView } from './editor/active'
 import { noteOpened, vaultChanged } from './events'
 import type { GraphFilters } from './graph'
 import * as layouts from './layout'
-import { NOTE_EXTENSION, basename, extensionOf, isImage, join, parentOf, uniqueName } from './paths'
+import {
+  NOTE_EXTENSION,
+  basename,
+  extensionOf,
+  isImage,
+  isWithin,
+  join,
+  noteTitle,
+  parentOf,
+  uniqueName,
+} from './paths'
 import {
   type AttachmentFolder,
   type EditorMode,
@@ -19,7 +42,17 @@ const SEARCH_DELAY_MS = 200
 const LAYOUT_SAVE_DELAY_MS = 500
 const NOTICE_MS = 5000
 const LAYOUT_CONFIG = 'workspace'
+const DAILY_NOTES_CONFIG = 'daily-notes'
+const TEMPLATES_CONFIG = 'templates'
 const ATTACHMENTS_FOLDER = 'attachments'
+
+async function readJsonConfig(name: string): Promise<object> {
+  const stored: unknown = JSON.parse((await vault.readConfig(name)) ?? '{}')
+  return typeof stored === 'object' && stored !== null ? stored : {}
+}
+
+const writeJsonConfig = (name: string, value: object) =>
+  vault.writeConfig(name, JSON.stringify(value, null, 2))
 
 const timestamp = () => new Date().toISOString().replace(/\D/g, '').slice(0, 14)
 
@@ -56,6 +89,14 @@ class Workspace {
   linkUpdate = $state<LinkUpdate>('ask')
   checkForUpdates = $state(true)
   attachmentFolder = $state<AttachmentFolder>('root')
+  dailyNotes = $state<DailyNoteSettings>(DEFAULT_DAILY_NOTES)
+  templates = $state<TemplateSettings>(DEFAULT_TEMPLATES)
+  templateNotes = $derived(
+    this.entries.filter(
+      (entry) => entry.kind === 'file' && isWithin(entry.path, this.templates.folder),
+    ),
+  )
+  isTemplatePickerOpen = $state(false)
   isSettingsOpen = $state(false)
   isQuickSwitcherOpen = $state(false)
   isCommandPaletteOpen = $state(false)
@@ -102,6 +143,8 @@ class Workspace {
       this.info = await vault.openVault(path)
       await this.#refresh()
       this.#setLayout(await this.#storedLayout(), { save: false })
+      this.dailyNotes = { ...DEFAULT_DAILY_NOTES, ...(await readJsonConfig(DAILY_NOTES_CONFIG)) }
+      this.templates = { ...DEFAULT_TEMPLATES, ...(await readJsonConfig(TEMPLATES_CONFIG)) }
       await setSetting('lastVault', path)
       if (!this.#isWatching) {
         this.#isWatching = true
@@ -235,6 +278,56 @@ class Workspace {
     if (!(await source.write(path))) return null
     await this.#refresh()
     return this.linkTargets.find((target) => target.path === path)?.linkText ?? basename(path)
+  }
+
+  setDailyNotes(changes: Partial<DailyNoteSettings>) {
+    this.dailyNotes = { ...this.dailyNotes, ...changes }
+    void this.#run(() => writeJsonConfig(DAILY_NOTES_CONFIG, this.dailyNotes))
+  }
+
+  setTemplates(changes: Partial<TemplateSettings>) {
+    this.templates = { ...this.templates, ...changes }
+    void this.#run(() => writeJsonConfig(TEMPLATES_CONFIG, this.templates))
+  }
+
+  /** Opens today's daily note (creating it from the template), or the closest one before or after. */
+  async openDailyNote(direction: 0 | 1 | -1 = 0) {
+    await this.#run(async () => {
+      const today = dayjs()
+      if (direction === 0) {
+        const path = dailyNotePath(today, this.dailyNotes)
+        if (!this.#takenPaths().has(path)) {
+          const { template } = this.dailyNotes
+          const text = template ? await this.#templateText(template, noteTitle(path), today) : ''
+          await vault.createNote(path)
+          if (text) await vault.writeNote(path, text)
+          await this.#refresh()
+        }
+        this.openNote(path)
+        return
+      }
+      const current = this.notePath ? dailyNoteDate(this.notePath, this.dailyNotes) : null
+      const paths = this.entries.map((entry) => entry.path)
+      const path = adjacentDailyNote(paths, current ?? today, direction, this.dailyNotes)
+      if (path) this.openNote(path)
+      else this.notify(direction === 1 ? 'No next daily note' : 'No previous daily note')
+    })
+  }
+
+  async insertTemplate(template: string) {
+    const view = activeView()
+    const title = this.notePath ? noteTitle(this.notePath) : ''
+    if (!view) return
+    await this.#run(async () => {
+      view.dispatch(view.state.replaceSelection(await this.#templateText(template, title, dayjs())))
+      view.focus()
+    })
+  }
+
+  async #templateText(template: string, title: string, date: Dayjs) {
+    const [path] = await this.resolveLinks([template])
+    if (!path) throw new Error(`Template not found: ${template}`)
+    return applyTemplate(await vault.readNote(path), { title, date }, this.templates)
   }
 
   setLinkUpdate(value: LinkUpdate) {

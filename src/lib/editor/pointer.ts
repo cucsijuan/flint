@@ -15,7 +15,7 @@ export const pointerDown = StateField.define<boolean>({
 export const pointerReleased = (transaction: Transaction) =>
   transaction.startState.field(pointerDown, false) && !transaction.state.field(pointerDown, false)
 
-/** Live preview keeps its layout while the mouse is pressed, so the click doesn't turn into a selection. */
+/** Live preview keeps its layout while the mouse is pressed; clicks in the side margins go to the line beside them. */
 const pointerTracking = ViewPlugin.define(
   (view) => {
     const release = () => {

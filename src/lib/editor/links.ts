@@ -1,23 +1,12 @@
 import { syntaxTree } from '@codemirror/language'
 import { type EditorState, StateEffect, StateField } from '@codemirror/state'
 import { EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view'
+import { isExternalUrl, linkTargetOfUrl } from '../paths'
 import { wikiLinkParts } from './wikilink'
 
 export type LinkResolver = (targets: string[]) => Promise<(string | null)[]>
 
 const RESOLVE_DELAY_MS = 150
-const EXTERNAL = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i
-
-export function imageTarget(url: string) {
-  try {
-    return decodeURI(url).replace(/^\.\//, '')
-  } catch {
-    return url
-  }
-}
-
-export const isExternalUrl = (url: string) => EXTERNAL.test(url)
-
 const addResolved = StateEffect.define<Map<string, string | null>>()
 const setResolved = StateEffect.define<Map<string, string | null>>()
 const refreshResolved = StateEffect.define<null>()
@@ -49,7 +38,7 @@ function linkTargets(state: EditorState) {
       if (name === 'WikiLinkTarget') targets.add(state.sliceDoc(from, to))
       if (name === 'URL' && node.parent?.name === 'Image') {
         const url = state.sliceDoc(from, to)
-        if (!EXTERNAL.test(url)) targets.add(imageTarget(url))
+        if (!isExternalUrl(url)) targets.add(linkTargetOfUrl(url))
       }
     },
   })

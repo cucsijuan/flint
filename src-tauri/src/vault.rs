@@ -122,12 +122,7 @@ impl Vault {
     }
 
     pub fn create_note(&self, path: &str) -> Result<()> {
-        let target = self.resolve(path)?;
-        OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&target)
-            .map_err(|e| already_exists_or(e, path))?;
+        self.new_file(path)?;
         Ok(())
     }
 

@@ -2,6 +2,7 @@
   import { openUrl } from '@tauri-apps/plugin-opener'
   import { onMount } from 'svelte'
   import { documents } from '../lib/documents'
+  import { isExternalUrl } from '../lib/paths'
   import type { Tab } from '../lib/layout'
   import { hydrate, stripFrontmatter } from '../lib/render/hydrate'
   import { renderMarkdown } from '../lib/render/markdown'
@@ -69,7 +70,7 @@
     const href = anchor.getAttribute('href') ?? ''
     if (link !== undefined) void workspace.openLink(link, path, { newTab })
     else if (tag !== undefined) workspace.openSearch(`tag:#${tag}`)
-    else if (/^[a-z][a-z\d+.-]*:/i.test(href)) void openUrl(href)
+    else if (isExternalUrl(href)) void openUrl(href)
   }
 </script>
 

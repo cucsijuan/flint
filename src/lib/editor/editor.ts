@@ -48,7 +48,7 @@ const pluginExtensions = new Compartment()
 const remoteChange = Annotation.define<boolean>()
 
 const modeExtension = (editorMode: EditorMode): Extension =>
-  editorMode === 'live' ? [pointer, livePreview, blockPreview] : []
+  editorMode === 'live' ? [livePreview, blockPreview] : []
 
 export interface EditorOptions {
   doc: string
@@ -86,6 +86,7 @@ export function createEditorState({
         codeLanguages: languages,
         extensions: [wikiLinkSyntax, hashtagSyntax],
       }),
+      pointer,
       navigation(resolveLinks, handlers),
       completion(sources),
       syntaxHighlighting(markdownStyle),

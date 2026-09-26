@@ -8,10 +8,11 @@ import {
   keymap,
   WidgetType,
 } from '@codemirror/view'
-import { isImage, NOTE_EXTENSION } from '../paths'
+import { isExternalUrl, isImage, linkTargetOfUrl, NOTE_EXTENSION } from '../paths'
 import { hydrate } from '../render/hydrate'
 import { renderMarkdown } from '../render/markdown'
-import { imageTarget, isExternalUrl, linkRevision, resolvedLinks } from './links'
+import { linkRevision, resolvedLinks } from './links'
+import { ImageWidget, isAloneOnLine } from './live-preview'
 import { pointerDown, pointerReleased } from './pointer'
 import { type PreviewContext, previewContext } from './preview-context'
 import { wikiLinkParts } from './wikilink'
@@ -84,32 +85,20 @@ class NoteEmbedWidget extends BlockWidget {
 }
 
 class ImageBlockWidget extends BlockWidget {
-  constructor(
-    readonly src: string,
-    readonly width: string,
-  ) {
+  constructor(readonly image: ImageWidget) {
     super()
   }
 
   eq(other: ImageBlockWidget) {
-    return other.src === this.src && other.width === this.width
+    return other.image.eq(this.image)
   }
 
   toDOM(view: EditorView) {
     const element = this.container(view, 'cm-live-image-block')
-    const image = Object.assign(document.createElement('img'), {
-      className: 'cm-live-image',
-      src: this.src,
-    })
-    if (/^\d+$/.test(this.width)) image.width = Number(this.width)
-    image.addEventListener('load', () => view.requestMeasure())
-    element.append(image)
+    element.append(this.image.toDOM(view))
     return element
   }
 }
-
-export const isAloneOnLine = (state: EditorState, from: number, to: number) =>
-  state.doc.lineAt(from).text.trim() === state.sliceDoc(from, to)
 
 function blockDecorations(state: EditorState): DecorationSet {
   const context = state.facet(previewContext)
@@ -130,7 +119,8 @@ function blockDecorations(state: EditorState): DecorationSet {
     width = '',
   ) => {
     if (!path || !context) return
-    const widget = new ImageBlockWidget(isExternalUrl(path) ? path : context.assetUrl(path), width)
+    const src = isExternalUrl(path) ? path : context.assetUrl(path)
+    const widget = new ImageBlockWidget(new ImageWidget(src, width))
     if (isEditingLine) below(line.to, widget)
     else block(line.from, line.to, widget)
   }
@@ -152,7 +142,7 @@ function blockDecorations(state: EditorState): DecorationSet {
       if (name === 'Image') {
         const url = node.getChild('URL')
         const text = url ? doc.sliceString(url.from, url.to) : ''
-        const path = isExternalUrl(text) ? text : resolved?.get(imageTarget(text))
+        const path = isExternalUrl(text) ? text : resolved?.get(linkTargetOfUrl(text))
         image(line, isEditingLine, path)
         return false
       }

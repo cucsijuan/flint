@@ -1,11 +1,18 @@
-import { basename, extensionOf, isImage, NOTE_EXTENSION, noteTitle } from '../paths'
+import {
+  basename,
+  extensionOf,
+  isExternalUrl,
+  isImage,
+  linkTargetOfUrl,
+  NOTE_EXTENSION,
+  noteTitle,
+} from '../paths'
 import { highlightBlock } from './highlight'
 import { renderMarkdown } from './markdown'
 
 const MAX_EMBED_DEPTH = 3
 const AUDIO = new Set(['mp3', 'wav', 'ogg', 'm4a'])
 const VIDEO = new Set(['mp4', 'webm', 'mov'])
-const EXTERNAL = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i
 const FRONTMATTER = /^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/
 const HEADING_LINE = /^(#{1,6})\s+(.*?)\s*#*\s*$/
 
@@ -90,13 +97,12 @@ export async function hydrate(root: HTMLElement, context: HydrateContext) {
   const links = [...root.querySelectorAll<HTMLElement>('a.internal-link[data-link]')]
   const embeds = [...root.querySelectorAll<HTMLElement>('.internal-embed[data-embed]')]
   const images = [...root.querySelectorAll<HTMLImageElement>('img[src]')].filter(
-    (image) => !EXTERNAL.test(image.getAttribute('src') ?? ''),
+    (image) => !isExternalUrl(image.getAttribute('src') ?? ''),
   )
 
   const targetOf = (element: HTMLElement) =>
     splitDestination(element.dataset.link ?? element.dataset.embed ?? '').target
-  const imageTarget = (image: HTMLImageElement) =>
-    decodeURI(image.getAttribute('src') ?? '').replace(/^\.\//, '')
+  const imageTarget = (image: HTMLImageElement) => linkTargetOfUrl(image.getAttribute('src') ?? '')
   const targets = [
     ...new Set([...links, ...embeds].map(targetOf).concat(images.map(imageTarget)).filter(Boolean)),
   ]

@@ -21,6 +21,18 @@ export const extensionOf = (path: string) => {
 
 export const isImage = (path: string) => IMAGE_EXTENSIONS.has(extensionOf(path))
 
+const EXTERNAL_URL = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i
+
+export const isExternalUrl = (url: string) => EXTERNAL_URL.test(url)
+
+export function linkTargetOfUrl(url: string) {
+  try {
+    return decodeURI(url).replace(/^\.\//, '')
+  } catch {
+    return url
+  }
+}
+
 export const isWithin = (path: string, folder: string) =>
   path === folder || path.startsWith(`${folder}/`)
 

@@ -9,9 +9,8 @@ import {
   WidgetType,
 } from '@codemirror/view'
 import type { SyntaxNode, Tree } from '@lezer/common'
-import { isImage } from '../paths'
-import { isAloneOnLine } from './blocks'
-import { imageTarget, isExternalUrl, resolvedLinks } from './links'
+import { isExternalUrl, isImage, linkTargetOfUrl } from '../paths'
+import { resolvedLinks } from './links'
 import { pointerDown, pointerReleased } from './pointer'
 import { previewContext } from './preview-context'
 import { wikiLinkParts } from './wikilink'
@@ -106,6 +105,9 @@ export class CheckboxWidget extends WidgetType {
     return true
   }
 }
+
+export const isAloneOnLine = (state: EditorState, from: number, to: number) =>
+  state.doc.lineAt(from).text.trim() === state.sliceDoc(from, to)
 
 const hide = Decoration.replace({})
 const bullet = Decoration.replace({ widget: new BulletWidget() })
@@ -225,7 +227,11 @@ export function previewDecorations(
           if (!url || touchesSelection(node.from, node.to)) break
           if (isAloneOnLine(state, node.from, node.to)) return false
           const text = doc.sliceString(url.from, url.to)
-          imageAt(node.from, node.to, isExternalUrl(text) ? text : resolved?.get(imageTarget(text)))
+          imageAt(
+            node.from,
+            node.to,
+            isExternalUrl(text) ? text : resolved?.get(linkTargetOfUrl(text)),
+          )
           return false
         }
         case 'Blockquote':

@@ -1,5 +1,6 @@
 <script lang="ts">
   import {
+    Bookmark,
     CalendarDays,
     FilePlus,
     Files,
@@ -10,6 +11,7 @@
   } from '@lucide/svelte'
   import { Tabs } from 'bits-ui'
   import { workspace } from '../lib/workspace.svelte'
+  import BookmarksPanel from './BookmarksPanel.svelte'
   import FileTree from './FileTree.svelte'
   import SearchPanel from './SearchPanel.svelte'
 </script>
@@ -43,9 +45,13 @@
       <Tabs.Trigger class="tab" value="search" title="Search (Ctrl+Shift+F)">
         <Search size={16} />
       </Tabs.Trigger>
+      <Tabs.Trigger class="tab" value="bookmarks" title="Bookmarks">
+        <Bookmark size={16} />
+      </Tabs.Trigger>
     </Tabs.List>
     <Tabs.Content class="tab-content" value="files"><FileTree /></Tabs.Content>
     <Tabs.Content class="tab-content" value="search"><SearchPanel /></Tabs.Content>
+    <Tabs.Content class="tab-content" value="bookmarks"><BookmarksPanel /></Tabs.Content>
   </Tabs.Root>
 </aside>
 

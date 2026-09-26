@@ -106,6 +106,14 @@
       {#if target}
         {@const path = target.path}
         {#if target.kind === 'folder'}<ContextMenu.Separator class="menu-separator" />{/if}
+        {#if target.kind === 'file'}
+          <ContextMenu.Item
+            class="menu-item"
+            onSelect={() => workspace.toggleBookmark({ type: 'file', path })}
+          >
+            {workspace.isBookmarked({ type: 'file', path }) ? 'Remove bookmark' : 'Bookmark'}
+          </ContextMenu.Item>
+        {/if}
         <ContextMenu.Item class="menu-item" onSelect={() => (workspace.renaming = path)}>
           Rename
         </ContextMenu.Item>

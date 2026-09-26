@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Bookmark } from '@lucide/svelte'
   import { documents } from '../lib/documents'
   import { type OutlineHeading, outlineOf } from '../lib/outline'
   import { workspace } from '../lib/workspace.svelte'
@@ -36,8 +37,18 @@
   {:else}
     <ul>
       {#each headings as heading (heading.line)}
+        {@const target = { type: 'heading' as const, path, subpath: `#${heading.text}` }}
+        {@const isBookmarked = workspace.isBookmarked(target)}
         <li style:padding-left="{(heading.level - minLevel) * 14}px">
-          <button onclick={() => jump(heading)}>{heading.text}</button>
+          <button class="heading" onclick={() => jump(heading)}>{heading.text}</button>
+          <button
+            class="icon bookmark"
+            class:on={isBookmarked}
+            title={isBookmarked ? 'Remove bookmark' : 'Bookmark this heading'}
+            onclick={() => workspace.toggleBookmark(target)}
+          >
+            <Bookmark size={13} fill={isBookmarked ? 'currentColor' : 'none'} />
+          </button>
         </li>
       {/each}
     </ul>
@@ -64,8 +75,32 @@
     padding: 6px;
   }
 
-  button {
-    width: 100%;
+  li {
+    display: flex;
+    align-items: center;
+    border-radius: 4px;
+  }
+
+  li:hover {
+    background: var(--hover);
+  }
+
+  .bookmark {
+    visibility: hidden;
+  }
+
+  li:hover .bookmark,
+  .bookmark.on {
+    visibility: visible;
+  }
+
+  .on {
+    color: var(--accent);
+  }
+
+  .heading {
+    flex: 1;
+    min-width: 0;
     padding: 3px 6px;
     overflow: hidden;
     border: none;
@@ -78,10 +113,6 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     cursor: pointer;
-  }
-
-  button:hover {
-    background: var(--hover);
   }
 
   .empty {

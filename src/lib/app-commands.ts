@@ -118,6 +118,19 @@ export function registerAppCommands() {
       run: () => workspace.updateLayout(layouts.goForward),
     },
     {
+      id: 'bookmark-note',
+      name: 'Bookmark or unbookmark current note',
+      isAvailable: hasNote,
+      run: () =>
+        workspace.notePath && workspace.toggleBookmark({ type: 'file', path: workspace.notePath }),
+    },
+    {
+      id: 'show-bookmarks',
+      name: 'Show bookmarks',
+      isAvailable: hasVault,
+      run: () => (workspace.leftTab = 'bookmarks'),
+    },
+    {
       id: 'show-outline',
       name: 'Show outline',
       isAvailable: hasVault,

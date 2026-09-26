@@ -11,6 +11,16 @@ import {
   DEFAULT_TEMPLATES,
   type TemplateSettings,
 } from './dates'
+import {
+  type Bookmark,
+  type BookmarkTarget,
+  isSameBookmark,
+  moveBookmark,
+  parseBookmarks,
+  renameBookmarks,
+  serializeBookmarks,
+  toggleBookmark,
+} from './bookmarks'
 import { documents } from './documents'
 import { activeView } from './editor/active'
 import { noteOpened, vaultChanged } from './events'
@@ -44,6 +54,7 @@ const NOTICE_MS = 5000
 const LAYOUT_CONFIG = 'workspace'
 const DAILY_NOTES_CONFIG = 'daily-notes'
 const TEMPLATES_CONFIG = 'templates'
+const BOOKMARKS_CONFIG = 'bookmarks'
 const ATTACHMENTS_FOLDER = 'attachments'
 
 async function readJsonConfig(name: string): Promise<object> {
@@ -56,7 +67,7 @@ const writeJsonConfig = (name: string, value: object) =>
 
 const timestamp = () => new Date().toISOString().replace(/\D/g, '').slice(0, 14)
 
-export type LeftTab = 'files' | 'search'
+export type LeftTab = 'files' | 'search' | 'bookmarks'
 export type RightTab = 'backlinks' | 'outline' | 'tags' | 'graph' | (string & {})
 
 export interface Jump {
@@ -97,6 +108,7 @@ class Workspace {
     ),
   )
   isTemplatePickerOpen = $state(false)
+  bookmarks = $state<Bookmark[]>([])
   isSettingsOpen = $state(false)
   isQuickSwitcherOpen = $state(false)
   isCommandPaletteOpen = $state(false)
@@ -145,6 +157,7 @@ class Workspace {
       this.#setLayout(await this.#storedLayout(), { save: false })
       this.dailyNotes = { ...DEFAULT_DAILY_NOTES, ...(await readJsonConfig(DAILY_NOTES_CONFIG)) }
       this.templates = { ...DEFAULT_TEMPLATES, ...(await readJsonConfig(TEMPLATES_CONFIG)) }
+      this.bookmarks = parseBookmarks(await vault.readConfig(BOOKMARKS_CONFIG))
       await setSetting('lastVault', path)
       if (!this.#isWatching) {
         this.#isWatching = true
@@ -330,6 +343,30 @@ class Workspace {
     return applyTemplate(await vault.readNote(path), { title, date }, this.templates)
   }
 
+  isBookmarked(target: BookmarkTarget) {
+    return this.bookmarks.some((bookmark) => isSameBookmark(bookmark, target))
+  }
+
+  toggleBookmark(target: BookmarkTarget) {
+    this.#setBookmarks(toggleBookmark(this.bookmarks, target))
+  }
+
+  moveBookmark(from: number, to: number) {
+    this.#setBookmarks(moveBookmark(this.bookmarks, from, to))
+  }
+
+  openBookmark(bookmark: Bookmark, options?: OpenOptions) {
+    if (bookmark.type === 'search') this.openSearch(bookmark.query)
+    else if (bookmark.type === 'heading') {
+      this.openNoteAt(bookmark.path, { heading: bookmark.subpath.replace(/^#/, '') }, options)
+    } else this.openNote(bookmark.path, options)
+  }
+
+  #setBookmarks(bookmarks: Bookmark[]) {
+    this.bookmarks = bookmarks
+    void this.#run(() => vault.writeConfig(BOOKMARKS_CONFIG, serializeBookmarks(bookmarks)))
+  }
+
   setLinkUpdate(value: LinkUpdate) {
     this.linkUpdate = value
     void setSetting('linkUpdate', value)
@@ -395,6 +432,10 @@ class Workspace {
       const updateLinks = linkCount > 0 && (await this.#shouldUpdateLinks(linkCount))
       const updated = await vault.renameEntry(path, target, updateLinks)
       documents.rename(path, target)
+      const bookmarks = renameBookmarks(this.bookmarks, path, target)
+      if (serializeBookmarks(bookmarks) !== serializeBookmarks(this.bookmarks)) {
+        this.#setBookmarks(bookmarks)
+      }
       this.updateLayout((layout) => layouts.renamePaths(layout, path, target))
       await this.#refresh()
       if (updated) this.notify(`Updated ${updated} ${updated === 1 ? 'link' : 'links'}.`)

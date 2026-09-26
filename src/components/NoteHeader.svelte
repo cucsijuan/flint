@@ -3,6 +3,7 @@
     ArrowLeft,
     ArrowRight,
     BookOpen,
+    Bookmark,
     ChevronLeft,
     ChevronRight,
     PanelRight,
@@ -16,6 +17,7 @@
   let { tab, path }: { tab: Tab; path: string } = $props()
 
   const isDailyNote = $derived(dailyNoteDate(path, workspace.dailyNotes) !== null)
+  const isBookmarked = $derived(workspace.isBookmarked({ type: 'file', path }))
 </script>
 
 <header>
@@ -59,6 +61,14 @@
     {/if}
   </div>
   <div class="actions">
+    <button
+      class="icon"
+      class:on={isBookmarked}
+      title={isBookmarked ? 'Remove bookmark' : 'Bookmark this note'}
+      onclick={() => workspace.toggleBookmark({ type: 'file', path })}
+    >
+      <Bookmark size={16} fill={isBookmarked ? 'currentColor' : 'none'} />
+    </button>
     <button
       class="icon"
       title={tab.isReading ? 'Edit (Ctrl+E)' : 'Reading view (Ctrl+E)'}

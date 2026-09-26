@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Bookmark } from '@lucide/svelte'
   import { noteTitle, parentOf } from '../lib/paths'
   import { workspace } from '../lib/workspace.svelte'
 
@@ -10,13 +11,27 @@
 </script>
 
 <section>
-  <input
-    bind:this={input}
-    type="search"
-    placeholder="Search…"
-    value={workspace.searchQuery}
-    oninput={(event) => workspace.search(event.currentTarget.value)}
-  />
+  <div class="bar">
+    <input
+      bind:this={input}
+      type="search"
+      placeholder="Search…"
+      value={workspace.searchQuery}
+      oninput={(event) => workspace.search(event.currentTarget.value)}
+    />
+    {#if workspace.searchQuery.trim()}
+      {@const target = { type: 'search' as const, query: workspace.searchQuery.trim() }}
+      {@const isBookmarked = workspace.isBookmarked(target)}
+      <button
+        class="icon"
+        class:on={isBookmarked}
+        title={isBookmarked ? 'Remove bookmark' : 'Bookmark this search'}
+        onclick={() => workspace.toggleBookmark(target)}
+      >
+        <Bookmark size={15} fill={isBookmarked ? 'currentColor' : 'none'} />
+      </button>
+    {/if}
+  </div>
   {#if workspace.searchError}
     <p class="message error">{workspace.searchError}</p>
   {:else if workspace.searchQuery.trim()}
@@ -64,8 +79,21 @@
     min-height: 0;
   }
 
-  input {
+  .bar {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 2px;
     margin: 8px;
+  }
+
+  .on {
+    color: var(--accent);
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
     padding: 6px 8px;
     border: 1px solid var(--border);
     border-radius: 4px;
@@ -98,7 +126,7 @@
     margin-top: 8px;
   }
 
-  button {
+  ul button {
     display: block;
     width: 100%;
     border: none;
@@ -110,7 +138,7 @@
     cursor: pointer;
   }
 
-  button:hover {
+  ul button:hover {
     background: var(--hover);
   }
 

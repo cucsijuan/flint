@@ -28,6 +28,34 @@ export interface NoteEntry {
   kind: 'file' | 'folder' | 'attachment'
 }
 
+export interface MarkdownSection {
+  /** First source line of the block, 0-based. */
+  lineStart: number
+  /** Line after the block's last line. */
+  lineEnd: number
+}
+
+/**
+ * Where rendered Markdown came from. Buttons, inputs, links, `summary` and elements with a
+ * `data-interactive` attribute receive clicks in live preview instead of moving the cursor.
+ */
+export interface MarkdownContext {
+  /** The note the content was rendered from. */
+  sourcePath: string
+  /** The source lines of the innermost block containing `element`. */
+  sectionOf(element: HTMLElement): MarkdownSection | null
+  /** Replaces source lines of the note (an empty `text` removes them); open editors update and it is saved. */
+  replaceLines(lineStart: number, lineEnd: number, text: string): Promise<void>
+}
+
+export type PostProcessor = (element: HTMLElement, context: MarkdownContext) => unknown
+
+export type CodeBlockProcessor = (
+  source: string,
+  element: HTMLElement,
+  context: MarkdownContext,
+) => unknown
+
 export interface FlintApi {
   /** The id from the plugin's manifest. */
   readonly pluginId: string
@@ -63,6 +91,13 @@ export interface FlintApi {
   ui: {
     notice(message: string): void
     registerSidebarTab(tab: SidebarTab): Disposer
+  }
+
+  markdown: {
+    /** Runs on every rendered block of Markdown: the reading view and embedded notes. */
+    registerPostProcessor(processor: PostProcessor): Disposer
+    /** Renders fenced code blocks of `language` into `element` instead of showing the code. */
+    registerCodeBlockProcessor(language: string, processor: CodeBlockProcessor): Disposer
   }
 
   storage: {

@@ -14,6 +14,7 @@
   import { refreshLinks } from '../lib/editor/links'
   import type { Tab } from '../lib/layout'
   import { pluginHost } from '../lib/plugins/host.svelte'
+  import { processors } from '../lib/render/processors.svelte'
   import * as vault from '../lib/vault'
   import { workspace } from '../lib/workspace.svelte'
   import NoteHeader from './NoteHeader.svelte'
@@ -55,6 +56,7 @@
               resolve: (targets, source) => workspace.resolveLinks(targets, source),
               assetUrl: (asset) => workspace.assetUrl(asset),
               readNote: vault.readNote,
+              editNote: (note, edit) => documents.update(note, edit),
             },
             saveAttachment: (source) => workspace.saveAttachment(source, path),
           }),
@@ -89,6 +91,10 @@
 
   $effect(() => {
     if (view && workspace.indexVersion) refreshLinks(view)
+  })
+
+  $effect(() => {
+    if (view && processors.version) refreshLinks(view)
   })
 
   $effect(() => {

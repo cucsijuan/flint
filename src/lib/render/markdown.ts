@@ -5,6 +5,7 @@ type PluginSimple = (md: MarkdownIt) => void
 
 const TAG_CHAR = /[\p{L}\p{N}_/-]/u
 const TASK = /^\[([ xX])\]\s/
+const CALLOUT = /^\[!([\w-]+)\]([+-])?[ \t]*(.*)$/
 
 const wikiLinks: PluginSimple = (md) => {
   md.inline.ruler.before('link', 'wikilink', (state: StateInline, silent: boolean) => {
@@ -66,10 +67,63 @@ const taskLists: PluginSimple = (md) => {
       first.content = first.content.slice(match[0].length)
       const checkbox = new state.Token('html_inline', '', 0)
       const checked = match[1] === ' ' ? '' : ' checked'
-      checkbox.content = `<input type="checkbox" class="task" disabled${checked}> `
+      checkbox.content = `<input type="checkbox" class="task"${checked}> `
       token.children?.unshift(checkbox)
       listItem.attrJoin('class', 'task-list-item')
     })
+  })
+}
+
+/** Obsidian callouts: `> [!type]` with an optional title, foldable with `+` (open) or `-` (closed). */
+const callouts: PluginSimple = (md) => {
+  md.core.ruler.after('block', 'callouts', (state: StateCore) => {
+    const { tokens } = state
+    for (let index = 0; index < tokens.length; index++) {
+      const open = tokens[index]
+      const inline = tokens[index + 2]
+      if (open.type !== 'blockquote_open' || inline?.type !== 'inline') continue
+      const [firstLine, ...rest] = inline.content.split('\n')
+      const match = CALLOUT.exec(firstLine)
+      if (!match) continue
+      const [, type, fold, title] = match
+      const tag = fold ? 'details' : 'div'
+      const close = tokens.findIndex(
+        (token, at) =>
+          at > index && token.type === 'blockquote_close' && token.level === open.level,
+      )
+      open.tag = tokens[close].tag = tag
+      open.attrJoin('class', 'callout')
+      open.attrSet('data-callout', type.toLowerCase())
+      if (fold === '+') open.attrSet('open', '')
+
+      const titleOpen = new state.Token('callout_title_open', fold ? 'summary' : 'div', 1)
+      titleOpen.attrSet('class', 'callout-title')
+      const titleText = new state.Token('inline', '', 0)
+      titleText.content = title || type[0].toUpperCase() + type.slice(1).toLowerCase()
+      titleText.children = []
+      const titleClose = new state.Token('callout_title_close', titleOpen.tag, -1)
+      const contentOpen = new state.Token('callout_content_open', 'div', 1)
+      contentOpen.attrSet('class', 'callout-content')
+      const contentClose = new state.Token('callout_content_close', 'div', -1)
+      for (const token of [titleOpen, titleClose, contentOpen, contentClose]) token.block = true
+
+      inline.content = rest.join('\n')
+      const emptyParagraph = inline.content.trim() ? 0 : 3
+      tokens.splice(close, 0, contentClose)
+      tokens.splice(index + 1, emptyParagraph, titleOpen, titleText, titleClose, contentOpen)
+    }
+  })
+}
+
+/** Marks every block with the source lines it came from, so rendered content can edit its note. */
+const sourceLines: PluginSimple = (md) => {
+  md.core.ruler.push('source-lines', (state: StateCore) => {
+    const firstLine = (state.env as RenderOptions).firstLine ?? 0
+    for (const token of state.tokens) {
+      if (!token.block || !token.map || token.nesting === -1) continue
+      token.attrSet('data-line', String(token.map[0] + firstLine))
+      token.attrSet('data-line-end', String(token.map[1] + firstLine))
+    }
   })
 }
 
@@ -77,7 +131,14 @@ const markdown = markdownIt({ html: true, linkify: true })
   .use(wikiLinks)
   .use(hashtags)
   .use(taskLists)
+  .use(callouts)
+  .use(sourceLines)
 
-export function renderMarkdown(text: string) {
-  return DOMPurify.sanitize(markdown.render(text), { ADD_ATTR: ['target'] })
+export interface RenderOptions {
+  /** Line of the note where `text` starts, when it is only part of the note. */
+  firstLine?: number
+}
+
+export function renderMarkdown(text: string, options: RenderOptions = {}) {
+  return DOMPurify.sanitize(markdown.render(text, { ...options }), { ADD_ATTR: ['target'] })
 }

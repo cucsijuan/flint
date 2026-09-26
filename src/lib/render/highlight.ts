@@ -2,8 +2,10 @@ import { LanguageDescription } from '@codemirror/language'
 import { languages } from '@codemirror/language-data'
 import { classHighlighter, highlightCode } from '@lezer/highlight'
 
+export const codeLanguage = (code: HTMLElement) => /language-(\S+)/.exec(code.className)?.[1] ?? ''
+
 export async function highlightBlock(code: HTMLElement) {
-  const name = /language-(\S+)/.exec(code.className)?.[1]
+  const name = codeLanguage(code)
   const description = name && LanguageDescription.matchLanguageName(languages, name, true)
   if (!description) return
   const { language } = await description.load()

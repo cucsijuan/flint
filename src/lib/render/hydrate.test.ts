@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest'
-import { extractSection, hydrate, type HydrateContext, stripFrontmatter } from './hydrate'
+import { hydrate, type HydrateContext } from './hydrate'
 import { renderMarkdown } from './markdown'
+import { processors } from './processors.svelte'
 
 const notes: Record<string, string> = {
   'Other.md': '# Other\n\nIntro\n\n## Part\n\nPart body\n\n## Next\n\nNext body',
@@ -18,6 +19,7 @@ const context: HydrateContext = {
   resolve: async (targets) => targets.map((target) => paths[target] ?? null),
   assetUrl: (path) => `asset://${path}`,
   readNote: async (path) => notes[path],
+  editNote: async () => {},
 }
 
 async function hydrated(text: string) {
@@ -63,9 +65,41 @@ describe('hydrate', () => {
   })
 })
 
-describe('text helpers', () => {
-  it('strips frontmatter and extracts sections', () => {
-    expect(stripFrontmatter('---\ntags: [a]\n---\nBody')).toBe('Body')
-    expect(extractSection(notes['Other.md'], 'part')).toBe('## Part\n\nPart body\n')
+describe('interactive content', () => {
+  it('toggles tasks in their source note', async () => {
+    const edits: string[] = []
+    const root = document.createElement('div')
+    root.innerHTML = renderMarkdown('- [ ] one\n- [ ] two', { firstLine: 4 })
+    const text = '---\na: 1\n---\n\n- [ ] one\n- [ ] two'
+    await hydrate(root, {
+      ...context,
+      editNote: async (path, edit) => void edits.push(`${path}: ${edit(text)}`),
+    })
+    root.querySelectorAll('input')[1].dispatchEvent(new Event('change'))
+    expect(edits).toEqual(['Note.md: ---\na: 1\n---\n\n- [ ] one\n- [x] two'])
+  })
+
+  it('adds copy buttons to code blocks', async () => {
+    const root = await hydrated('```\ncode\n```')
+    expect(root.querySelector('pre button.copy-code')).not.toBeNull()
+  })
+
+  it('runs plugin processors with the source of each block', async () => {
+    const seen: string[] = []
+    const removeCode = processors.addCodeBlockProcessor('chart', (source, element, markdown) => {
+      element.textContent = `chart of ${source.trim()}`
+      seen.push(`${markdown.sourcePath} ${JSON.stringify(markdown.sectionOf(element))}`)
+    })
+    const removePost = processors.addPostProcessor((element) => {
+      element.querySelector('p')?.classList.add('processed')
+    })
+    const root = await hydrated('Intro\n\n```chart\n1 2\n```')
+    removeCode()
+    removePost()
+
+    expect(root.querySelector('.code-block-plugin')?.textContent).toBe('chart of 1 2')
+    expect(root.querySelector('p.processed')).not.toBeNull()
+    expect(seen).toEqual(['Note.md {"lineStart":2,"lineEnd":5}'])
+    expect(processors.codeBlock('chart')).toBeUndefined()
   })
 })

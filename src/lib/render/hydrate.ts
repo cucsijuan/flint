@@ -7,35 +7,25 @@ import {
   NOTE_EXTENSION,
   noteTitle,
 } from '../paths'
-import { highlightBlock } from './highlight'
+import type { MarkdownContext } from '../../../plugin-api'
+import { codeLanguage, highlightBlock } from './highlight'
 import { renderMarkdown } from './markdown'
+import { processors } from './processors.svelte'
+import { noteContent, replaceLines, toggleTask } from './source'
 
 const MAX_EMBED_DEPTH = 3
 const AUDIO = new Set(['mp3', 'wav', 'ogg', 'm4a'])
 const VIDEO = new Set(['mp4', 'webm', 'mov'])
-const FRONTMATTER = /^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/
-const HEADING_LINE = /^(#{1,6})\s+(.*?)\s*#*\s*$/
+const COPIED_MS = 1500
 
 export interface HydrateContext {
   source: string
   resolve: (targets: string[], source: string) => Promise<(string | null)[]>
   assetUrl: (path: string) => string
   readNote: (path: string) => Promise<string>
+  /** Applies `edit` to a note's text; `null` leaves it unchanged. */
+  editNote: (path: string, edit: (text: string) => string | null) => Promise<void>
   depth?: number
-}
-
-export const stripFrontmatter = (text: string) => text.replace(FRONTMATTER, '')
-
-export function extractSection(text: string, heading: string) {
-  const lines = text.split('\n')
-  const wanted = heading.trim().toLowerCase()
-  const start = lines.findIndex((line) => HEADING_LINE.exec(line)?.[2].toLowerCase() === wanted)
-  if (start === -1) return ''
-  const level = HEADING_LINE.exec(lines[start])?.[1].length ?? 1
-  const end = lines.findIndex(
-    (line, index) => index > start && (HEADING_LINE.exec(line)?.[1].length ?? 7) <= level,
-  )
-  return lines.slice(start, end === -1 ? undefined : end).join('\n')
 }
 
 const splitDestination = (destination: string) => {
@@ -84,21 +74,70 @@ async function embedNote(
     element.replaceChildren(title)
     return
   }
-  const text = stripFrontmatter(await context.readNote(path))
+  const { text, firstLine } = noteContent(await context.readNote(path), subpath)
   const body = document.createElement('div')
   body.className = 'embed-body'
-  body.innerHTML = renderMarkdown(subpath ? extractSection(text, subpath) : text)
+  body.innerHTML = renderMarkdown(text, { firstLine })
   element.replaceChildren(title, body)
   element.classList.add('note-embed')
   await hydrate(body, { ...context, source: path, depth: depth + 1 })
 }
 
+function markdownContext(context: HydrateContext): MarkdownContext {
+  return {
+    sourcePath: context.source,
+    sectionOf: (element) => {
+      const block =
+        element.closest<HTMLElement>('[data-line]') ??
+        element.querySelector<HTMLElement>('[data-line]')
+      if (!block) return null
+      return { lineStart: Number(block.dataset.line), lineEnd: Number(block.dataset.lineEnd) }
+    },
+    replaceLines: (lineStart, lineEnd, text) =>
+      context.editNote(context.source, (source) => replaceLines(source, lineStart, lineEnd, text)),
+  }
+}
+
+function copyButton(code: HTMLElement) {
+  const button = Object.assign(document.createElement('button'), {
+    type: 'button',
+    className: 'copy-code',
+    textContent: 'Copy',
+  })
+  button.addEventListener('click', () => {
+    void navigator.clipboard.writeText(code.textContent ?? '').then(() => {
+      button.textContent = 'Copied'
+      setTimeout(() => (button.textContent = 'Copy'), COPIED_MS)
+    })
+  })
+  return button
+}
+
+async function renderCode(code: HTMLElement, markdown: MarkdownContext) {
+  const pre = code.parentElement
+  const processor = processors.codeBlock(codeLanguage(code))
+  if (!pre) return
+  if (!processor) {
+    pre.append(copyButton(code))
+    await highlightBlock(code)
+    return
+  }
+  const element = document.createElement('div')
+  element.className = 'code-block-plugin'
+  Object.assign(element.dataset, code.dataset)
+  pre.replaceWith(element)
+  await processor(code.textContent ?? '', element, markdown)
+}
+
 export async function hydrate(root: HTMLElement, context: HydrateContext) {
+  const markdown = markdownContext(context)
   const links = [...root.querySelectorAll<HTMLElement>('a.internal-link[data-link]')]
   const embeds = [...root.querySelectorAll<HTMLElement>('.internal-embed[data-embed]')]
   const images = [...root.querySelectorAll<HTMLImageElement>('img[src]')].filter(
     (image) => !isExternalUrl(image.getAttribute('src') ?? ''),
   )
+  const tasks = [...root.querySelectorAll<HTMLInputElement>('input.task')]
+  const codeBlocks = [...root.querySelectorAll<HTMLElement>('pre > code')]
 
   const targetOf = (element: HTMLElement) =>
     splitDestination(element.dataset.link ?? element.dataset.embed ?? '').target
@@ -117,6 +156,15 @@ export async function hydrate(root: HTMLElement, context: HydrateContext) {
     const path = resolved.get(imageTarget(image))
     if (path) image.src = context.assetUrl(path)
   }
+  for (const task of tasks) {
+    task.addEventListener('change', () => {
+      const line = markdown.sectionOf(task)?.lineStart
+      if (line !== undefined)
+        void context.editNote(context.source, (text) => toggleTask(text, line))
+    })
+  }
+  await Promise.all(codeBlocks.map((code) => renderCode(code, markdown)))
+  for (const processor of processors.post) await processor(root, markdown)
   await Promise.all(
     embeds.map(async (embed) => {
       const { target, subpath } = splitDestination(embed.dataset.embed ?? '')
@@ -131,5 +179,4 @@ export async function hydrate(root: HTMLElement, context: HydrateContext) {
       }
     }),
   )
-  await Promise.all([...root.querySelectorAll<HTMLElement>('pre > code')].map(highlightBlock))
 }

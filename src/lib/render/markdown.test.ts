@@ -41,6 +41,30 @@ describe('renderMarkdown', () => {
     expect(items[0].textContent?.trim()).toBe('todo')
   })
 
+  it('marks blocks with their source lines, offset by the first line', () => {
+    const root = render('# Title\n\n- [ ] task\n- two')
+    expect(root.querySelector('h1')?.dataset).toMatchObject({ line: '0', lineEnd: '1' })
+    expect(root.querySelector('li')?.dataset.line).toBe('2')
+    const offset = document.createElement('div')
+    offset.innerHTML = renderMarkdown('para', { firstLine: 5 })
+    expect(offset.querySelector('p')?.dataset.line).toBe('5')
+  })
+
+  it('renders callouts, foldable with + and -', () => {
+    const root = render(
+      '> [!warning] Careful\n> body\n\n> [!tip]-\n> hidden\n\n> [!note]+ Open\n> shown',
+    )
+    const [plain, closed, open] = root.querySelectorAll<HTMLElement>('.callout')
+    expect(plain.tagName).toBe('DIV')
+    expect(plain.dataset.callout).toBe('warning')
+    expect(plain.querySelector('.callout-title')?.textContent).toBe('Careful')
+    expect(plain.querySelector('.callout-content')?.textContent?.trim()).toBe('body')
+    expect(closed.tagName).toBe('DETAILS')
+    expect(closed.hasAttribute('open')).toBe(false)
+    expect(closed.querySelector('summary')?.textContent).toBe('Tip')
+    expect(open.hasAttribute('open')).toBe(true)
+  })
+
   it('removes scripts and event handlers from raw HTML', () => {
     const html = renderMarkdown(
       '<img src=x onerror="alert(1)"><script>alert(2)</script>[x](javascript:alert(3))',

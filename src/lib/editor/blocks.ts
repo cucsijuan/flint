@@ -1,4 +1,5 @@
 import { syntaxTree } from '@codemirror/language'
+import type { SyntaxNode } from '@lezer/common'
 import { type EditorState, type Line, Prec, type Range, StateField } from '@codemirror/state'
 import {
   type Command,
@@ -11,22 +12,30 @@ import {
 import { isExternalUrl, isImage, linkTargetOfUrl, NOTE_EXTENSION } from '../paths'
 import { hydrate } from '../render/hydrate'
 import { renderMarkdown } from '../render/markdown'
+import { processors } from '../render/processors.svelte'
 import { linkRevision, resolvedLinks } from './links'
 import { ImageWidget, isAloneOnLine } from './live-preview'
 import { pointerDown, pointerReleased } from './pointer'
 import { type PreviewContext, previewContext } from './preview-context'
 import { wikiLinkParts } from './wikilink'
 
+const CALLOUT_START = /^\s*>\s*\[![\w-]+\]/
+
+const INTERACTIVE = 'a, button, input, select, textarea, summary, [data-interactive]'
+
 abstract class BlockWidget extends WidgetType {
   protected container(view: EditorView, className: string) {
     const element = document.createElement('div')
     element.className = `cm-live-block markdown ${className}`
     element.addEventListener('mousedown', (event) => {
-      if ((event.target as HTMLElement).closest('a')) return
+      if ((event.target as HTMLElement).closest(INTERACTIVE)) return
       event.preventDefault()
       view.dispatch({ selection: { anchor: view.posAtDOM(element) } })
       view.focus()
     })
+    for (const resize of ['load', 'toggle']) {
+      element.addEventListener(resize, () => view.requestMeasure(), true)
+    }
     return element
   }
 
@@ -35,51 +44,46 @@ abstract class BlockWidget extends WidgetType {
   }
 }
 
-class TableWidget extends BlockWidget {
-  constructor(readonly markdown: string) {
-    super()
-  }
-
-  eq(other: TableWidget) {
-    return other.markdown === this.markdown
-  }
-
-  toDOM(view: EditorView) {
-    const element = this.container(view, 'cm-live-table')
-    element.innerHTML = renderMarkdown(this.markdown)
-    return element
-  }
-}
-
-class NoteEmbedWidget extends BlockWidget {
+/** Markdown rendered like the reading view: tables, callouts, embedded notes and plugin code blocks. */
+class MarkdownWidget extends BlockWidget {
   constructor(
-    readonly destination: string,
+    readonly markdown: string,
+    readonly firstLine: number,
+    readonly className: string,
     readonly context: PreviewContext,
-    readonly revision: number,
+    readonly revision: string,
   ) {
     super()
   }
 
-  eq(other: NoteEmbedWidget) {
-    return other.destination === this.destination && other.revision === this.revision
+  eq(other: MarkdownWidget) {
+    return (
+      other.markdown === this.markdown &&
+      other.firstLine === this.firstLine &&
+      other.revision === this.revision
+    )
   }
 
   toDOM(view: EditorView) {
-    const element = this.container(view, 'cm-live-embed')
-    void this.render(element, view)
+    const element = this.container(view, this.className)
+    element.innerHTML = this.html()
+    void this.hydrate(element, view)
     return element
   }
 
   updateDOM(element: HTMLElement, view: EditorView) {
-    void this.render(element, view)
+    const content = document.createElement('div')
+    content.innerHTML = this.html()
+    void this.hydrate(content, view).then(() => element.replaceChildren(...content.childNodes))
     return true
   }
 
-  private async render(element: HTMLElement, view: EditorView) {
-    const content = document.createElement('div')
-    content.innerHTML = renderMarkdown(`![[${this.destination}]]`)
-    await hydrate(content, this.context)
-    element.replaceChildren(...content.childNodes)
+  private html() {
+    return renderMarkdown(this.markdown, { firstLine: this.firstLine })
+  }
+
+  private async hydrate(element: HTMLElement, view: EditorView) {
+    await hydrate(element, this.context)
     view.requestMeasure()
   }
 }
@@ -103,7 +107,7 @@ class ImageBlockWidget extends BlockWidget {
 function blockDecorations(state: EditorState): DecorationSet {
   const context = state.facet(previewContext)
   const resolved = state.field(resolvedLinks, false)
-  const revision = state.field(linkRevision, false) ?? 0
+  const revision = `${state.field(linkRevision, false) ?? 0}:${processors.version}`
   const { doc, selection } = state
   const decorations: Range<Decoration>[] = []
   const isEditing = (from: number, to: number) =>
@@ -125,12 +129,33 @@ function blockDecorations(state: EditorState): DecorationSet {
     else block(line.from, line.to, widget)
   }
 
+  const rendered = (node: SyntaxNode, className: string) => {
+    const first = doc.lineAt(node.from)
+    const to = doc.lineAt(node.to).to
+    if (!context || isEditing(first.from, to)) return
+    const markdown = doc.sliceString(first.from, to)
+    block(
+      first.from,
+      to,
+      new MarkdownWidget(markdown, first.number - 1, className, context, revision),
+    )
+  }
+
   syntaxTree(state).iterate({
     enter: ({ name, node }) => {
       if (name === 'Table') {
-        const from = doc.lineAt(node.from).from
-        const to = doc.lineAt(node.to).to
-        if (!isEditing(from, to)) block(from, to, new TableWidget(doc.sliceString(from, to)))
+        rendered(node, 'cm-live-table')
+        return false
+      }
+      if (name === 'Blockquote' && CALLOUT_START.test(doc.lineAt(node.from).text)) {
+        rendered(node, 'cm-live-callout')
+        return false
+      }
+      if (name === 'FencedCode') {
+        const info = node.getChild('CodeInfo')
+        if (info && processors.codeBlock(doc.sliceString(info.from, info.to))) {
+          rendered(node, 'cm-live-code-block')
+        }
         return false
       }
       if ((name !== 'WikiLink' && name !== 'Image') || !context) return
@@ -152,7 +177,13 @@ function blockDecorations(state: EditorState): DecorationSet {
         const width = aliasNode ? doc.sliceString(aliasNode.from, aliasNode.to) : ''
         image(line, isEditingLine, path, width)
       } else if (path?.toLowerCase().endsWith(NOTE_EXTENSION)) {
-        const embed = new NoteEmbedWidget(destination, context, revision)
+        const embed = new MarkdownWidget(
+          `![[${destination}]]`,
+          0,
+          'cm-live-embed',
+          context,
+          revision,
+        )
         if (isEditingLine) below(line.to, embed)
         else block(line.from, line.to, embed)
       }

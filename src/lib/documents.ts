@@ -1,4 +1,4 @@
-import type { ChangeSet } from '@codemirror/state'
+import { ChangeSet } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
 import { applyChanges, replaceDoc } from './editor/editor'
 import { isWithin, replacePrefix } from './paths'
@@ -10,6 +10,20 @@ interface Document {
   contents: string
   views: Set<EditorView>
   saveTimer?: ReturnType<typeof setTimeout>
+}
+
+function difference(from: string, to: string) {
+  let start = 0
+  while (start < from.length && start < to.length && from[start] === to[start]) start++
+  let end = 0
+  while (
+    end < from.length - start &&
+    end < to.length - start &&
+    from[from.length - 1 - end] === to[to.length - 1 - end]
+  ) {
+    end++
+  }
+  return { from: start, to: from.length - end, insert: to.slice(start, to.length - end) }
 }
 
 class Documents {
@@ -49,7 +63,7 @@ class Documents {
     if (document.views.size === 0 && !document.saveTimer) this.#documents.delete(path)
   }
 
-  edit(path: string, source: EditorView, changes: ChangeSet, contents: string) {
+  edit(path: string, source: EditorView | null, changes: ChangeSet, contents: string) {
     const document = this.#documents.get(path)
     if (!document) return
     document.contents = contents
@@ -57,6 +71,14 @@ class Documents {
     this.#notify(path, contents)
     clearTimeout(document.saveTimer)
     document.saveTimer = setTimeout(() => void this.#save(path), SAVE_DELAY_MS)
+  }
+
+  /** Edits a note that may not be open, as if it were typed into every editor showing it. */
+  async update(path: string, edit: (text: string) => string | null) {
+    const contents = await this.load(path)
+    const next = edit(contents)
+    if (next === null || next === contents) return
+    this.edit(path, null, ChangeSet.of(difference(contents, next), contents.length), next)
   }
 
   isOpen(path: string) {

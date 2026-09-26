@@ -66,8 +66,8 @@ describe('live preview', () => {
 
   it('hides code fences and labels the language unless the cursor is in the block', () => {
     const doc = '```js\nlet a\n```\n\n```\nplain\n```\n\nend'
-    expect(preview(doc).replaced).toEqual(['<js>', '```', '```', '```'])
-    expect(preview(doc, doc.indexOf('let')).replaced).toEqual(['```', '```'])
+    expect(preview(doc).replaced).toEqual(['<js>', '```', '<>', '```'])
+    expect(preview(doc, doc.indexOf('let')).replaced).toEqual(['<>', '```'])
   })
 
   it('styles quote and code block lines', () => {

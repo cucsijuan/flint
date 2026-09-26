@@ -54,6 +54,7 @@ class RuleWidget extends WidgetType {
   }
 }
 
+/** Replaces a code block's opening fence with its language and a copy button. */
 export class LanguageWidget extends WidgetType {
   constructor(readonly language: string) {
     super()
@@ -63,12 +64,42 @@ export class LanguageWidget extends WidgetType {
     return other.language === this.language
   }
 
-  toDOM() {
-    const label = document.createElement('span')
-    label.className = 'cm-live-language'
-    label.textContent = this.language
-    return label
+  toDOM(view: EditorView) {
+    const fence = document.createElement('span')
+    fence.className = 'cm-live-fence'
+    const label = Object.assign(document.createElement('span'), {
+      className: 'cm-live-language',
+      textContent: this.language,
+    })
+    const copy = Object.assign(document.createElement('button'), {
+      type: 'button',
+      className: 'copy-code',
+      textContent: 'Copy',
+    })
+    copy.addEventListener('mousedown', (event) => event.preventDefault())
+    copy.addEventListener('click', () => {
+      const code = codeTextAt(view.state, view.posAtDOM(fence))
+      void navigator.clipboard.writeText(code).then(() => {
+        copy.textContent = 'Copied'
+        setTimeout(() => (copy.textContent = 'Copy'), COPIED_MS)
+      })
+    })
+    fence.append(label, copy)
+    return fence
   }
+}
+
+function codeTextAt(state: EditorState, position: number) {
+  for (
+    let node: SyntaxNode | null = syntaxTree(state).resolveInner(position, 1);
+    node;
+    node = node.parent
+  ) {
+    if (node.name !== 'FencedCode') continue
+    const text = node.getChild('CodeText')
+    return text ? state.sliceDoc(text.from, text.to) : ''
+  }
+  return ''
 }
 
 export class CheckboxWidget extends WidgetType {
@@ -108,6 +139,8 @@ export class CheckboxWidget extends WidgetType {
 
 export const isAloneOnLine = (state: EditorState, from: number, to: number) =>
   state.doc.lineAt(from).text.trim() === state.sliceDoc(from, to)
+
+const COPIED_MS = 1500
 
 const hide = Decoration.replace({})
 const bullet = Decoration.replace({ widget: new BulletWidget() })
@@ -272,14 +305,12 @@ export function previewDecorations(
           const [open, close] = node.getChildren('CodeMark')
           if (!open || linesTouchSelection(node.from, node.to)) break
           const info = node.getChild('CodeInfo')
-          const language = info && doc.sliceString(info.from, info.to)
+          const language = info ? doc.sliceString(info.from, info.to) : ''
           decorations.push(
-            language
-              ? Decoration.replace({ widget: new LanguageWidget(language) }).range(
-                  open.from,
-                  info.to,
-                )
-              : hide.range(open.from, open.to),
+            Decoration.replace({ widget: new LanguageWidget(language) }).range(
+              open.from,
+              info?.to ?? open.to,
+            ),
           )
           if (close) decorations.push(hide.range(close.from, close.to))
           break

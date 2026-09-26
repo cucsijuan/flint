@@ -7,6 +7,7 @@ import type { ActivatePlugin, Disposer, FlintApi, SidebarTab } from '../../../pl
 import { commands } from '../commands.svelte'
 import { activeView } from '../editor/active'
 import { noteOpened, vaultChanged } from '../events'
+import { processors } from '../render/processors.svelte'
 import * as vault from '../vault'
 import { workspace } from '../workspace.svelte'
 import { isCompatibleLicense } from './licenses'
@@ -143,13 +144,15 @@ class PluginHost {
       loaded.disposers.push(disposer)
       return disposer
     }
-    const guard = (run: () => unknown) => async () => {
-      try {
-        await run()
-      } catch (error) {
-        workspace.notify(`${manifest.name}: ${messageOf(error)}`)
+    const guard =
+      <Args extends unknown[]>(run: (...args: Args) => unknown) =>
+      async (...args: Args) => {
+        try {
+          await run(...args)
+        } catch (error) {
+          workspace.notify(`${manifest.name}: ${messageOf(error)}`)
+        }
       }
-    }
 
     return {
       pluginId: manifest.id,
@@ -202,6 +205,11 @@ class PluginHost {
             if (workspace.rightTab === key) workspace.rightTab = 'backlinks'
           })
         },
+      },
+      markdown: {
+        registerPostProcessor: (processor) => track(processors.addPostProcessor(guard(processor))),
+        registerCodeBlockProcessor: (language, processor) =>
+          track(processors.addCodeBlockProcessor(language, guard(processor))),
       },
       storage: {
         load: async <T>() => {

@@ -1,33 +1,72 @@
 <script lang="ts">
   import { openUrl } from '@tauri-apps/plugin-opener'
   import { onMount } from 'svelte'
+  import { SvelteSet } from 'svelte/reactivity'
   import { documents } from '../lib/documents'
   import { isExternalUrl } from '../lib/paths'
   import type { Tab } from '../lib/layout'
-  import { hydrate, stripFrontmatter } from '../lib/render/hydrate'
+  import { hydrate } from '../lib/render/hydrate'
   import { renderMarkdown } from '../lib/render/markdown'
+  import { processors } from '../lib/render/processors.svelte'
+  import { noteContent } from '../lib/render/source'
   import * as vault from '../lib/vault'
   import { workspace } from '../lib/workspace.svelte'
   import NoteHeader from './NoteHeader.svelte'
 
   const HEADING = 'h1, h2, h3, h4, h5, h6'
+  const HEADING_TAGS = ['H1', 'H2', 'H3', 'H4', 'H5', 'H6']
 
   let { tab, path }: { tab: Tab; path: string } = $props()
 
   let content: HTMLElement | undefined
   let renderId = 0
+  const foldedLines = new SvelteSet<string>()
 
   async function render(text: string) {
     const id = ++renderId
     const body = document.createElement('div')
-    body.innerHTML = renderMarkdown(stripFrontmatter(text))
+    const note = noteContent(text)
+    body.innerHTML = renderMarkdown(note.text, { firstLine: note.firstLine })
     await hydrate(body, {
       source: path,
       resolve: (targets, source) => workspace.resolveLinks(targets, source),
       assetUrl: (asset) => workspace.assetUrl(asset),
       readNote: vault.readNote,
+      editNote: (note, edit) => documents.update(note, edit),
     })
-    if (id === renderId) content?.replaceChildren(...body.childNodes)
+    if (id !== renderId || !content) return
+    content.replaceChildren(...body.childNodes)
+    addFoldToggles(content)
+    applyFolding(content)
+  }
+
+  function addFoldToggles(root: HTMLElement) {
+    for (const heading of root.querySelectorAll<HTMLElement>(`:scope > :is(${HEADING})`)) {
+      const toggle = Object.assign(document.createElement('button'), {
+        type: 'button',
+        className: 'fold-toggle',
+        title: 'Fold',
+      })
+      toggle.addEventListener('click', () => {
+        const line = heading.dataset.line ?? ''
+        if (!foldedLines.delete(line)) foldedLines.add(line)
+        applyFolding(root)
+      })
+      heading.prepend(toggle)
+    }
+  }
+
+  /** Hides everything under a folded heading until the next heading of the same or a higher level. */
+  function applyFolding(root: HTMLElement) {
+    let foldedLevel = Infinity
+    for (const child of root.children as HTMLCollectionOf<HTMLElement>) {
+      const level = HEADING_TAGS.indexOf(child.tagName) + 1
+      if (level && level <= foldedLevel) foldedLevel = Infinity
+      child.hidden = foldedLevel !== Infinity
+      const isFolded = level > 0 && foldedLines.has(child.dataset.line ?? '')
+      child.classList.toggle('folded', isFolded)
+      if (isFolded && !child.hidden) foldedLevel = level
+    }
   }
 
   onMount(() => {
@@ -36,7 +75,7 @@
   })
 
   $effect(() => {
-    if (workspace.indexVersion) void documents.load(path).then(render)
+    if (workspace.indexVersion + processors.version) void documents.load(path).then(render)
   })
 
   $effect(() => {

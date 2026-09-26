@@ -448,6 +448,7 @@ button.primary {
 }
 
 .markdown pre {
+  position: relative;
   padding: 12px 16px;
   overflow-x: auto;
   border-radius: 6px;
@@ -498,6 +499,144 @@ button.primary {
 .markdown li.task-list-item input {
   margin: 0 6px 0 -20px;
   accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.copy-code {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--background);
+  color: var(--text-muted);
+  font-family: var(--font-text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.markdown pre .copy-code {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  opacity: 0;
+}
+
+.markdown pre:hover .copy-code,
+.copy-code:focus-visible {
+  opacity: 1;
+}
+
+.cm-live-fence {
+  display: inline-flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cm-live-fence .copy-code {
+  visibility: hidden;
+}
+
+.cm-line:hover .cm-live-fence .copy-code {
+  visibility: visible;
+}
+
+.callout {
+  --callout-color: 68 138 255;
+  margin: 1em 0;
+  padding: 8px 12px;
+  border-left: 3px solid rgb(var(--callout-color));
+  border-radius: 4px;
+  background: rgb(var(--callout-color) / 0.1);
+}
+
+.callout-title {
+  color: rgb(var(--callout-color));
+  font-weight: 600;
+}
+
+summary.callout-title {
+  cursor: pointer;
+}
+
+.callout-content > :last-child {
+  margin-bottom: 0;
+}
+
+.callout:is(
+  [data-callout='abstract'],
+  [data-callout='summary'],
+  [data-callout='tldr'],
+  [data-callout='tip'],
+  [data-callout='hint'],
+  [data-callout='important']
+) {
+  --callout-color: 0 191 188;
+}
+
+.callout:is([data-callout='success'], [data-callout='check'], [data-callout='done']) {
+  --callout-color: 8 185 78;
+}
+
+.callout:is(
+  [data-callout='question'],
+  [data-callout='help'],
+  [data-callout='faq'],
+  [data-callout='warning'],
+  [data-callout='caution'],
+  [data-callout='attention']
+) {
+  --callout-color: 236 117 0;
+}
+
+.callout:is(
+  [data-callout='failure'],
+  [data-callout='fail'],
+  [data-callout='missing'],
+  [data-callout='danger'],
+  [data-callout='error'],
+  [data-callout='bug']
+) {
+  --callout-color: 233 49 71;
+}
+
+.callout[data-callout='example'] {
+  --callout-color: 120 82 238;
+}
+
+.callout:is([data-callout='quote'], [data-callout='cite']) {
+  --callout-color: 158 158 158;
+}
+
+.fold-toggle {
+  width: 16px;
+  height: 16px;
+  margin: 0 4px 0 -20px;
+  padding: 0;
+  border: none;
+  background: none;
+  vertical-align: middle;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.fold-toggle::before {
+  display: block;
+  width: 6px;
+  height: 6px;
+  margin: auto;
+  border-right: 2px solid var(--text-faint);
+  border-bottom: 2px solid var(--text-faint);
+  content: '';
+  transform: rotate(45deg);
+}
+
+:is(h1, h2, h3, h4, h5, h6):hover > .fold-toggle,
+.folded > .fold-toggle {
+  opacity: 1;
+}
+
+.folded > .fold-toggle::before {
+  transform: rotate(-45deg);
 }
 
 .internal-embed.missing {
@@ -531,14 +670,24 @@ button.primary {
   max-width: 100%;
 }
 
+/* CodeMirror measures block widgets without their margins, so spacing must be padding. */
 .cm-live-block {
-  margin: 4px 0;
+  display: flow-root;
+  padding: 4px 0;
   font-family: var(--font-text);
   white-space: normal;
   cursor: text;
 }
 
-.cm-live-block table {
+.cm-live-block > :first-child {
+  margin-top: 0;
+}
+
+.cm-live-block > :last-child {
+  margin-bottom: 0;
+}
+
+.cm-live-block > p {
   margin: 0;
 }
 

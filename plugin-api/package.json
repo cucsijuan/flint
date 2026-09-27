@@ -1,0 +1,28 @@
+{
+  "name": "flint-plugin-api",
+  "version": "0.6.0",
+  "description": "TypeScript types for writing Flint plugins",
+  "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cucsijuan/flint.git",
+    "directory": "plugin-api"
+  },
+  "homepage": "https://github.com/cucsijuan/flint/tree/main/plugin-api#readme",
+  "keywords": [
+    "flint",
+    "plugin",
+    "markdown",
+    "notes"
+  ],
+  "types": "index.d.ts",
+  "files": [
+    "index.d.ts"
+  ],
+  "dependencies": {
+    "@codemirror/autocomplete": "^6.20.3",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.13"
+  }
+}

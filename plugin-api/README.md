@@ -1,5 +1,15 @@
 # Writing Flint plugins
 
+The API's TypeScript types are on npm, versioned with Flint:
+
+```sh
+npm install --save-dev flint-plugin-api
+```
+
+```ts
+import type { ActivatePlugin } from 'flint-plugin-api'
+```
+
 A plugin is a folder inside a vault's `.flint/plugins/` directory:
 
 ```

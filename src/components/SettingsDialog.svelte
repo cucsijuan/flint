@@ -6,6 +6,7 @@
   import DailyNotesSettings from './settings/DailyNotesSettings.svelte'
   import EditorSettings from './settings/EditorSettings.svelte'
   import GeneralSettings from './settings/GeneralSettings.svelte'
+  import HotkeySettings from './settings/HotkeySettings.svelte'
   import PluginSettings from './settings/PluginSettings.svelte'
 
   interface Section {
@@ -17,6 +18,7 @@
   const sections: Section[] = [
     { name: 'Editor', content: EditorSettings, needsVault: true },
     { name: 'Appearance', content: AppearanceSettings, needsVault: true },
+    { name: 'Hotkeys', content: HotkeySettings, needsVault: true },
     { name: 'Daily notes and templates', content: DailyNotesSettings, needsVault: true },
     { name: 'Plugins', content: PluginSettings, needsVault: true },
     { name: 'General', content: GeneralSettings, needsVault: false },

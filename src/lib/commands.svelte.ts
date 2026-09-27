@@ -53,8 +53,12 @@ export function displayHotkey(hotkey: string, mac = isMac) {
   return keys.map((key) => (key === 'Mod' ? 'Ctrl' : key)).join('+')
 }
 
+/** A command with the hotkey in effect, which the user may have changed. */
+export type BoundCommand = Command & { defaultHotkey?: string }
+
 class CommandRegistry {
   #commands = $state<Command[]>([])
+  #custom = $state<Record<string, string | null>>({})
 
   register(...commands: Command[]) {
     const ids = new Set(commands.map((command) => command.id))
@@ -65,18 +69,31 @@ class CommandRegistry {
     this.#commands = [...this.#commands.filter((command) => !ids.has(command.id)), ...forPlatform]
   }
 
-  /** `label` followed by the command's hotkey, for tooltips. */
-  label(label: string, id: string) {
-    const hotkey = this.#commands.find((command) => command.id === id)?.hotkey
-    return hotkey ? `${label} (${displayHotkey(hotkey)})` : label
-  }
-
   unregister(id: string) {
     this.#commands = this.#commands.filter((command) => command.id !== id)
   }
 
+  /** Hotkeys the user changed: a hotkey, or `null` for none. */
+  setCustomHotkeys(custom: Record<string, string | null>) {
+    this.#custom = custom
+  }
+
+  all(): BoundCommand[] {
+    return this.#commands.map((command) => ({
+      ...command,
+      defaultHotkey: command.hotkey,
+      hotkey: command.id in this.#custom ? (this.#custom[command.id] ?? undefined) : command.hotkey,
+    }))
+  }
+
   available() {
-    return this.#commands.filter((command) => command.isAvailable?.() ?? true)
+    return this.all().filter((command) => command.isAvailable?.() ?? true)
+  }
+
+  /** `label` followed by the command's hotkey, for tooltips. */
+  label(label: string, id: string) {
+    const hotkey = this.all().find((command) => command.id === id)?.hotkey
+    return hotkey ? `${label} (${displayHotkey(hotkey)})` : label
   }
 
   run(id: string) {

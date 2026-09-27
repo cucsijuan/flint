@@ -22,7 +22,9 @@ import {
   toggleBookmark,
 } from './bookmarks'
 import { type AppearanceSettings, DEFAULT_APPEARANCE } from './appearance'
+import { commands } from './commands.svelte'
 import { VaultConfig } from './config.svelte'
+import { parseHotkeys, serializeHotkeys } from './hotkeys'
 import { documents } from './documents'
 import { activeView } from './editor/active'
 import { noteOpened, vaultChanged } from './events'
@@ -56,6 +58,7 @@ const NOTICE_MS = 5000
 const LAYOUT_CONFIG = 'workspace'
 const BOOKMARKS_CONFIG = 'bookmarks'
 const SNIPPETS_FOLDER = '.flint/snippets'
+const HOTKEYS_CONFIG = 'hotkeys'
 const ATTACHMENTS_FOLDER = 'attachments'
 
 const timestamp = () => new Date().toISOString().replace(/\D/g, '').slice(0, 14)
@@ -127,6 +130,7 @@ class Workspace {
   localGraphDepth = $state(1)
 
   #legacySettings: Partial<VaultSettings> = {}
+  #customHotkeys: Record<string, string | null> = {}
   #isWatching = false
   #noticeTimer: ReturnType<typeof setTimeout> | undefined
   #searchTimer: ReturnType<typeof setTimeout> | undefined
@@ -186,6 +190,8 @@ class Workspace {
       await this.dailyNotesConfig.load()
       await this.templatesConfig.load()
       await this.appearance.load()
+      this.#customHotkeys = parseHotkeys(await vault.readConfig(HOTKEYS_CONFIG))
+      commands.setCustomHotkeys(this.#customHotkeys)
       await this.reloadSnippets()
       this.bookmarks = parseBookmarks(await vault.readConfig(BOOKMARKS_CONFIG))
       await setSetting('lastVault', path)
@@ -319,6 +325,17 @@ class Workspace {
     if (!(await source.write(path))) return null
     await this.#refresh()
     return this.linkTargets.find((target) => target.path === path)?.linkText ?? basename(path)
+  }
+
+  /** Sets a command's hotkey: a hotkey, `null` for none, or `undefined` to restore the default. */
+  setHotkey(id: string, hotkey: string | null | undefined) {
+    const others = Object.fromEntries(
+      Object.entries(this.#customHotkeys).filter(([known]) => known !== id),
+    )
+    this.#customHotkeys = hotkey === undefined ? others : { ...others, [id]: hotkey }
+    commands.setCustomHotkeys(this.#customHotkeys)
+    const json = serializeHotkeys(this.#customHotkeys)
+    void this.#run(() => vault.writeConfig(HOTKEYS_CONFIG, json))
   }
 
   setAppearance(changes: Partial<AppearanceSettings>) {

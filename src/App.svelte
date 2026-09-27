@@ -13,6 +13,7 @@
   import Welcome from './components/Welcome.svelte'
   import { listen } from '@tauri-apps/api/event'
   import { dropFiles } from './lib/editor/attachments'
+  import { contextWord, replaceContextWord } from './lib/editor/context-word'
   import { registerAppCommands, rememberContextTarget } from './lib/app-commands'
   import { checkForUpdates } from './lib/updates'
   import { commands, isMac } from './lib/commands.svelte'
@@ -35,6 +36,9 @@
     const menuActions = listen<string>('context-menu-action', ({ payload }) =>
       commands.run(payload),
     )
+    const spelling = listen<string>('context-menu-spelling', ({ payload }) =>
+      replaceContextWord(payload),
+    )
     // Only Linux enables native file drops; WebKitGTK reports their position in CSS pixels.
     const fileDrops = getCurrentWebview().onDragDropEvent(({ payload }) => {
       if (payload.type === 'drop') dropFiles(payload.paths, payload.position.x, payload.position.y)
@@ -43,6 +47,7 @@
       void closing.then((unlisten) => unlisten())
       void fileDrops.then((unlisten) => unlisten())
       void menuActions.then((unlisten) => unlisten())
+      void spelling.then((unlisten) => unlisten())
     }
   })
 
@@ -58,7 +63,7 @@
     if (allowsNativeMenu && isMac) {
       const isLink = target.closest('a, [data-link], [data-url]') !== null
       const isEditable = target.closest('.cm-content, input, textarea') !== null
-      void vault.showContextMenu(isLink, isEditable)
+      void vault.showContextMenu(isLink, isEditable, contextWord(event))
     }
   }
 

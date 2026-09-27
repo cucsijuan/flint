@@ -1174,6 +1174,8 @@ dependencies = [
  "log",
  "notify",
  "notify-debouncer-full",
+ "objc2-app-kit",
+ "objc2-foundation",
  "percent-encoding",
  "png 0.18.1",
  "pulldown-cmark",

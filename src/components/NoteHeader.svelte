@@ -12,6 +12,7 @@
   import { dailyNoteDate } from '../lib/dates'
   import { goBack, goForward, type Tab, toggleReading } from '../lib/layout'
   import { noteTitle } from '../lib/paths'
+  import { commands } from '../lib/commands.svelte'
   import { workspace } from '../lib/workspace.svelte'
 
   let { tab, path }: { tab: Tab; path: string } = $props()
@@ -24,7 +25,7 @@
   <div class="actions">
     <button
       class="icon"
-      title="Go back (Alt+←)"
+      title={commands.label('Go back', 'go-back')}
       disabled={tab.back.length === 0}
       onclick={() => workspace.updateLayout(goBack)}
     >
@@ -32,7 +33,7 @@
     </button>
     <button
       class="icon"
-      title="Go forward (Alt+→)"
+      title={commands.label('Go forward', 'go-forward')}
       disabled={tab.forward.length === 0}
       onclick={() => workspace.updateLayout(goForward)}
     >
@@ -43,7 +44,7 @@
     {#if isDailyNote}
       <button
         class="icon"
-        title="Previous daily note (Ctrl+Alt+←)"
+        title={commands.label('Previous daily note', 'open-previous-daily-note')}
         onclick={() => workspace.openDailyNote(-1)}
       >
         <ChevronLeft size={16} />
@@ -53,7 +54,7 @@
     {#if isDailyNote}
       <button
         class="icon"
-        title="Next daily note (Ctrl+Alt+→)"
+        title={commands.label('Next daily note', 'open-next-daily-note')}
         onclick={() => workspace.openDailyNote(1)}
       >
         <ChevronRight size={16} />
@@ -71,7 +72,7 @@
     </button>
     <button
       class="icon"
-      title={tab.isReading ? 'Edit (Ctrl+E)' : 'Reading view (Ctrl+E)'}
+      title={commands.label(tab.isReading ? 'Edit' : 'Reading view', 'toggle-reading')}
       onclick={() => workspace.updateLayout(toggleReading)}
     >
       {#if tab.isReading}<Pencil size={16} />{:else}<BookOpen size={16} />{/if}

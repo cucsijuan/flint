@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { isMac } from '../lib/commands.svelte'
   import { noteTitle, parentOf } from '../lib/paths'
   import type { LinkTarget } from '../lib/vault'
   import { workspace } from '../lib/workspace.svelte'
@@ -12,7 +13,7 @@
   detail={(target: LinkTarget) =>
     target.alias ? `→ ${noteTitle(target.path)}` : parentOf(target.path)}
   placeholder="Find or create a note…"
-  hint="↵ open · Ctrl+↵ open in new tab · Shift+↵ create"
+  hint={`↵ open · ${isMac ? '⌘' : 'Ctrl+'}↵ open in new tab · ${isMac ? '⇧' : 'Shift+'}↵ create`}
   onChoose={(target: LinkTarget, options) => workspace.openNote(target.path, options)}
   onSubmitQuery={(query) => workspace.openOrCreateNote(query)}
 />

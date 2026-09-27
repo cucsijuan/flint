@@ -15,8 +15,9 @@
   import { dropFiles } from './lib/editor/attachments'
   import { registerAppCommands, rememberContextTarget } from './lib/app-commands'
   import { checkForUpdates } from './lib/updates'
-  import { commands } from './lib/commands.svelte'
+  import { commands, isMac } from './lib/commands.svelte'
   import { pluginHost } from './lib/plugins/host.svelte'
+  import * as vault from './lib/vault'
   import { workspace } from './lib/workspace.svelte'
 
   registerAppCommands()
@@ -51,10 +52,14 @@
 
   function onContextMenu(event: MouseEvent) {
     rememberContextTarget(event.target)
-    const allowsNativeMenu = (event.target as Element).closest(
-      '.cm-editor, .markdown, input, textarea',
-    )
-    if (!allowsNativeMenu) event.preventDefault()
+    const target = event.target as Element
+    const allowsNativeMenu = target.closest('.cm-editor, .markdown, input, textarea')
+    if (!allowsNativeMenu || isMac) event.preventDefault()
+    if (allowsNativeMenu && isMac) {
+      const isLink = target.closest('a, [data-link], [data-url]') !== null
+      const isEditable = target.closest('.cm-content, input, textarea') !== null
+      void vault.showContextMenu(isLink, isEditable)
+    }
   }
 
   function preventFileDrop(event: DragEvent) {

@@ -1,17 +1,26 @@
 export interface Command {
   id: string
   name: string
+  /** For example `Mod+Shift+K`. `Mod` is Ctrl, or ⌘ on macOS. */
   hotkey?: string
+  /** Replaces `hotkey` on macOS, where some shortcuts mean something else. */
+  macHotkey?: string
   run: () => unknown
   isAvailable?: () => boolean
 }
 
-const isMac = navigator.userAgent.includes('Mac')
+export const isMac = navigator.userAgent.includes('Mac')
 
-export function hotkeyOf(event: KeyboardEvent) {
-  const key = event.key.length === 1 ? event.key.toUpperCase() : event.key
+const LETTER_OR_DIGIT = /^(?:Key[A-Z]|Digit\d)$/
+
+/** On macOS `Mod` is only ⌘, so Ctrl keeps its text-editing shortcuts (Ctrl+A, Ctrl+E…). */
+export function hotkeyOf(event: KeyboardEvent, mac = isMac) {
+  // Option+letter types a symbol on macOS, so read which key was pressed instead.
+  const typed = mac && event.altKey && LETTER_OR_DIGIT.test(event.code) ? event.code.at(-1) : null
+  const key = typed ?? (event.key.length === 1 ? event.key.toUpperCase() : event.key)
   return [
-    (event.ctrlKey || event.metaKey) && 'Mod',
+    (mac ? event.metaKey : event.ctrlKey || event.metaKey) && 'Mod',
+    mac && event.ctrlKey && 'Ctrl',
     event.altKey && 'Alt',
     event.shiftKey && 'Shift',
     key,
@@ -27,18 +36,30 @@ const KEY_SYMBOLS: Record<string, string> = {
   ArrowDown: '↓',
 }
 
-export const displayHotkey = (hotkey: string) =>
-  hotkey
-    .replace('Mod', isMac ? '⌘' : 'Ctrl')
-    .replace(/Arrow\w+/, (key) => KEY_SYMBOLS[key] ?? key)
-    .replaceAll('+', isMac ? '' : '+')
+const MAC_MODIFIERS: Record<string, string> = { Mod: '⌘', Ctrl: '⌃', Alt: '⌥', Shift: '⇧' }
+
+export function displayHotkey(hotkey: string, mac = isMac) {
+  const keys = hotkey.split('+').map((key) => KEY_SYMBOLS[key] ?? key)
+  if (mac) return keys.map((key) => MAC_MODIFIERS[key] ?? key).join('')
+  return keys.map((key) => (key === 'Mod' ? 'Ctrl' : key)).join('+')
+}
 
 class CommandRegistry {
   #commands = $state<Command[]>([])
 
   register(...commands: Command[]) {
     const ids = new Set(commands.map((command) => command.id))
-    this.#commands = [...this.#commands.filter((command) => !ids.has(command.id)), ...commands]
+    const forPlatform = commands.map((command) => ({
+      ...command,
+      hotkey: isMac ? (command.macHotkey ?? command.hotkey) : command.hotkey,
+    }))
+    this.#commands = [...this.#commands.filter((command) => !ids.has(command.id)), ...forPlatform]
+  }
+
+  /** `label` followed by the command's hotkey, for tooltips. */
+  label(label: string, id: string) {
+    const hotkey = this.#commands.find((command) => command.id === id)?.hotkey
+    return hotkey ? `${label} (${displayHotkey(hotkey)})` : label
   }
 
   unregister(id: string) {

@@ -10,6 +10,7 @@
     Settings,
   } from '@lucide/svelte'
   import { Tabs } from 'bits-ui'
+  import { commands } from '../lib/commands.svelte'
   import { workspace } from '../lib/workspace.svelte'
   import BookmarksPanel from './BookmarksPanel.svelte'
   import FileTree from './FileTree.svelte'
@@ -19,7 +20,11 @@
 <aside>
   <header>
     <span class="vault" title={workspace.info?.root}>{workspace.info?.name}</span>
-    <button class="icon" title="New note (Ctrl+N)" onclick={() => workspace.createNote()}>
+    <button
+      class="icon"
+      title={commands.label('New note', 'new-note')}
+      onclick={() => workspace.createNote()}
+    >
       <FilePlus size={16} />
     </button>
     <button class="icon" title="Open today's daily note" onclick={() => workspace.openDailyNote()}>
@@ -33,7 +38,7 @@
     </button>
     <button
       class="icon"
-      title="Settings (Ctrl+,)"
+      title={commands.label('Settings', 'open-settings')}
       onclick={() => (workspace.isSettingsOpen = true)}
     >
       <Settings size={16} />
@@ -42,7 +47,7 @@
   <Tabs.Root bind:value={workspace.leftTab} class="panel-tabs">
     <Tabs.List class="tab-list">
       <Tabs.Trigger class="tab" value="files" title="Files"><Files size={16} /></Tabs.Trigger>
-      <Tabs.Trigger class="tab" value="search" title="Search (Ctrl+Shift+F)">
+      <Tabs.Trigger class="tab" value="search" title={commands.label('Search', 'search')}>
         <Search size={16} />
       </Tabs.Trigger>
       <Tabs.Trigger class="tab" value="bookmarks" title="Bookmarks">

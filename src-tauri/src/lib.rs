@@ -45,6 +45,7 @@ pub fn run() {
             commands::save_clipboard_image,
             commands::clipboard_files,
             commands::open_externally,
+            context_menu::show_context_menu,
             commands::read_config,
             commands::write_config,
             commands::list_plugins,
@@ -58,6 +59,8 @@ pub fn run() {
             if let Some(window) = app.get_webview_window("main") {
                 context_menu::install(&window)?;
             }
+            #[cfg(target_os = "macos")]
+            app.set_menu(context_menu::app_menu(app.handle())?)?;
             if cfg!(debug_assertions) {
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()

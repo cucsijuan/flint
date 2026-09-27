@@ -1,4 +1,4 @@
-use tauri::{Emitter, WebviewWindow};
+use tauri::{Emitter, Manager, WebviewWindow};
 
 pub const CONTEXT_MENU_ACTION: &str = "context-menu-action";
 
@@ -188,7 +188,100 @@ pub fn install(window: &WebviewWindow) -> tauri::Result<()> {
     })
 }
 
-#[cfg(not(any(target_os = "linux", windows)))]
+/// WKWebView's menu can't be extended, so on macOS the page asks for a native menu instead.
+#[cfg(target_os = "macos")]
+pub fn install(window: &WebviewWindow) -> tauri::Result<()> {
+    let emitter = window.clone();
+    window.on_menu_event(move |_, event| {
+        let known = LINK_ACTIONS.iter().chain(&EDIT_ACTIONS);
+        if let Some((id, _)) = known.into_iter().find(|(id, _)| event.id() == *id) {
+            let _ = emitter.emit(CONTEXT_MENU_ACTION, *id);
+        }
+    });
+    Ok(())
+}
+
+#[cfg(not(any(target_os = "linux", windows, target_os = "macos")))]
 pub fn install(_window: &WebviewWindow) -> tauri::Result<()> {
     Ok(())
+}
+
+#[tauri::command]
+pub fn show_context_menu(
+    window: WebviewWindow,
+    is_link: bool,
+    is_editable: bool,
+) -> tauri::Result<()> {
+    use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+
+    let app = window.app_handle();
+    let menu = Menu::new(app)?;
+    if is_editable {
+        menu.append(&PredefinedMenuItem::cut(app, None)?)?;
+    }
+    menu.append(&PredefinedMenuItem::copy(app, None)?)?;
+    if is_editable {
+        menu.append(&PredefinedMenuItem::paste(app, None)?)?;
+    }
+    menu.append(&PredefinedMenuItem::select_all(app, None)?)?;
+    let actions = actions(is_link, is_editable);
+    if !actions.is_empty() {
+        menu.append(&PredefinedMenuItem::separator(app)?)?;
+    }
+    for (id, label) in actions {
+        menu.append(&MenuItem::with_id(app, id, label, true, None::<&str>)?)?;
+    }
+    window.popup_menu(&menu)
+}
+
+/// The macOS menu bar, without "Close Window" so ⌘W is free to close tabs.
+#[cfg(target_os = "macos")]
+pub fn app_menu(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
+    use tauri::menu::{Menu, PredefinedMenuItem, Submenu};
+
+    let separator = || PredefinedMenuItem::separator(app);
+    Menu::with_items(
+        app,
+        &[
+            &Submenu::with_items(
+                app,
+                "Flint",
+                true,
+                &[
+                    &PredefinedMenuItem::about(app, None, None)?,
+                    &separator()?,
+                    &PredefinedMenuItem::services(app, None)?,
+                    &separator()?,
+                    &PredefinedMenuItem::hide(app, None)?,
+                    &PredefinedMenuItem::hide_others(app, None)?,
+                    &PredefinedMenuItem::show_all(app, None)?,
+                    &separator()?,
+                    &PredefinedMenuItem::quit(app, None)?,
+                ],
+            )?,
+            &Submenu::with_items(
+                app,
+                "Edit",
+                true,
+                &[
+                    &PredefinedMenuItem::undo(app, None)?,
+                    &PredefinedMenuItem::redo(app, None)?,
+                    &separator()?,
+                    &PredefinedMenuItem::cut(app, None)?,
+                    &PredefinedMenuItem::copy(app, None)?,
+                    &PredefinedMenuItem::paste(app, None)?,
+                    &PredefinedMenuItem::select_all(app, None)?,
+                ],
+            )?,
+            &Submenu::with_items(
+                app,
+                "Window",
+                true,
+                &[
+                    &PredefinedMenuItem::minimize(app, None)?,
+                    &PredefinedMenuItem::fullscreen(app, None)?,
+                ],
+            )?,
+        ],
+    )
 }

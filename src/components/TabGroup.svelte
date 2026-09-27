@@ -13,6 +13,7 @@
   import { ContextMenu } from 'bits-ui'
   import * as layouts from '../lib/layout'
   import { basename, noteTitle } from '../lib/paths'
+  import { commands } from '../lib/commands.svelte'
   import { workspace } from '../lib/workspace.svelte'
   import EmptyTab from './EmptyTab.svelte'
   import FileView from './FileView.svelte'
@@ -181,7 +182,7 @@
             <span class="title">{title(tab.view)}</span>
             <button
               class="close"
-              title="Close (Ctrl+W)"
+              title={commands.label('Close', 'close-tab')}
               onclick={(event) => {
                 event.stopPropagation()
                 close(tab.id)
@@ -193,7 +194,7 @@
         {/each}
         <button
           class="new"
-          title="New tab (Ctrl+T)"
+          title={commands.label('New tab', 'new-tab')}
           onclick={() =>
             workspace.updateLayout((layout) => layouts.addTab(layout, undefined, group.id))}
         >

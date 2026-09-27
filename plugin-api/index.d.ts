@@ -9,8 +9,10 @@ export interface PluginCommand {
   /** Unique within the plugin; Flint prefixes it with the plugin id. */
   id: string
   name: string
-  /** For example `Mod+Shift+K`. `Mod` is Ctrl, or Cmd on macOS. */
+  /** For example `Mod+Shift+K`. `Mod` is Ctrl, or ⌘ on macOS. */
   hotkey?: string
+  /** Replaces `hotkey` on macOS, where `Ctrl` is the Control key. */
+  macHotkey?: string
   run: () => unknown
   isAvailable?: () => boolean
 }

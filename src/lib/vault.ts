@@ -107,6 +107,8 @@ export const importAttachment = (source: string, path: string) =>
 export const saveClipboardImage = (path: string) =>
   invoke<boolean>('save_clipboard_image', { path })
 export const clipboardFiles = () => invoke<string[]>('clipboard_files')
+export const showContextMenu = (isLink: boolean, isEditable: boolean) =>
+  invoke('show_context_menu', { isLink, isEditable })
 export const openExternally = (path: string) => invoke('open_externally', { path })
 export const assetUrl = (root: string, path: string) => convertFileSrc(`${root}/${path}`)
 

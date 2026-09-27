@@ -157,12 +157,13 @@ class PluginHost {
     return {
       pluginId: manifest.id,
       commands: {
-        register: ({ id, name, hotkey, run, isAvailable }) => {
+        register: ({ id, name, hotkey, macHotkey, run, isAvailable }) => {
           const commandId = `${manifest.id}:${id}`
           commands.register({
             id: commandId,
             name: `${manifest.name}: ${name}`,
             hotkey,
+            macHotkey,
             isAvailable,
             run: guard(run),
           })

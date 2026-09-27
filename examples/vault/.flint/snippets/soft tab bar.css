@@ -1,4 +1,4 @@
-/* Uses the accent color for the active tab's text. */
-[role='tab'][aria-selected='true'] {
+/* Uses the accent color for the active tab's title in the tab bar. */
+.workspace-tab.is-active .title {
   color: var(--accent);
 }

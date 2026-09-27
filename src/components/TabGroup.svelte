@@ -158,8 +158,8 @@
         {#each group.tabs as tab, index (tab.id)}
           {@const isCurrent = tab.id === group.activeTabId}
           <div
-            class="tab"
-            class:current={isCurrent}
+            class="tab workspace-tab"
+            class:is-active={isCurrent}
             class:drop-left={tabIndicator?.tabId === tab.id && tabIndicator.edge === 'left'}
             class:drop-right={tabIndicator?.tabId === tab.id && tabIndicator.edge === 'right'}
             role="tab"
@@ -300,12 +300,12 @@
     background: var(--hover);
   }
 
-  .tab.current {
+  .tab.is-active {
     background: var(--background);
     color: var(--text);
   }
 
-  .group.active .tab.current {
+  .group.active .tab.is-active {
     box-shadow: inset 0 2px 0 var(--accent);
   }
 
@@ -341,7 +341,7 @@
   }
 
   .tab:hover .close,
-  .tab.current .close {
+  .tab.is-active .close {
     visibility: visible;
   }
 

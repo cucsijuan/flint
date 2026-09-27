@@ -81,9 +81,13 @@ With M5, the MVP is complete. [v0.1.0](https://github.com/cucsijuan/flint/releas
 
 Builds, installers and automatic updates for macOS (Intel and Apple Silicon), with everything from M0 to M9 working as it does on Linux and Windows: pasting and dropping images, the editor context menu with formatting actions, spell checking, and hotkeys with ⌘.
 
-### M11: Customization
+### M11: Customization ✅
 
-Appearance (theme, fonts), customizable hotkeys, per-vault settings, and graph color groups.
+- Per-vault settings in `.flint/` (`app.json`, `appearance.json`, `hotkeys.json`, `graph.json`) with Obsidian's keys; Settings split into sections.
+- Appearance: light, dark or system theme, accent color, text and code fonts picked from the installed fonts, font size, readable line length, and CSS snippets from `.flint/snippets`.
+- Customizable hotkeys for every command, plugins included, with conflict warnings.
+- Graph: Obsidian-style forces with sliders, and color groups based on search queries.
+- Duplicate files from the file tree; folders stay open after a rename.
 
 ### M12: Plugin ecosystem
 
@@ -93,7 +97,6 @@ Browsing and installing community plugins, hot reload, a settings-page API, tab 
 
 Features that are not scheduled in a milestone yet.
 
-- **File tree:** keeping folders expanded after a rename, duplicating files.
 - **Links:** block references (`[[note#^id]]`).
 - **Search:** parentheses for grouping terms, more operators (`line:`, `section:`, `content:`), sort options.
 - **Graph:** force settings.

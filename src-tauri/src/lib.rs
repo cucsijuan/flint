@@ -1,4 +1,5 @@
 mod commands;
+mod community;
 mod config;
 mod context_menu;
 mod error;
@@ -55,6 +56,9 @@ pub fn run() {
             commands::read_config,
             commands::write_config,
             commands::list_plugins,
+            commands::community_plugins,
+            commands::latest_plugin_versions,
+            commands::install_plugin,
             commands::read_plugin_file,
             commands::read_plugin_data,
             commands::write_plugin_data,

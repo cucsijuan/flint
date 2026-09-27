@@ -92,6 +92,15 @@ pub fn set_enabled(vault: &Vault, enabled: Vec<String>) -> Result<()> {
     vault.write(ENABLED_FILE, &json)
 }
 
+/// Writes a plugin's files (`manifest.json`, `main.js`, `styles.css`) into its folder.
+pub fn write_files(vault: &Vault, folder: &str, files: &[(&str, String)]) -> Result<()> {
+    vault.ensure_folder(&format!("{PLUGINS_FOLDER}/{folder}"))?;
+    for (name, contents) in files {
+        vault.write(&plugin_path(folder, name)?, contents)?;
+    }
+    Ok(())
+}
+
 fn plugin_path(folder: &str, file: &str) -> Result<String> {
     if folder.is_empty() || folder.contains(['/', '\\']) || folder.starts_with('.') {
         return Err(Error::OutsideVault(folder.to_owned()));

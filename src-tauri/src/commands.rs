@@ -8,11 +8,12 @@ use serde::Serialize;
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_opener::OpenerExt;
 
+use crate::community::{self, CommunityPlugin};
 use crate::config;
 use crate::error::{Error, Result};
 use crate::index::{Backlink, Graph, Index, LinkTarget, TagCount};
 use crate::markdown::Heading;
-use crate::plugins::{self, PluginListing};
+use crate::plugins::{self, PluginListing, PluginManifest};
 use crate::search::SearchResult;
 use crate::vault::{Entry, Vault, is_attachment_name};
 use crate::watcher::{VaultWatcher, watch};
@@ -180,6 +181,25 @@ pub fn tags(state: State<AppState>) -> Result<Vec<TagCount>> {
 #[tauri::command(async)]
 pub fn graph(state: State<AppState>) -> Result<Graph> {
     state.read_index(Index::graph)
+}
+
+#[tauri::command]
+pub async fn community_plugins() -> Result<Vec<CommunityPlugin>> {
+    community::list().await
+}
+
+#[tauri::command]
+pub async fn latest_plugin_versions(repos: Vec<String>) -> Result<Vec<Option<String>>> {
+    community::latest_versions(repos).await
+}
+
+#[tauri::command]
+pub async fn install_plugin(
+    state: State<'_, AppState>,
+    plugin: CommunityPlugin,
+) -> Result<PluginManifest> {
+    let vault = state.vault()?;
+    community::install(&vault, &plugin).await
 }
 
 #[tauri::command(async)]

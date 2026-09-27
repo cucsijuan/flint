@@ -12,6 +12,10 @@ pub enum Error {
     InvalidQuery(String),
     #[error("invalid attachment data")]
     InvalidAttachment,
+    #[error("{0}")]
+    Plugin(String),
+    #[error(transparent)]
+    Http(#[from] reqwest::Error),
     #[error(transparent)]
     Tauri(#[from] tauri::Error),
     #[error(transparent)]

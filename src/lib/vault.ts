@@ -88,6 +88,21 @@ export interface PluginManifest {
   license: string
 }
 
+export interface CommunityPlugin {
+  id: string
+  name: string
+  author: string
+  description: string
+  /** `owner/name` on GitHub. */
+  repo: string
+}
+
+export const communityPlugins = () => invoke<CommunityPlugin[]>('community_plugins')
+export const latestPluginVersions = (repos: string[]) =>
+  invoke<(string | null)[]>('latest_plugin_versions', { repos })
+export const installPlugin = (plugin: CommunityPlugin) =>
+  invoke<PluginManifest>('install_plugin', { plugin })
+
 export interface PluginListing {
   folder: string
   manifest: PluginManifest | null

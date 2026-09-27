@@ -21,6 +21,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_os::init())
         .manage(AppState::default())
         .invoke_handler(tauri::generate_handler![
             commands::launch_vault,
@@ -46,6 +47,7 @@ pub fn run() {
             commands::clipboard_files,
             commands::open_externally,
             context_menu::show_context_menu,
+            commands::system_fonts,
             commands::snippets,
             commands::read_snippet,
             commands::read_config,

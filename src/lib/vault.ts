@@ -112,6 +112,12 @@ export const showContextMenu = (isLink: boolean, isEditable: boolean, word: stri
 export const openExternally = (path: string) => invoke('open_externally', { path })
 export const assetUrl = (root: string, path: string) => convertFileSrc(`${root}/${path}`)
 
+export interface FontFamily {
+  name: string
+  monospaced: boolean
+}
+
+export const systemFonts = () => invoke<FontFamily[]>('system_fonts')
 export const snippets = () => invoke<string[]>('snippets')
 export const readSnippet = (name: string) => invoke<string>('read_snippet', { name })
 export const readConfig = (name: string) => invoke<string | null>('read_config', { name })

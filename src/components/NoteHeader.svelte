@@ -93,8 +93,10 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-shrink: 0;
     gap: 8px;
-    padding: 4px 8px;
+    height: var(--header-height);
+    padding: 0 8px;
     border-bottom: 1px solid var(--border);
   }
 

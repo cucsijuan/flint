@@ -268,9 +268,10 @@
   .bar {
     display: flex;
     align-items: stretch;
+    flex-shrink: 0;
     gap: 1px;
-    min-height: 32px;
-    padding: 4px 4px 0;
+    height: var(--header-height);
+    padding: 6px 4px 0;
     overflow-x: auto;
     border-bottom: 1px solid var(--border);
     background: var(--background-secondary);

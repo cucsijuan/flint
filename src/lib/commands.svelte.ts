@@ -1,3 +1,5 @@
+import { platform } from '@tauri-apps/plugin-os'
+
 export interface Command {
   id: string
   name: string
@@ -9,7 +11,14 @@ export interface Command {
   isAvailable?: () => boolean
 }
 
-export const isMac = navigator.userAgent.includes('Mac')
+/** WebKitGTK reports a macOS user agent, so ask Tauri; tests run outside it. */
+export const isMac = (() => {
+  try {
+    return platform() === 'macos'
+  } catch {
+    return false
+  }
+})()
 
 const LETTER_OR_DIGIT = /^(?:Key[A-Z]|Digit\d)$/
 

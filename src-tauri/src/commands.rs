@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::{Arc, Mutex, RwLock};
 
@@ -203,6 +204,29 @@ pub fn enabled_plugins(state: State<AppState>) -> Result<Vec<String>> {
 #[tauri::command(async)]
 pub fn set_enabled_plugins(state: State<AppState>, enabled: Vec<String>) -> Result<()> {
     plugins::set_enabled(&state.vault()?, enabled)
+}
+
+#[derive(Serialize)]
+pub struct FontFamily {
+    name: String,
+    monospaced: bool,
+}
+
+/// The font families installed on this computer, sorted by name.
+#[tauri::command(async)]
+pub fn system_fonts() -> Vec<FontFamily> {
+    let mut database = fontdb::Database::new();
+    database.load_system_fonts();
+    let mut families: BTreeMap<String, bool> = BTreeMap::new();
+    for face in database.faces() {
+        if let Some((name, _)) = face.families.first() {
+            *families.entry(name.clone()).or_default() |= face.monospaced;
+        }
+    }
+    families
+        .into_iter()
+        .map(|(name, monospaced)| FontFamily { name, monospaced })
+        .collect()
 }
 
 #[tauri::command(async)]

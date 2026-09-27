@@ -71,8 +71,10 @@
   header {
     display: flex;
     align-items: center;
+    flex-shrink: 0;
     gap: 2px;
-    padding: 6px 8px;
+    height: var(--header-height);
+    padding: 0 8px;
     border-bottom: 1px solid var(--border);
   }
 

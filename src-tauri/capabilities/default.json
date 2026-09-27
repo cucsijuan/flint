@@ -12,6 +12,7 @@
     "window-state:default",
     "updater:default",
     "process:allow-restart",
-    "opener:allow-open-url"
+    "opener:allow-open-url",
+    "os:allow-platform"
   ]
 }

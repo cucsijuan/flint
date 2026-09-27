@@ -17,6 +17,7 @@ tauri-build = { version = "2.6.3", features = [] }
 [dependencies]
 arboard = { version = "3.6.1", features = ["wayland-data-control"] }
 base64 = "0.23.1"
+fontdb = "0.24.0"
 ignore = "0.4.33"
 log = "0.4"
 notify = "8.2.0"
@@ -31,6 +32,7 @@ tauri = { version = "2.11.6", features = ["protocol-asset"] }
 tauri-plugin-dialog = "2.7.3"
 tauri-plugin-log = "2"
 tauri-plugin-opener = "2.5.5"
+tauri-plugin-os = "2"
 tauri-plugin-process = "2.3.1"
 tauri-plugin-store = "2.4.5"
 tauri-plugin-updater = "2.12.0"

@@ -1,0 +1,4 @@
+/* Uses the accent color for the active tab's text. */
+[role='tab'][aria-selected='true'] {
+  color: var(--accent);
+}

@@ -19,5 +19,8 @@ Each note below covers one area. Follow the links, then open the **graph** (Ctrl
 8. [[Outline and bookmarks]]
 9. [[Plugins]]
 
+> [!tip] Appearance
+> Settings → Appearance changes the theme, accent color and fonts. Three CSS snippets ship in `.flint/snippets`: turn them on there.
+
 > [!tip] Right sidebar
 > Backlinks, outline, properties, tags and the local graph for the open note live in the right sidebar.

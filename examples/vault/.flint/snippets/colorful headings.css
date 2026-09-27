@@ -1,0 +1,15 @@
+/* Gives each heading level its own color, in the editor and the reading view. */
+.cm-h1,
+.markdown h1 {
+  color: #e8590c;
+}
+
+.cm-h2,
+.markdown h2 {
+  color: #2f9e44;
+}
+
+.cm-h3,
+.markdown h3 {
+  color: #1c7ed6;
+}

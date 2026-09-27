@@ -13,6 +13,8 @@
   --font-mono: ui-monospace, 'Cascadia Code', 'JetBrains Mono', monospace;
   --font-size: 16px;
   --line-width: 760px;
+  /* Every toolbar row (tab bars, sidebar headers, note headers) shares it so they line up. */
+  --header-height: 38px;
 
   color-scheme: light dark;
 }
@@ -232,8 +234,11 @@ button.primary {
 
 .tab-list {
   display: flex;
+  flex-shrink: 0;
+  align-items: center;
   gap: 2px;
-  padding: 4px 8px;
+  height: var(--header-height);
+  padding: 0 8px;
   border-bottom: 1px solid var(--border);
 }
 

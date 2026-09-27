@@ -1,7 +1,11 @@
 <script lang="ts">
   import { FolderOpen, RefreshCw, RotateCcw } from '@lucide/svelte'
   import { DEFAULT_APPEARANCE } from '../../lib/appearance'
+  import { onMount } from 'svelte'
+  import * as vault from '../../lib/vault'
+  import type { FontFamily } from '../../lib/vault'
   import { workspace } from '../../lib/workspace.svelte'
+  import FontPicker from './FontPicker.svelte'
   import Choice from './Choice.svelte'
   import Setting from './Setting.svelte'
 
@@ -9,6 +13,11 @@
   const MAX_FONT_SIZE = 30
 
   const appearance = $derived(workspace.appearance.value)
+  let fonts = $state<FontFamily[]>([])
+
+  onMount(() => {
+    void vault.systemFonts().then((found) => (fonts = found))
+  })
 </script>
 
 <Setting name="Theme" description="Follow the system, or always use light or dark.">
@@ -56,23 +65,21 @@
     }}
   />
 </Setting>
-<Setting
-  name="Text font"
-  description="A font installed on this computer. Empty uses the system font."
->
-  <input
+<Setting name="Text font" description="For notes. Type to search the fonts on this computer.">
+  <FontPicker
     value={appearance.textFontFamily}
+    {fonts}
     placeholder="System font"
-    onchange={(event) =>
-      workspace.setAppearance({ textFontFamily: event.currentTarget.value.trim() })}
+    onchange={(textFontFamily) => workspace.setAppearance({ textFontFamily })}
   />
 </Setting>
-<Setting name="Code font" description="For code blocks and inline code.">
-  <input
+<Setting name="Code font" description="For code blocks and inline code; monospaced fonts first.">
+  <FontPicker
     value={appearance.monospaceFontFamily}
+    {fonts}
     placeholder="System monospace"
-    onchange={(event) =>
-      workspace.setAppearance({ monospaceFontFamily: event.currentTarget.value.trim() })}
+    preferMonospaced
+    onchange={(monospaceFontFamily) => workspace.setAppearance({ monospaceFontFamily })}
   />
 </Setting>
 

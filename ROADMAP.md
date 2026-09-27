@@ -95,16 +95,37 @@ Builds, installers and automatic updates for macOS (Intel and Apple Silicon), wi
 - Plugin API: settings sections, Lucide icons for sidebar tabs, and types published to npm as [`flint-plugin-api`](https://www.npmjs.com/package/flint-plugin-api).
 - Hot reload for plugin development, and a TypeScript plugin template (`examples/plugin-template`).
 
+### M13: Complete Markdown
+
+Math (`$…$`, `$$…$$`, KaTeX) and Mermaid diagrams, `==highlights==`, footnotes, `%%comments%%`, and block references (`[[note#^id]]`) with block embeds.
+
+### M14: A stronger editor
+
+Tables edited as a grid, moving lines and blocks, folding headings and lists in the editor, pasting a URL onto selected text to make a link, an optional Vim mode, and choosing spell-check languages.
+
+### M15: Advanced search and links
+
+Grouping with parentheses and more operators (`line:`, `section:`, `task:`, `content:`), sorting, search and replace, unlinked mentions in backlinks, and an outgoing links panel.
+
+### M16: Bases
+
+Table and card views of notes filtered and sorted by their properties, with property types shared across the vault.
+
+### M17: Export and history
+
+Exporting notes to PDF and HTML, and file recovery with earlier versions of each note.
+
+### M18: Canvas
+
+An infinite canvas of notes, images and links connected by arrows, in the open JSON Canvas format.
+
 ## Backlog
 
 Features that are not scheduled in a milestone yet.
 
-- **Links:** block references (`[[note#^id]]`).
-- **Search:** parentheses for grouping terms, more operators (`line:`, `section:`, `content:`), sort options.
-- **Graph:** force settings.
-- **Core workflows:** bookmark groups, property types shared across the vault, code block processors in the editor's source mode, a calendar view for daily notes.
-- **Rich content:** editing tables as a grid in live preview, pasting or dropping non-image attachments, dropping images on the reading view.
+- **Core workflows:** bookmark groups, code block processors in the editor's source mode, a calendar view for daily notes.
+- **Rich content:** pasting or dropping non-image attachments, dropping images on the reading view.
 - **Distribution:** Windows code signing.
 - **Testing:** run the end-to-end tests on Windows too (`msedgedriver` can't attach to WebView2 in CI yet).
-- **Later:** sync, canvas, mobile.
+- **Later:** mobile (iOS and Android), sync between devices.
 - **Testing:** verify light/dark theme switching (graph colors in particular).

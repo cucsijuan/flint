@@ -89,9 +89,11 @@ Builds, installers and automatic updates for macOS (Intel and Apple Silicon), wi
 - Graph: Obsidian-style forces with sliders, and color groups based on search queries.
 - Duplicate files from the file tree; folders stay open after a rename.
 
-### M12: Plugin ecosystem
+### M12: Plugin ecosystem ✅
 
-Browsing and installing community plugins, hot reload, a settings-page API, tab icons, and published API types.
+- Community plugins: Settings → Plugins lists the [flint-plugins](https://github.com/cucsijuan/flint-plugins) registry and installs or updates plugins from their GitHub releases.
+- Plugin API: settings sections, Lucide icons for sidebar tabs, and types published to npm as [`flint-plugin-api`](https://www.npmjs.com/package/flint-plugin-api).
+- Hot reload for plugin development, and a TypeScript plugin template (`examples/plugin-template`).
 
 ## Backlog
 

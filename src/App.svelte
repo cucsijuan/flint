@@ -12,6 +12,7 @@
   import TemplatePicker from './components/TemplatePicker.svelte'
   import Welcome from './components/Welcome.svelte'
   import { listen } from '@tauri-apps/api/event'
+  import { applyAppearance, applySnippets } from './lib/appearance'
   import { dropFiles } from './lib/editor/attachments'
   import { contextWord, replaceContextWord } from './lib/editor/context-word'
   import { registerAppCommands, rememberContextTarget } from './lib/app-commands'
@@ -54,6 +55,12 @@
   $effect(() => {
     if (workspace.info?.root) void pluginHost.load()
   })
+
+  $effect(() =>
+    applyAppearance(workspace.appearance.value, workspace.settings.value.readableLineLength),
+  )
+
+  $effect(() => applySnippets(workspace.enabledSnippetCss))
 
   function onContextMenu(event: MouseEvent) {
     rememberContextTarget(event.target)

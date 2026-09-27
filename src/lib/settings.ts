@@ -5,14 +5,28 @@ export type LinkUpdate = 'ask' | 'always' | 'never'
 export type AttachmentFolder = 'root' | 'same' | 'attachments'
 export type PropertiesDisplay = 'visible' | 'hidden' | 'source'
 
-interface Settings {
-  lastVault: string
+/** Per-vault settings, stored in `.flint/app.json`. */
+export interface VaultSettings {
   editorMode: EditorMode
   linkUpdate: LinkUpdate
-  showRightPanel: boolean
-  checkForUpdates: boolean
   attachmentFolder: AttachmentFolder
   propertiesDisplay: PropertiesDisplay
+  readableLineLength: boolean
+}
+
+export const DEFAULT_VAULT_SETTINGS: VaultSettings = {
+  editorMode: 'live',
+  linkUpdate: 'ask',
+  attachmentFolder: 'root',
+  propertiesDisplay: 'visible',
+  readableLineLength: true,
+}
+
+/** App-wide settings; the vault settings kept here by older versions seed new vaults. */
+interface Settings extends Partial<VaultSettings> {
+  lastVault: string
+  showRightPanel: boolean
+  checkForUpdates: boolean
 }
 
 const store = new LazyStore('settings.json')

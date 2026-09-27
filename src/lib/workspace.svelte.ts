@@ -21,6 +21,8 @@ import {
   serializeBookmarks,
   toggleBookmark,
 } from './bookmarks'
+import { type AppearanceSettings, DEFAULT_APPEARANCE } from './appearance'
+import { VaultConfig } from './config.svelte'
 import { documents } from './documents'
 import { activeView } from './editor/active'
 import { noteOpened, vaultChanged } from './events'
@@ -38,11 +40,10 @@ import {
   uniqueName,
 } from './paths'
 import {
-  type AttachmentFolder,
   type EditorMode,
   getSetting,
-  type LinkUpdate,
-  type PropertiesDisplay,
+  DEFAULT_VAULT_SETTINGS,
+  type VaultSettings,
   setSetting,
 } from './settings'
 import type { AttachmentSource } from './editor/attachments'
@@ -53,18 +54,9 @@ const SEARCH_DELAY_MS = 200
 const LAYOUT_SAVE_DELAY_MS = 500
 const NOTICE_MS = 5000
 const LAYOUT_CONFIG = 'workspace'
-const DAILY_NOTES_CONFIG = 'daily-notes'
-const TEMPLATES_CONFIG = 'templates'
 const BOOKMARKS_CONFIG = 'bookmarks'
+const SNIPPETS_FOLDER = '.flint/snippets'
 const ATTACHMENTS_FOLDER = 'attachments'
-
-async function readJsonConfig(name: string): Promise<object> {
-  const stored: unknown = JSON.parse((await vault.readConfig(name)) ?? '{}')
-  return typeof stored === 'object' && stored !== null ? stored : {}
-}
-
-const writeJsonConfig = (name: string, value: object) =>
-  vault.writeConfig(name, JSON.stringify(value, null, 2))
 
 const timestamp = () => new Date().toISOString().replace(/\D/g, '').slice(0, 14)
 
@@ -88,7 +80,6 @@ class Workspace {
   layout = $state.raw<layouts.Layout>(layouts.createLayout())
   activeTab = $derived(layouts.activeTab(this.layout))
   notePath = $derived(this.activeTab.view.kind === 'note' ? this.activeTab.view.path : null)
-  mode = $state<EditorMode>('live')
   renaming = $state<string | null>(null)
   notice = $state<string | null>(null)
   linkTargets = $state<vault.LinkTarget[]>([])
@@ -98,12 +89,20 @@ class Workspace {
   leftTab = $state<LeftTab>('files')
   rightTab = $state<RightTab>('backlinks')
   showRightPanel = $state(true)
-  linkUpdate = $state<LinkUpdate>('ask')
   checkForUpdates = $state(true)
-  attachmentFolder = $state<AttachmentFolder>('root')
-  propertiesDisplay = $state<PropertiesDisplay>('visible')
-  dailyNotes = $state<DailyNoteSettings>(DEFAULT_DAILY_NOTES)
-  templates = $state<TemplateSettings>(DEFAULT_TEMPLATES)
+  readonly settings = new VaultConfig('app', DEFAULT_VAULT_SETTINGS)
+  readonly dailyNotesConfig = new VaultConfig('daily-notes', DEFAULT_DAILY_NOTES)
+  readonly templatesConfig = new VaultConfig('templates', DEFAULT_TEMPLATES)
+  readonly appearance = new VaultConfig('appearance', DEFAULT_APPEARANCE)
+  snippets = $state<string[]>([])
+  #snippetCss = $state(new Map<string, string>())
+  enabledSnippetCss = $derived(
+    new Map(
+      [...this.#snippetCss].filter(([name]) =>
+        this.appearance.value.enabledCssSnippets.includes(name),
+      ),
+    ),
+  )
   templateNotes = $derived(
     this.entries.filter(
       (entry) => entry.kind === 'file' && isWithin(entry.path, this.templates.folder),
@@ -127,6 +126,7 @@ class Workspace {
   })
   localGraphDepth = $state(1)
 
+  #legacySettings: Partial<VaultSettings> = {}
   #isWatching = false
   #noticeTimer: ReturnType<typeof setTimeout> | undefined
   #searchTimer: ReturnType<typeof setTimeout> | undefined
@@ -136,13 +136,37 @@ class Workspace {
     documents.onError = (error) => this.notify(String(error))
   }
 
+  get mode() {
+    return this.settings.value.editorMode
+  }
+
+  get linkUpdate() {
+    return this.settings.value.linkUpdate
+  }
+
+  get attachmentFolder() {
+    return this.settings.value.attachmentFolder
+  }
+
+  get propertiesDisplay() {
+    return this.settings.value.propertiesDisplay
+  }
+
+  get dailyNotes() {
+    return this.dailyNotesConfig.value
+  }
+
+  get templates() {
+    return this.templatesConfig.value
+  }
+
   async restore() {
-    this.mode = (await getSetting('editorMode')) ?? 'live'
     this.showRightPanel = (await getSetting('showRightPanel')) ?? true
-    this.linkUpdate = (await getSetting('linkUpdate')) ?? 'ask'
     this.checkForUpdates = (await getSetting('checkForUpdates')) ?? true
-    this.attachmentFolder = (await getSetting('attachmentFolder')) ?? 'root'
-    this.propertiesDisplay = (await getSetting('propertiesDisplay')) ?? 'visible'
+    for (const key of Object.keys(DEFAULT_VAULT_SETTINGS) as (keyof VaultSettings)[]) {
+      const value = await getSetting(key)
+      if (value !== undefined) this.#legacySettings = { ...this.#legacySettings, [key]: value }
+    }
     const vaultPath = (await vault.launchVault()) ?? (await getSetting('lastVault'))
     if (vaultPath) await this.openVault(vaultPath)
   }
@@ -158,8 +182,11 @@ class Workspace {
       this.info = await vault.openVault(path)
       await this.#refresh()
       this.#setLayout(await this.#storedLayout(), { save: false })
-      this.dailyNotes = { ...DEFAULT_DAILY_NOTES, ...(await readJsonConfig(DAILY_NOTES_CONFIG)) }
-      this.templates = { ...DEFAULT_TEMPLATES, ...(await readJsonConfig(TEMPLATES_CONFIG)) }
+      await this.settings.load(this.#legacySettings)
+      await this.dailyNotesConfig.load()
+      await this.templatesConfig.load()
+      await this.appearance.load()
+      await this.reloadSnippets()
       this.bookmarks = parseBookmarks(await vault.readConfig(BOOKMARKS_CONFIG))
       await setSetting('lastVault', path)
       if (!this.#isWatching) {
@@ -238,9 +265,12 @@ class Workspace {
     this.setMode(this.mode === 'live' ? 'source' : 'live')
   }
 
-  setMode(mode: EditorMode) {
-    this.mode = mode
-    void setSetting('editorMode', mode)
+  setMode(editorMode: EditorMode) {
+    this.setSettings({ editorMode })
+  }
+
+  setSettings(changes: Partial<VaultSettings>) {
+    void this.#run(() => this.settings.set(changes))
   }
 
   toggleRightPanel() {
@@ -274,16 +304,6 @@ class Workspace {
     void setSetting('checkForUpdates', isEnabled)
   }
 
-  setPropertiesDisplay(value: PropertiesDisplay) {
-    this.propertiesDisplay = value
-    void setSetting('propertiesDisplay', value)
-  }
-
-  setAttachmentFolder(value: AttachmentFolder) {
-    this.attachmentFolder = value
-    void setSetting('attachmentFolder', value)
-  }
-
   async saveAttachment(source: AttachmentSource, notePath: string) {
     const folder = {
       root: '',
@@ -301,14 +321,36 @@ class Workspace {
     return this.linkTargets.find((target) => target.path === path)?.linkText ?? basename(path)
   }
 
+  setAppearance(changes: Partial<AppearanceSettings>) {
+    void this.#run(() => this.appearance.set(changes))
+  }
+
+  toggleSnippet(name: string, isEnabled: boolean) {
+    const others = this.appearance.value.enabledCssSnippets.filter((known) => known !== name)
+    this.setAppearance({ enabledCssSnippets: isEnabled ? [...others, name] : others })
+  }
+
+  async reloadSnippets() {
+    await this.#run(async () => {
+      this.snippets = await vault.snippets()
+      const css = await Promise.all(this.snippets.map((name) => vault.readSnippet(name)))
+      this.#snippetCss = new Map(this.snippets.map((name, index) => [name, css[index]]))
+    })
+  }
+
+  async openSnippetsFolder() {
+    await this.#run(async () => {
+      await vault.createFolder(SNIPPETS_FOLDER).catch(() => undefined)
+      await vault.openExternally(SNIPPETS_FOLDER)
+    })
+  }
+
   setDailyNotes(changes: Partial<DailyNoteSettings>) {
-    this.dailyNotes = { ...this.dailyNotes, ...changes }
-    void this.#run(() => writeJsonConfig(DAILY_NOTES_CONFIG, this.dailyNotes))
+    void this.#run(() => this.dailyNotesConfig.set(changes))
   }
 
   setTemplates(changes: Partial<TemplateSettings>) {
-    this.templates = { ...this.templates, ...changes }
-    void this.#run(() => writeJsonConfig(TEMPLATES_CONFIG, this.templates))
+    void this.#run(() => this.templatesConfig.set(changes))
   }
 
   /** Opens today's daily note (creating it from the template), or the closest one before or after. */
@@ -373,11 +415,6 @@ class Workspace {
   #setBookmarks(bookmarks: Bookmark[]) {
     this.bookmarks = bookmarks
     void this.#run(() => vault.writeConfig(BOOKMARKS_CONFIG, serializeBookmarks(bookmarks)))
-  }
-
-  setLinkUpdate(value: LinkUpdate) {
-    this.linkUpdate = value
-    void setSetting('linkUpdate', value)
   }
 
   resolveLinks(targets: string[], source = this.notePath ?? '') {

@@ -206,6 +206,16 @@ pub fn set_enabled_plugins(state: State<AppState>, enabled: Vec<String>) -> Resu
 }
 
 #[tauri::command(async)]
+pub fn snippets(state: State<AppState>) -> Result<Vec<String>> {
+    config::snippets(&state.vault()?)
+}
+
+#[tauri::command(async)]
+pub fn read_snippet(state: State<AppState>, name: String) -> Result<String> {
+    config::read_snippet(&state.vault()?, &name)
+}
+
+#[tauri::command(async)]
 pub fn read_config(state: State<AppState>, name: String) -> Result<Option<String>> {
     config::read(&state.vault()?, &name)
 }

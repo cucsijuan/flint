@@ -1,173 +1,48 @@
 <script lang="ts">
   import { Dialog } from 'bits-ui'
-  import type { AttachmentFolder, EditorMode, LinkUpdate, PropertiesDisplay } from '../lib/settings'
-  import { dayjs } from '../lib/dates'
-  import { NOTE_EXTENSION } from '../lib/paths'
+  import type { Component } from 'svelte'
   import { workspace } from '../lib/workspace.svelte'
-  import PluginSettings from './PluginSettings.svelte'
+  import AppearanceSettings from './settings/AppearanceSettings.svelte'
+  import DailyNotesSettings from './settings/DailyNotesSettings.svelte'
+  import EditorSettings from './settings/EditorSettings.svelte'
+  import GeneralSettings from './settings/GeneralSettings.svelte'
+  import PluginSettings from './settings/PluginSettings.svelte'
 
-  const editorModeOptions: { value: EditorMode; label: string }[] = [
-    { value: 'live', label: 'Live preview' },
-    { value: 'source', label: 'Source mode' },
+  interface Section {
+    name: string
+    content: Component
+    needsVault: boolean
+  }
+
+  const sections: Section[] = [
+    { name: 'Editor', content: EditorSettings, needsVault: true },
+    { name: 'Appearance', content: AppearanceSettings, needsVault: true },
+    { name: 'Daily notes and templates', content: DailyNotesSettings, needsVault: true },
+    { name: 'Plugins', content: PluginSettings, needsVault: true },
+    { name: 'General', content: GeneralSettings, needsVault: false },
   ]
 
-  const propertiesDisplayOptions: { value: PropertiesDisplay; label: string }[] = [
-    { value: 'visible', label: 'Visible' },
-    { value: 'hidden', label: 'Hidden' },
-    { value: 'source', label: 'Source' },
-  ]
-
-  const attachmentFolderOptions: { value: AttachmentFolder; label: string }[] = [
-    { value: 'root', label: 'Vault root' },
-    { value: 'same', label: 'Same folder as the note' },
-    { value: 'attachments', label: '"attachments" folder' },
-  ]
-
-  const linkUpdateOptions: { value: LinkUpdate; label: string }[] = [
-    { value: 'ask', label: 'Ask' },
-    { value: 'always', label: 'Always' },
-    { value: 'never', label: 'Never' },
-  ]
+  let current = $state('Editor')
+  const available = $derived(sections.filter((section) => workspace.info || !section.needsVault))
+  const shown = $derived(available.find((section) => section.name === current) ?? available[0])
 </script>
 
 <Dialog.Root bind:open={workspace.isSettingsOpen}>
   <Dialog.Portal>
     <Dialog.Overlay class="overlay" />
-    <Dialog.Content class="dialog">
-      <Dialog.Title class="dialog-title">Settings</Dialog.Title>
-      <label class="setting">
-        <span>
-          <strong>Editing mode</strong>
-          <small
-            >Live preview hides Markdown syntax outside the cursor; source mode shows it all.</small
-          >
-        </span>
-        <select
-          value={workspace.mode}
-          onchange={(event) => workspace.setMode(event.currentTarget.value as EditorMode)}
-        >
-          {#each editorModeOptions as option (option.value)}
-            <option value={option.value}>{option.label}</option>
-          {/each}
-        </select>
-      </label>
-      <label class="setting">
-        <span>
-          <strong>Properties in notes</strong>
-          <small>How frontmatter shows above a note; the Properties panel always edits it.</small>
-        </span>
-        <select
-          value={workspace.propertiesDisplay}
-          onchange={(event) =>
-            workspace.setPropertiesDisplay(event.currentTarget.value as PropertiesDisplay)}
-        >
-          {#each propertiesDisplayOptions as option (option.value)}
-            <option value={option.value}>{option.label}</option>
-          {/each}
-        </select>
-      </label>
-      <label class="setting">
-        <span>
-          <strong>Update links on rename</strong>
-          <small>What to do with links pointing to a note or folder you rename or move.</small>
-        </span>
-        <select
-          value={workspace.linkUpdate}
-          onchange={(event) => workspace.setLinkUpdate(event.currentTarget.value as LinkUpdate)}
-        >
-          {#each linkUpdateOptions as option (option.value)}
-            <option value={option.value}>{option.label}</option>
-          {/each}
-        </select>
-      </label>
-      <label class="setting">
-        <span>
-          <strong>Attachment location</strong>
-          <small>Where pasted or dropped images are saved.</small>
-        </span>
-        <select
-          value={workspace.attachmentFolder}
-          onchange={(event) =>
-            workspace.setAttachmentFolder(event.currentTarget.value as AttachmentFolder)}
-        >
-          {#each attachmentFolderOptions as option (option.value)}
-            <option value={option.value}>{option.label}</option>
-          {/each}
-        </select>
-      </label>
-      <label class="setting">
-        <span>
-          <strong>Check for updates</strong>
-          <small>Look for a new version of Flint when it starts.</small>
-        </span>
-        <input
-          type="checkbox"
-          checked={workspace.checkForUpdates}
-          onchange={(event) => workspace.setCheckForUpdates(event.currentTarget.checked)}
-        />
-      </label>
-      {#if workspace.info}
-        <h3>Daily notes</h3>
-        <label class="setting">
-          <span>
-            <strong>Folder</strong>
-            <small>Where new daily notes go. Empty means the vault root.</small>
-          </span>
-          <input
-            value={workspace.dailyNotes.folder}
-            placeholder="Vault root"
-            onchange={(event) =>
-              workspace.setDailyNotes({ folder: event.currentTarget.value.trim() })}
-          />
-        </label>
-        <label class="setting">
-          <span>
-            <strong>Date format</strong>
-            <small>Today: {dayjs().format(workspace.dailyNotes.format || 'YYYY-MM-DD')}</small>
-          </span>
-          <input
-            value={workspace.dailyNotes.format}
-            placeholder="YYYY-MM-DD"
-            oninput={(event) =>
-              workspace.setDailyNotes({ format: event.currentTarget.value.trim() })}
-          />
-        </label>
-        <label class="setting">
-          <span>
-            <strong>Template</strong>
-            <small>A note whose contents start every new daily note.</small>
-          </span>
-          <input
-            value={workspace.dailyNotes.template}
-            placeholder="Templates/Daily"
-            list="template-notes"
-            onchange={(event) =>
-              workspace.setDailyNotes({ template: event.currentTarget.value.trim() })}
-          />
-        </label>
-        <h3>Templates</h3>
-        <label class="setting">
-          <span>
-            <strong>Folder</strong>
-            <small>
-              Notes here can be inserted with "Insert template". Use {'{{title}}'}, {'{{date}}'},
-              {'{{time}}'} or {'{{date:YYYY-MM-DD}}'}.
-            </small>
-          </span>
-          <input
-            value={workspace.templates.folder}
-            placeholder="Templates"
-            onchange={(event) =>
-              workspace.setTemplates({ folder: event.currentTarget.value.trim() })}
-          />
-        </label>
-        <datalist id="template-notes">
-          {#each workspace.templateNotes as entry (entry.path)}
-            <option value={entry.path.slice(0, -NOTE_EXTENSION.length)}></option>
-          {/each}
-        </datalist>
-        <PluginSettings />
-      {/if}
+    <Dialog.Content class="dialog settings">
+      <nav>
+        <Dialog.Title class="dialog-title">Settings</Dialog.Title>
+        {#each available as section (section.name)}
+          <button class:current={section === shown} onclick={() => (current = section.name)}>
+            {section.name}
+          </button>
+        {/each}
+      </nav>
+      <div class="content">
+        <h2>{shown.name}</h2>
+        <shown.content />
+      </div>
     </Dialog.Content>
   </Dialog.Portal>
 </Dialog.Root>
@@ -196,11 +71,12 @@
     box-shadow: 0 8px 32px rgb(0 0 0 / 0.3);
   }
 
-  h3 {
-    margin: 24px 0 12px;
-    padding-top: 16px;
-    border-top: 1px solid var(--border);
-    font-size: 14px;
+  :global(.dialog.settings) {
+    display: flex;
+    width: min(860px, calc(100vw - 32px));
+    height: min(640px, calc(100vh - 32px));
+    padding: 0;
+    overflow: hidden;
   }
 
   :global(.dialog-title) {
@@ -208,39 +84,47 @@
     font-size: 18px;
   }
 
-  .setting {
+  nav {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-  }
-
-  .setting + .setting {
-    margin-top: 16px;
-  }
-
-  .setting input[type='checkbox'] {
-    width: 16px;
-    height: 16px;
-    accent-color: var(--accent);
-  }
-
-  .setting span {
-    display: grid;
-    gap: 4px;
-  }
-
-  small {
-    color: var(--text-muted);
-  }
-
-  select,
-  .setting input:not([type='checkbox']) {
-    padding: 4px 8px;
-    border: 1px solid var(--border);
-    border-radius: 4px;
+    flex-direction: column;
+    gap: 2px;
+    width: 200px;
+    flex-shrink: 0;
+    padding: 20px 12px;
+    border-right: 1px solid var(--border);
     background: var(--background-secondary);
+  }
+
+  nav button {
+    padding: 6px 10px;
+    border: none;
+    border-radius: 4px;
+    background: none;
     color: var(--text);
     font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  nav button:hover {
+    background: var(--hover);
+  }
+
+  nav button.current {
+    background: var(--selected);
+  }
+
+  .content {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+    padding: 20px 24px;
+    font-size: 13px;
+  }
+
+  h2 {
+    margin: 0 0 8px;
+    font-size: 16px;
   }
 </style>

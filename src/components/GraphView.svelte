@@ -2,6 +2,7 @@
   import ForceGraph, { type LinkObject, type NodeObject } from 'force-graph'
   import { onMount } from 'svelte'
   import type { Graph, GraphNode } from '../lib/vault'
+  import { workspace } from '../lib/workspace.svelte'
 
   type Node = NodeObject & GraphNode & { degree: number }
   type Link = LinkObject<Node>
@@ -24,10 +25,14 @@
 
   const endpoint = (end: Link['source']) => (typeof end === 'object' ? end?.id : end)
 
+  /** Resolves theme colors (which use `light-dark()`) to values the canvas can draw with. */
   function palette() {
-    const style = getComputedStyle(container)
-    const color = (name: string) => style.getPropertyValue(name).trim()
-    return {
+    const probe = document.body.appendChild(document.createElement('span'))
+    const color = (name: string) => {
+      probe.style.color = `var(${name})`
+      return getComputedStyle(probe).color
+    }
+    const resolved = {
       note: color('--graph-node'),
       tag: color('--graph-tag'),
       unresolved: color('--graph-unresolved'),
@@ -35,6 +40,8 @@
       accent: color('--accent'),
       text: color('--text'),
     }
+    probe.remove()
+    return resolved
   }
   let colors = { note: '', tag: '', unresolved: '', link: '', accent: '', text: '' }
 
@@ -108,6 +115,11 @@
       theme.removeEventListener('change', onThemeChange)
       renderer?._destructor()
     }
+  })
+
+  $effect(() => {
+    void workspace.appearance.value
+    if (renderer) colors = palette()
   })
 
   $effect(() => {

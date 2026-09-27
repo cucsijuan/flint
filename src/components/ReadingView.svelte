@@ -152,6 +152,6 @@
     flex: 1;
     min-height: 0;
     overflow: auto;
-    padding: 24px max(32px, calc((100% - 760px) / 2)) 30vh;
+    padding: 24px max(32px, calc((100% - var(--line-width)) / 2)) 30vh;
   }
 </style>

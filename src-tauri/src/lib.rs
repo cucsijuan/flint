@@ -46,6 +46,8 @@ pub fn run() {
             commands::clipboard_files,
             commands::open_externally,
             context_menu::show_context_menu,
+            commands::snippets,
+            commands::read_snippet,
             commands::read_config,
             commands::write_config,
             commands::list_plugins,

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { RefreshCw } from '@lucide/svelte'
-  import { pluginHost } from '../lib/plugins/host.svelte'
+  import { pluginHost } from '../../lib/plugins/host.svelte'
 </script>
 
 <section>
@@ -46,12 +46,6 @@
 </section>
 
 <style>
-  section {
-    margin-top: 20px;
-    padding-top: 16px;
-    border-top: 1px solid var(--border);
-  }
-
   header,
   li {
     display: flex;

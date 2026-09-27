@@ -32,6 +32,7 @@ pub fn run() {
             commands::create_note,
             commands::create_folder,
             commands::rename_entry,
+            commands::copy_entry,
             commands::trash_entry,
             commands::link_targets,
             commands::resolve_links,

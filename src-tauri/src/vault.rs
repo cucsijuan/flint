@@ -109,6 +109,11 @@ impl Vault {
         Ok(())
     }
 
+    /// Copies a file to a new path inside the vault, refusing to overwrite.
+    pub fn copy_file(&self, from: &str, to: &str) -> Result<()> {
+        self.import_file(&self.resolve(from)?, to)
+    }
+
     fn new_file(&self, path: &str) -> Result<File> {
         let target = self.resolve(path)?;
         if let Some(parent) = target.parent() {
@@ -241,6 +246,16 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let vault = Vault::open(dir.path()).unwrap();
         (dir, vault)
+    }
+
+    #[test]
+    fn copies_files_inside_the_vault() {
+        let (dir, vault) = vault();
+        fs::write(dir.path().join("Note.md"), "text").unwrap();
+        vault.copy_file("Note.md", "Note 1.md").unwrap();
+        assert_eq!(vault.read("Note 1.md").unwrap(), "text");
+        assert!(vault.copy_file("Note.md", "Note 1.md").is_err());
+        assert!(vault.copy_file("../outside", "copy").is_err());
     }
 
     #[test]

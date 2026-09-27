@@ -111,6 +111,7 @@ export const saveClipboardImage = (path: string) =>
 export const clipboardFiles = () => invoke<string[]>('clipboard_files')
 export const showContextMenu = (isLink: boolean, isEditable: boolean, word: string | null) =>
   invoke('show_context_menu', { isLink, isEditable, word })
+export const copyEntry = (from: string, to: string) => invoke('copy_entry', { from, to })
 export const openExternally = (path: string) => invoke('open_externally', { path })
 export const assetUrl = (root: string, path: string) => convertFileSrc(`${root}/${path}`)
 

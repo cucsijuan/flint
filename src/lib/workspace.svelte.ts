@@ -1,4 +1,5 @@
 import { ask, open } from '@tauri-apps/plugin-dialog'
+import { SvelteSet } from 'svelte/reactivity'
 import {
   adjacentDailyNote,
   applyTemplate,
@@ -39,6 +40,7 @@ import {
   join,
   noteTitle,
   parentOf,
+  replacePrefix,
   uniqueName,
 } from './paths'
 import {
@@ -112,6 +114,8 @@ class Workspace {
     ),
   )
   isTemplatePickerOpen = $state(false)
+  /** Folders open in the file tree; kept here so they stay open when renamed or moved. */
+  readonly expandedFolders = new SvelteSet<string>()
   bookmarks = $state<Bookmark[]>([])
   isSettingsOpen = $state(false)
   isQuickSwitcherOpen = $state(false)
@@ -500,6 +504,19 @@ class Workspace {
     if (trimmed) await this.#move(path, join(parentOf(path), name))
   }
 
+  /** Copies a note or attachment next to itself as "Name 1", "Name 2"… */
+  async duplicate(path: string) {
+    const extension = extensionOf(path) ? `.${extensionOf(path)}` : ''
+    const base = basename(path).slice(0, basename(path).length - extension.length)
+    const copy = uniqueName(this.#takenPaths(), parentOf(path), base, extension)
+    await this.#run(async () => {
+      await this.flush()
+      await vault.copyEntry(path, copy)
+      await this.#refresh()
+      if (copy.toLowerCase().endsWith(NOTE_EXTENSION)) this.openNote(copy)
+    })
+  }
+
   /** Moves a note, attachment or folder into `folder` ('' is the vault root). */
   async move(path: string, folder: string) {
     if (folder === parentOf(path) || isWithin(folder, path)) return
@@ -524,6 +541,10 @@ class Workspace {
         this.#setBookmarks(bookmarks)
       }
       this.updateLayout((layout) => layouts.renamePaths(layout, path, target))
+      for (const folder of [...this.expandedFolders].filter((known) => isWithin(known, path))) {
+        this.expandedFolders.delete(folder)
+        this.expandedFolders.add(replacePrefix(folder, path, target))
+      }
       await this.#refresh()
       if (updated) this.notify(`Updated ${updated} ${updated === 1 ? 'link' : 'links'}.`)
     })

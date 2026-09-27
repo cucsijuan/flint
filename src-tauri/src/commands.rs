@@ -119,6 +119,11 @@ pub fn rename_entry(
 }
 
 #[tauri::command(async)]
+pub fn copy_entry(state: State<AppState>, from: String, to: String) -> Result<()> {
+    state.vault()?.copy_file(&from, &to)
+}
+
+#[tauri::command(async)]
 pub fn trash_entry(state: State<AppState>, path: String) -> Result<()> {
     state.vault()?.trash(&path)
 }

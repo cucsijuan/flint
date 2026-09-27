@@ -6,14 +6,13 @@
   } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
   import { ChevronRight, File, FileText, Image } from '@lucide/svelte'
   import { ContextMenu } from 'bits-ui'
-  import { SvelteSet } from 'svelte/reactivity'
   import { isImage, isWithin, noteTitle, parentOf } from '../lib/paths'
   import type { TreeNode } from '../lib/tree'
   import { workspace } from '../lib/workspace.svelte'
 
   type EntryDrag = { type: 'entry'; path: string }
 
-  const expanded = new SvelteSet<string>()
+  const expanded = workspace.expandedFolders
   let dropFolder = $state<string | null>(null)
   let target = $state<TreeNode>()
   let targetFolder = $derived(target?.kind === 'folder' ? target.path : '')
@@ -160,6 +159,11 @@
             onSelect={() => workspace.toggleBookmark({ type: 'file', path })}
           >
             {workspace.isBookmarked({ type: 'file', path }) ? 'Remove bookmark' : 'Bookmark'}
+          </ContextMenu.Item>
+        {/if}
+        {#if target.kind !== 'folder'}
+          <ContextMenu.Item class="menu-item" onSelect={() => workspace.duplicate(path)}>
+            Duplicate
           </ContextMenu.Item>
         {/if}
         <ContextMenu.Item class="menu-item" onSelect={() => (workspace.renaming = path)}>

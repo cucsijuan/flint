@@ -1,0 +1,8 @@
+{
+  "id": "my-plugin",
+  "name": "My plugin",
+  "version": "1.0.0",
+  "author": "Your name",
+  "description": "What your plugin does, in one sentence.",
+  "license": "AGPL-3.0-or-later"
+}

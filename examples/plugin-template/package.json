@@ -1,0 +1,16 @@
+{
+  "name": "flint-plugin-template",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/main.ts --bundle --format=esm --target=es2022 --outfile=main.js",
+    "dev": "esbuild src/main.ts --bundle --format=esm --target=es2022 --outfile=${FLINT_PLUGIN_DIR:-.}/main.js --watch",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "flint-plugin-api": "^0.7.0",
+    "typescript": "^5.9.0"
+  }
+}

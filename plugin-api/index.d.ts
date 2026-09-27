@@ -126,6 +126,7 @@ export interface FlintApi {
 }
 
 /** The default export of a plugin's `main.js`. It may return a cleanup function. */
+/** The default export of a plugin's `main.js`; it may return a function to run when it's turned off. */
 export type ActivatePlugin = (
   flint: FlintApi,
-) => Disposer | undefined | Promise<Disposer | undefined>
+) => Disposer | undefined | Promise<Disposer | undefined> | Promise<void>

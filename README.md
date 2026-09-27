@@ -26,6 +26,8 @@ pnpm test
 
 On distributions with a recent toolchain (e.g. Fedora), AppImage bundling needs `NO_STRIP=true pnpm tauri build`.
 
+`examples/vault` is a demo vault with a note for each feature; open it from the app with "Open another vault". `examples/word-count` and `examples/counter` are sample plugins.
+
 Rust checks run from `src-tauri/`:
 
 ```sh

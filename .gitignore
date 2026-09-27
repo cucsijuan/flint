@@ -8,3 +8,7 @@ dist/
 !.vscode/extensions.json
 src-tauri/target/
 src-tauri/gen/schemas/
+
+# Written by Flint when the demo vault is opened
+examples/vault/.flint/workspace.json
+examples/vault/.flint/plugins/

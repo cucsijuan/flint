@@ -1,0 +1,12 @@
+{
+  "items": [
+    { "type": "file", "ctime": 1767225600000, "path": "Start here.md" },
+    {
+      "type": "heading",
+      "ctime": 1767225600001,
+      "path": "Rich content.md",
+      "subpath": "#Callouts"
+    },
+    { "type": "search", "ctime": 1767225600002, "query": "tag:#project" }
+  ]
+}

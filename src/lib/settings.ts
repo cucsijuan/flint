@@ -12,6 +12,7 @@ export interface VaultSettings {
   attachmentFolder: AttachmentFolder
   propertiesDisplay: PropertiesDisplay
   readableLineLength: boolean
+  pluginHotReload: boolean
 }
 
 export const DEFAULT_VAULT_SETTINGS: VaultSettings = {
@@ -20,6 +21,7 @@ export const DEFAULT_VAULT_SETTINGS: VaultSettings = {
   attachmentFolder: 'root',
   propertiesDisplay: 'visible',
   readableLineLength: true,
+  pluginHotReload: false,
 }
 
 /** App-wide settings; the vault settings kept here by older versions seed new vaults. */

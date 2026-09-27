@@ -139,3 +139,6 @@ export const setEnabledPlugins = (enabled: string[]) => invoke('set_enabled_plug
 
 export const onVaultChanged = (handler: (paths: string[]) => void): Promise<UnlistenFn> =>
   listen<string[]>('vault-changed', (event) => handler(event.payload))
+/** Plugin folders whose code changed on disk. */
+export const onPluginsChanged = (handler: (folders: string[]) => void): Promise<UnlistenFn> =>
+  listen<string[]>('plugins-changed', (event) => handler(event.payload))

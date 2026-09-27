@@ -7,7 +7,8 @@
   import GraphPanel from './GraphPanel.svelte'
   import OutlinePanel from './OutlinePanel.svelte'
   import PropertiesPanel from './PropertiesPanel.svelte'
-  import PluginTab from './PluginTab.svelte'
+  import PluginIcon from './PluginIcon.svelte'
+  import PluginView from './PluginView.svelte'
   import TagsPanel from './TagsPanel.svelte'
 </script>
 
@@ -28,7 +29,7 @@
       </Tabs.Trigger>
       {#each pluginHost.sidebarTabs as tab (tab.key)}
         <Tabs.Trigger class="tab text" value={tab.key} title={tab.name}>
-          {tab.name.slice(0, 2)}
+          <PluginIcon name={tab.icon} fallback={tab.name.slice(0, 2)} />
         </Tabs.Trigger>
       {/each}
     </Tabs.List>
@@ -55,7 +56,9 @@
     </Tabs.Content>
     <Tabs.Content class="tab-content" value="tags"><TagsPanel /></Tabs.Content>
     {#each pluginHost.sidebarTabs as tab (tab.key)}
-      <Tabs.Content class="tab-content" value={tab.key}><PluginTab {tab} /></Tabs.Content>
+      <Tabs.Content class="tab-content" value={tab.key}
+        ><PluginView render={tab.render} /></Tabs.Content
+      >
     {/each}
     <Tabs.Content class="tab-content" value="graph">
       {#if workspace.notePath}

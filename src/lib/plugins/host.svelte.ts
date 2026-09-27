@@ -3,7 +3,13 @@ import * as language from '@codemirror/language'
 import * as state from '@codemirror/state'
 import * as view from '@codemirror/view'
 import { ask } from '@tauri-apps/plugin-dialog'
-import type { ActivatePlugin, Disposer, FlintApi, SidebarTab } from '../../../plugin-api'
+import type {
+  ActivatePlugin,
+  Disposer,
+  FlintApi,
+  SettingsTab,
+  SidebarTab,
+} from '../../../plugin-api'
 import { commands } from '../commands.svelte'
 import { activeView } from '../editor/active'
 import { noteOpened, vaultChanged } from '../events'
@@ -26,6 +32,11 @@ export interface PluginSidebarTab extends SidebarTab {
   key: string
 }
 
+export interface PluginSettingsTab extends SettingsTab {
+  pluginId: string
+  name: string
+}
+
 interface LoadedPlugin {
   disposers: Disposer[]
   style?: HTMLStyleElement
@@ -46,6 +57,7 @@ class PluginHost {
   plugins = $state<Plugin[]>([])
   editorExtensions = $state.raw<state.Extension[]>([])
   sidebarTabs = $state.raw<PluginSidebarTab[]>([])
+  settingsTabs = $state.raw<PluginSettingsTab[]>([])
 
   #loaded = new Map<string, LoadedPlugin>()
 
@@ -61,6 +73,29 @@ class PluginHost {
     }))
     for (const plugin of this.plugins) {
       if (plugin.manifest && enabled.includes(plugin.manifest.id)) await this.#activate(plugin)
+    }
+  }
+
+  /** Loads the plugins in `folders` again from disk, for the developer's hot reload. */
+  async reload(folders: string[]) {
+    const [listings, enabled] = await Promise.all([vault.listPlugins(), vault.enabledPlugins()])
+    for (const { folder, manifest, error } of listings.filter((listing) =>
+      folders.includes(listing.folder),
+    )) {
+      const previous = this.plugins.find((plugin) => plugin.folder === folder)
+      if (previous?.manifest) this.#deactivate(previous.manifest.id)
+      const fresh: Plugin = {
+        folder,
+        manifest,
+        error,
+        status: 'off',
+        hasCompatibleLicense: isCompatibleLicense(manifest?.license ?? ''),
+      }
+      this.plugins = previous
+        ? this.plugins.map((plugin) => (plugin === previous ? fresh : plugin))
+        : [...this.plugins, fresh]
+      const plugin = this.plugins.find((candidate) => candidate.folder === folder)
+      if (plugin && manifest && enabled.includes(manifest.id)) await this.#activate(plugin)
     }
   }
 
@@ -204,6 +239,16 @@ class PluginHost {
           return track(() => {
             this.sidebarTabs = this.sidebarTabs.filter((known) => known.key !== key)
             if (workspace.rightTab === key) workspace.rightTab = 'backlinks'
+          })
+        },
+        registerSettingsTab: (tab) => {
+          const settingsTab = { ...tab, pluginId: manifest.id, name: manifest.name }
+          this.settingsTabs = [
+            ...this.settingsTabs.filter((known) => known.pluginId !== manifest.id),
+            settingsTab,
+          ]
+          return track(() => {
+            this.settingsTabs = this.settingsTabs.filter((known) => known !== settingsTab)
           })
         },
       },

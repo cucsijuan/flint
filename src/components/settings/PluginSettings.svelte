@@ -1,6 +1,7 @@
 <script lang="ts">
   import { RefreshCw } from '@lucide/svelte'
   import { pluginHost } from '../../lib/plugins/host.svelte'
+  import { workspace } from '../../lib/workspace.svelte'
 </script>
 
 <section>
@@ -13,6 +14,17 @@
       <RefreshCw size={16} />
     </button>
   </header>
+  <label class="option">
+    <span>
+      <strong>Reload plugins when their files change</strong>
+      <small>For plugin development: saving main.js or styles.css reloads that plugin.</small>
+    </span>
+    <input
+      type="checkbox"
+      checked={workspace.settings.value.pluginHotReload}
+      onchange={(event) => workspace.setSettings({ pluginHotReload: event.currentTarget.checked })}
+    />
+  </label>
   {#if pluginHost.plugins.length === 0}
     <p class="empty">No plugins installed.</p>
   {/if}
@@ -47,11 +59,17 @@
 
 <style>
   header,
+  .option,
   li {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+  }
+
+  .option {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
   }
 
   span {

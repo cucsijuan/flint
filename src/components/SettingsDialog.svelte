@@ -1,7 +1,9 @@
 <script lang="ts">
   import { Dialog } from 'bits-ui'
   import type { Component } from 'svelte'
+  import { pluginHost } from '../lib/plugins/host.svelte'
   import { workspace } from '../lib/workspace.svelte'
+  import PluginView from './PluginView.svelte'
   import AppearanceSettings from './settings/AppearanceSettings.svelte'
   import DailyNotesSettings from './settings/DailyNotesSettings.svelte'
   import EditorSettings from './settings/EditorSettings.svelte'
@@ -26,6 +28,7 @@
 
   let current = $state('Editor')
   const available = $derived(sections.filter((section) => workspace.info || !section.needsVault))
+  const pluginTab = $derived(pluginHost.settingsTabs.find((tab) => tab.pluginId === current))
   const shown = $derived(available.find((section) => section.name === current) ?? available[0])
 </script>
 
@@ -36,14 +39,30 @@
       <nav>
         <Dialog.Title class="dialog-title">Settings</Dialog.Title>
         {#each available as section (section.name)}
-          <button class:current={section === shown} onclick={() => (current = section.name)}>
+          <button
+            class:current={!pluginTab && section === shown}
+            onclick={() => (current = section.name)}
+          >
             {section.name}
           </button>
         {/each}
+        {#if pluginHost.settingsTabs.length}
+          <p class="group">Plugin options</p>
+          {#each pluginHost.settingsTabs as tab (tab.pluginId)}
+            <button class:current={tab === pluginTab} onclick={() => (current = tab.pluginId)}>
+              {tab.name}
+            </button>
+          {/each}
+        {/if}
       </nav>
       <div class="content">
-        <h2>{shown.name}</h2>
-        <shown.content />
+        {#if pluginTab}
+          <h2>{pluginTab.name}</h2>
+          {#key pluginTab}<PluginView render={pluginTab.render} />{/key}
+        {:else}
+          <h2>{shown.name}</h2>
+          <shown.content />
+        {/if}
       </div>
     </Dialog.Content>
   </Dialog.Portal>
@@ -123,6 +142,14 @@
     overflow-y: auto;
     padding: 20px 24px;
     font-size: 13px;
+  }
+
+  .group {
+    margin: 12px 10px 4px;
+    color: var(--text-faint);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
   }
 
   h2 {

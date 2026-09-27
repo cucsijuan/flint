@@ -34,6 +34,9 @@
       }
     })
     const closing = getCurrentWindow().onCloseRequested(() => workspace.flush())
+    const pluginChanges = vault.onPluginsChanged((folders) => {
+      if (workspace.settings.value.pluginHotReload) void pluginHost.reload(folders)
+    })
     const menuActions = listen<string>('context-menu-action', ({ payload }) =>
       commands.run(payload),
     )
@@ -48,6 +51,7 @@
       void closing.then((unlisten) => unlisten())
       void fileDrops.then((unlisten) => unlisten())
       void menuActions.then((unlisten) => unlisten())
+      void pluginChanges.then((unlisten) => unlisten())
       void spelling.then((unlisten) => unlisten())
     }
   })

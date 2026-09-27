@@ -1,11 +1,15 @@
-const WORDS_PER_MINUTE = 200
+const DEFAULT_WORDS_PER_MINUTE = 200
 
 const countWords = (text) => text.match(/\S+/g)?.length ?? 0
 
 /** @type {import('../../plugin-api').ActivatePlugin} */
 export default async function activate(flint) {
   const { EditorView } = flint.codemirror.view
-  const data = (await flint.storage.load()) ?? { datesInserted: 0 }
+  const data = {
+    datesInserted: 0,
+    wordsPerMinute: DEFAULT_WORDS_PER_MINUTE,
+    ...(await flint.storage.load()),
+  }
   let panel = null
 
   function render(text) {
@@ -15,7 +19,7 @@ export default async function activate(flint) {
       ...[
         ['Words', words],
         ['Characters', text.length],
-        ['Reading time', `${Math.ceil(words / WORDS_PER_MINUTE)} min`],
+        ['Reading time', `${Math.ceil(words / data.wordsPerMinute)} min`],
         ['Dates inserted', data.datesInserted],
       ].map(([label, value]) => {
         const row = document.createElement('div')
@@ -31,10 +35,31 @@ export default async function activate(flint) {
   flint.ui.registerSidebarTab({
     id: 'stats',
     name: 'Word count',
+    icon: 'bar-chart-3',
     render(element) {
       panel = element
       render(currentText())
       return () => (panel = null)
+    },
+  })
+
+  flint.ui.registerSettingsTab({
+    render(element) {
+      const label = document.createElement('label')
+      label.className = 'word-count-setting'
+      const input = Object.assign(document.createElement('input'), {
+        type: 'number',
+        min: 50,
+        value: data.wordsPerMinute,
+      })
+      input.addEventListener('change', async () => {
+        data.wordsPerMinute = Number(input.value) || DEFAULT_WORDS_PER_MINUTE
+        await flint.storage.save(data)
+        render(currentText())
+      })
+      label.append('Reading speed (words per minute)', input)
+      element.append(label)
+      return undefined
     },
   })
 

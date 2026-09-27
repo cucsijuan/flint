@@ -21,7 +21,14 @@ export interface SidebarTab {
   /** Unique within the plugin. */
   id: string
   name: string
+  /** A Lucide icon name from https://lucide.dev/icons, like `bar-chart-3`. Defaults to the name's first letters. */
+  icon?: string
   /** Renders into `element`; the returned function runs when the tab is removed. */
+  render: (element: HTMLElement) => Disposer | undefined
+}
+
+export interface SettingsTab {
+  /** Renders into `element` when the section opens; the returned function runs when it closes. */
   render: (element: HTMLElement) => Disposer | undefined
 }
 
@@ -93,6 +100,8 @@ export interface FlintApi {
   ui: {
     notice(message: string): void
     registerSidebarTab(tab: SidebarTab): Disposer
+    /** Adds a section named after the plugin to Settings. */
+    registerSettingsTab(tab: SettingsTab): Disposer
   }
 
   markdown: {

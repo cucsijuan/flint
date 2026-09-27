@@ -10,6 +10,7 @@
     scrollToHeading,
     scrollToLine,
     setMode,
+    setPropertiesDisplay,
     setPluginExtensions,
   } from '../lib/editor/editor'
   import { refreshLinks } from '../lib/editor/links'
@@ -37,6 +38,7 @@
           state: createEditorState({
             doc,
             mode: workspace.mode,
+            propertiesDisplay: workspace.propertiesDisplay,
             onChange: (changes, contents) =>
               editor && documents.edit(path, editor, changes, contents),
             onKeydown: (event) => commands.handleKeydown(event),
@@ -85,6 +87,10 @@
 
   $effect(() => {
     if (view) setMode(view, workspace.mode)
+  })
+
+  $effect(() => {
+    if (view) setPropertiesDisplay(view, workspace.propertiesDisplay)
   })
 
   $effect(() => {

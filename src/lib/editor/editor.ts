@@ -1,5 +1,6 @@
 import { indentWithTab } from '@codemirror/commands'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
+import { yamlFrontmatter } from '@codemirror/lang-yaml'
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
 import { languages } from '@codemirror/language-data'
 import { searchKeymap } from '@codemirror/search'
@@ -15,7 +16,7 @@ import {
 import { EditorView, keymap } from '@codemirror/view'
 import { classHighlighter, tags } from '@lezer/highlight'
 import { minimalSetup } from 'codemirror'
-import type { EditorMode } from '../settings'
+import type { EditorMode, PropertiesDisplay } from '../settings'
 import { attachmentInput, type SaveAttachment } from './attachments'
 import { blockPreview } from './blocks'
 import { completion, type CompletionSources } from './completion'
@@ -23,7 +24,7 @@ import { hashtagSyntax } from './hashtag'
 import { type LinkResolver, type Navigation, navigation } from './links'
 import { livePreview } from './live-preview'
 import { pointer } from './pointer'
-import { type PreviewContext, previewContext } from './preview-context'
+import { type PreviewContext, previewContext, propertiesDisplay } from './preview-context'
 import { wikiLinkSyntax } from './wikilink'
 
 const markdownStyle = HighlightStyle.define([
@@ -45,6 +46,7 @@ const markdownStyle = HighlightStyle.define([
 
 const mode = new Compartment()
 const pluginExtensions = new Compartment()
+const properties = new Compartment()
 const remoteChange = Annotation.define<boolean>()
 
 const modeExtension = (editorMode: EditorMode): Extension =>
@@ -53,6 +55,7 @@ const modeExtension = (editorMode: EditorMode): Extension =>
 export interface EditorOptions {
   doc: string
   mode: EditorMode
+  propertiesDisplay: PropertiesDisplay
   onChange: (changes: ChangeSet, doc: string) => void
   onKeydown: (event: KeyboardEvent) => boolean
   resolveLinks: LinkResolver
@@ -66,6 +69,7 @@ export interface EditorOptions {
 export function createEditorState({
   doc,
   mode: editorMode,
+  propertiesDisplay: display,
   onChange,
   onKeydown,
   resolveLinks,
@@ -81,10 +85,12 @@ export function createEditorState({
       Prec.highest(EditorView.domEventHandlers({ keydown: onKeydown })),
       minimalSetup,
       keymap.of([indentWithTab, ...searchKeymap]),
-      markdown({
-        base: markdownLanguage,
-        codeLanguages: languages,
-        extensions: [wikiLinkSyntax, hashtagSyntax],
+      yamlFrontmatter({
+        content: markdown({
+          base: markdownLanguage,
+          codeLanguages: languages,
+          extensions: [wikiLinkSyntax, hashtagSyntax],
+        }),
       }),
       pointer,
       navigation(resolveLinks, handlers),
@@ -96,6 +102,7 @@ export function createEditorState({
       mode.of(modeExtension(editorMode)),
       pluginExtensions.of(plugins),
       previewContext.of(preview),
+      properties.of(propertiesDisplay.of(display)),
       attachmentInput(saveAttachment),
       EditorView.updateListener.of((update) => {
         const isLocalEdit = !update.transactions.some((tr) => tr.annotation(remoteChange))
@@ -110,6 +117,9 @@ export const setPluginExtensions = (view: EditorView, plugins: Extension[]) =>
 
 export const setMode = (view: EditorView, editorMode: EditorMode) =>
   view.dispatch({ effects: mode.reconfigure(modeExtension(editorMode)) })
+
+export const setPropertiesDisplay = (view: EditorView, display: PropertiesDisplay) =>
+  view.dispatch({ effects: properties.reconfigure(propertiesDisplay.of(display)) })
 
 const remote = [remoteChange.of(true), Transaction.addToHistory.of(false)]
 

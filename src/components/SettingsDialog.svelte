@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Dialog } from 'bits-ui'
-  import type { AttachmentFolder, EditorMode, LinkUpdate } from '../lib/settings'
+  import type { AttachmentFolder, EditorMode, LinkUpdate, PropertiesDisplay } from '../lib/settings'
   import { dayjs } from '../lib/dates'
   import { NOTE_EXTENSION } from '../lib/paths'
   import { workspace } from '../lib/workspace.svelte'
@@ -9,6 +9,12 @@
   const editorModeOptions: { value: EditorMode; label: string }[] = [
     { value: 'live', label: 'Live preview' },
     { value: 'source', label: 'Source mode' },
+  ]
+
+  const propertiesDisplayOptions: { value: PropertiesDisplay; label: string }[] = [
+    { value: 'visible', label: 'Visible' },
+    { value: 'hidden', label: 'Hidden' },
+    { value: 'source', label: 'Source' },
   ]
 
   const attachmentFolderOptions: { value: AttachmentFolder; label: string }[] = [
@@ -41,6 +47,21 @@
           onchange={(event) => workspace.setMode(event.currentTarget.value as EditorMode)}
         >
           {#each editorModeOptions as option (option.value)}
+            <option value={option.value}>{option.label}</option>
+          {/each}
+        </select>
+      </label>
+      <label class="setting">
+        <span>
+          <strong>Properties in notes</strong>
+          <small>How frontmatter shows above a note; the Properties panel always edits it.</small>
+        </span>
+        <select
+          value={workspace.propertiesDisplay}
+          onchange={(event) =>
+            workspace.setPropertiesDisplay(event.currentTarget.value as PropertiesDisplay)}
+        >
+          {#each propertiesDisplayOptions as option (option.value)}
             <option value={option.value}>{option.label}</option>
           {/each}
         </select>

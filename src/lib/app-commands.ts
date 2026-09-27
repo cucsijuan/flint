@@ -1,7 +1,9 @@
 import { commands } from './commands.svelte'
+import { documents } from './documents'
 import { activeView } from './editor/active'
 import { insertLink, toggleWrap } from './editor/formatting'
 import * as layouts from './layout'
+import { readProperties } from './properties'
 import { checkForUpdates } from './updates'
 import { workspace } from './workspace.svelte'
 
@@ -116,6 +118,22 @@ export function registerAppCommands() {
       hotkey: 'Alt+ArrowRight',
       isAvailable: hasVault,
       run: () => workspace.updateLayout(layouts.goForward),
+    },
+    {
+      id: 'show-properties',
+      name: 'Show properties',
+      isAvailable: hasVault,
+      run: () => workspace.showRightTab('properties'),
+    },
+    {
+      id: 'add-properties',
+      name: 'Add properties to current note',
+      isAvailable: hasNote,
+      run: () => {
+        const path = workspace.notePath
+        if (path)
+          void documents.update(path, (note) => (readProperties(note) ? null : `---\n---\n${note}`))
+      },
     },
     {
       id: 'bookmark-note',

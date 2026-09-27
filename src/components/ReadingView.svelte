@@ -3,6 +3,7 @@
   import { onMount } from 'svelte'
   import { SvelteSet } from 'svelte/reactivity'
   import { documents } from '../lib/documents'
+  import { frontmatterOf, type Property, readProperties } from '../lib/properties'
   import { isExternalUrl } from '../lib/paths'
   import type { Tab } from '../lib/layout'
   import { hydrate } from '../lib/render/hydrate'
@@ -12,6 +13,7 @@
   import * as vault from '../lib/vault'
   import { workspace } from '../lib/workspace.svelte'
   import NoteHeader from './NoteHeader.svelte'
+  import PropertiesEditor from './PropertiesEditor.svelte'
 
   const HEADING = 'h1, h2, h3, h4, h5, h6'
   const HEADING_TAGS = ['H1', 'H2', 'H3', 'H4', 'H5', 'H6']
@@ -20,11 +22,15 @@
 
   let content: HTMLElement | undefined
   let renderId = 0
+  let properties = $state<Property[] | null>(null)
+  let frontmatter = $state<string | null>(null)
   const foldedLines = new SvelteSet<string>()
 
   async function render(text: string) {
     const id = ++renderId
     const body = document.createElement('div')
+    properties = readProperties(text)
+    frontmatter = frontmatterOf(text)
     const note = noteContent(text)
     body.innerHTML = renderMarkdown(note.text, { firstLine: note.firstLine })
     await hydrate(body, {
@@ -115,7 +121,14 @@
 
 <section class="reading">
   <NoteHeader {tab} {path} />
-  <article class="markdown" {@attach attachContent}></article>
+  <div class="scroll">
+    {#if workspace.propertiesDisplay === 'source' && frontmatter !== null}
+      <pre class="frontmatter">{frontmatter}</pre>
+    {:else if workspace.propertiesDisplay === 'visible' && properties}
+      <PropertiesEditor {properties} edit={(change) => void documents.update(path, change)} />
+    {/if}
+    <article class="markdown" {@attach attachContent}></article>
+  </div>
 </section>
 
 <style>
@@ -125,7 +138,17 @@
     height: 100%;
   }
 
-  article {
+  .frontmatter {
+    margin: 0 0 16px;
+    padding: 12px 16px;
+    border-radius: 6px;
+    background: var(--code-background);
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    white-space: pre-wrap;
+  }
+
+  .scroll {
     flex: 1;
     min-height: 0;
     overflow: auto;

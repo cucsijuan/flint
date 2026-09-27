@@ -12,16 +12,21 @@ import {
 import { isExternalUrl, isImage, linkTargetOfUrl, NOTE_EXTENSION } from '../paths'
 import { hydrate } from '../render/hydrate'
 import { renderMarkdown } from '../render/markdown'
+import { readProperties } from '../properties'
 import { processors } from '../render/processors.svelte'
 import { linkRevision, resolvedLinks } from './links'
 import { ImageWidget, isAloneOnLine } from './live-preview'
 import { pointerDown, pointerReleased } from './pointer'
-import { type PreviewContext, previewContext } from './preview-context'
+import { mountProperties } from './properties-widget.svelte'
+import { type PreviewContext, previewContext, propertiesDisplay } from './preview-context'
 import { wikiLinkParts } from './wikilink'
 
 const CALLOUT_START = /^\s*>\s*\[![\w-]+\]/
 
 const INTERACTIVE = 'a, button, input, select, textarea, summary, [data-interactive]'
+
+/** Rendered blocks change height after CodeMirror measures them (images, folds, forms). */
+const resizeObservers = new WeakMap<HTMLElement, ResizeObserver>()
 
 abstract class BlockWidget extends WidgetType {
   protected container(view: EditorView, className: string) {
@@ -33,10 +38,14 @@ abstract class BlockWidget extends WidgetType {
       view.dispatch({ selection: { anchor: view.posAtDOM(element) } })
       view.focus()
     })
-    for (const resize of ['load', 'toggle']) {
-      element.addEventListener(resize, () => view.requestMeasure(), true)
-    }
+    const observer = new ResizeObserver(() => view.requestMeasure())
+    observer.observe(element)
+    resizeObservers.set(element, observer)
     return element
+  }
+
+  destroy(element: HTMLElement) {
+    resizeObservers.get(element)?.disconnect()
   }
 
   ignoreEvent(event: Event) {
@@ -67,24 +76,60 @@ class MarkdownWidget extends BlockWidget {
   toDOM(view: EditorView) {
     const element = this.container(view, this.className)
     element.innerHTML = this.html()
-    void this.hydrate(element, view)
+    void hydrate(element, this.context)
     return element
   }
 
-  updateDOM(element: HTMLElement, view: EditorView) {
+  updateDOM(element: HTMLElement) {
     const content = document.createElement('div')
     content.innerHTML = this.html()
-    void this.hydrate(content, view).then(() => element.replaceChildren(...content.childNodes))
+    void hydrate(content, this.context).then(() => element.replaceChildren(...content.childNodes))
     return true
   }
 
   private html() {
     return renderMarkdown(this.markdown, { firstLine: this.firstLine })
   }
+}
 
-  private async hydrate(element: HTMLElement, view: EditorView) {
-    await hydrate(element, this.context)
-    view.requestMeasure()
+const mountedProperties = new WeakMap<HTMLElement, ReturnType<typeof mountProperties>>()
+
+/** The frontmatter as an editable form; moving the cursor into it shows the YAML. */
+class PropertiesWidget extends BlockWidget {
+  constructor(
+    readonly yaml: string,
+    readonly context: PreviewContext,
+  ) {
+    super()
+  }
+
+  eq(other: PropertiesWidget) {
+    return other.yaml === this.yaml
+  }
+
+  toDOM(view: EditorView) {
+    const element = this.container(view, 'cm-live-properties')
+    mountedProperties.set(element, mountProperties(element, this.properties(), this.edit()))
+    return element
+  }
+
+  updateDOM(element: HTMLElement) {
+    mountedProperties.get(element)?.update(this.properties())
+    return true
+  }
+
+  destroy(element: HTMLElement) {
+    super.destroy(element)
+    mountedProperties.get(element)?.destroy()
+  }
+
+  private properties() {
+    return readProperties(this.yaml) ?? []
+  }
+
+  private edit() {
+    const { editNote, source } = this.context
+    return (change: (note: string) => string) => void editNote(source, change)
   }
 }
 
@@ -143,6 +188,15 @@ function blockDecorations(state: EditorState): DecorationSet {
 
   syntaxTree(state).iterate({
     enter: ({ name, node }) => {
+      if (name === 'Frontmatter') {
+        const closing = node.getChildren('DashLine').at(-1)
+        const to = doc.lineAt(closing?.from ?? node.from).to
+        const display = state.facet(propertiesDisplay)
+        if (!context || isEditing(0, to) || display === 'source') return false
+        if (display === 'hidden') decorations.push(Decoration.replace({ block: true }).range(0, to))
+        else block(0, to, new PropertiesWidget(doc.sliceString(0, to), context))
+        return false
+      }
       if (name === 'Table') {
         rendered(node, 'cm-live-table')
         return false
@@ -197,6 +251,7 @@ const blockDecorationsField = StateField.define<DecorationSet>({
   update(decorations, transaction) {
     const isStale =
       transaction.docChanged ||
+      transaction.reconfigured ||
       (transaction.selection && !transaction.state.field(pointerDown, false)) ||
       pointerReleased(transaction) ||
       syntaxTree(transaction.startState) !== syntaxTree(transaction.state) ||

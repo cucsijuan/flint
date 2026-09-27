@@ -42,6 +42,7 @@ import {
   type EditorMode,
   getSetting,
   type LinkUpdate,
+  type PropertiesDisplay,
   setSetting,
 } from './settings'
 import type { AttachmentSource } from './editor/attachments'
@@ -68,7 +69,7 @@ const writeJsonConfig = (name: string, value: object) =>
 const timestamp = () => new Date().toISOString().replace(/\D/g, '').slice(0, 14)
 
 export type LeftTab = 'files' | 'search' | 'bookmarks'
-export type RightTab = 'backlinks' | 'outline' | 'tags' | 'graph' | (string & {})
+export type RightTab = 'backlinks' | 'outline' | 'properties' | 'tags' | 'graph' | (string & {})
 
 export interface Jump {
   tabId: string
@@ -100,6 +101,7 @@ class Workspace {
   linkUpdate = $state<LinkUpdate>('ask')
   checkForUpdates = $state(true)
   attachmentFolder = $state<AttachmentFolder>('root')
+  propertiesDisplay = $state<PropertiesDisplay>('visible')
   dailyNotes = $state<DailyNoteSettings>(DEFAULT_DAILY_NOTES)
   templates = $state<TemplateSettings>(DEFAULT_TEMPLATES)
   templateNotes = $derived(
@@ -140,6 +142,7 @@ class Workspace {
     this.linkUpdate = (await getSetting('linkUpdate')) ?? 'ask'
     this.checkForUpdates = (await getSetting('checkForUpdates')) ?? true
     this.attachmentFolder = (await getSetting('attachmentFolder')) ?? 'root'
+    this.propertiesDisplay = (await getSetting('propertiesDisplay')) ?? 'visible'
     const vaultPath = (await vault.launchVault()) ?? (await getSetting('lastVault'))
     if (vaultPath) await this.openVault(vaultPath)
   }
@@ -269,6 +272,11 @@ class Workspace {
   setCheckForUpdates(isEnabled: boolean) {
     this.checkForUpdates = isEnabled
     void setSetting('checkForUpdates', isEnabled)
+  }
+
+  setPropertiesDisplay(value: PropertiesDisplay) {
+    this.propertiesDisplay = value
+    void setSetting('propertiesDisplay', value)
   }
 
   setAttachmentFolder(value: AttachmentFolder) {

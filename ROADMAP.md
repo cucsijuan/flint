@@ -67,9 +67,15 @@ With M5, the MVP is complete. [v0.1.0](https://github.com/cucsijuan/flint/releas
 - Reading view (Ctrl+E) with syntax-highlighted code blocks.
 - Editor context menu with formatting actions (bold, italic, strikethrough, code, link) and spell checking.
 
-### M9: Core workflows
+### M9: Core workflows ✅
 
-Interactive rendered content (tasks you can check in reading view and in embedded notes, foldable callouts and headings, a copy button on code blocks, and a plugin API to render and handle custom elements), daily notes, templates, outline, bookmarks, a properties editor for frontmatter, and standard Markdown links to notes.
+- Interactive rendered content: tasks can be checked in the reading view, embedded notes and rendered blocks; callouts (`> [!note]`, foldable); heading folding in the reading view; a copy button on code blocks.
+- Plugin API for rendered Markdown: post-processors and code block processors that know their source lines and can edit them.
+- Daily notes (today, previous, next) with a folder, date format and template; templates inserted from a picker with `{{title}}`, `{{date}}`, `{{time}}` and custom formats.
+- Outline of the active note, bookmarks for notes, headings and searches (drag to reorder, Obsidian's `bookmarks.json` format).
+- Standard Markdown links to notes (`[text](path.md)`): indexed, in backlinks and the graph, rewritten on rename, clickable; external links open in the browser.
+- Files move by dragging them in the file tree, fixing relative links in moved notes.
+- Frontmatter is parsed as YAML and edited as properties (text, list, number, checkbox, date), shown above the note, hidden or as source, and in a Properties panel.
 
 ### M10: macOS
 
@@ -87,10 +93,11 @@ Browsing and installing community plugins, hot reload, a settings-page API, tab 
 
 Features that are not scheduled in a milestone yet.
 
-- **File tree:** drag-and-drop moves, keeping folders expanded after a rename.
+- **File tree:** keeping folders expanded after a rename, duplicating files.
 - **Links:** block references (`[[note#^id]]`).
 - **Search:** parentheses for grouping terms, more operators (`line:`, `section:`, `content:`), sort options.
 - **Graph:** force settings.
+- **Core workflows:** bookmark groups, property types shared across the vault, code block processors in the editor's source mode, a calendar view for daily notes.
 - **Rich content:** editing tables as a grid in live preview, pasting or dropping non-image attachments, dropping images on the reading view.
 - **Distribution:** Windows code signing.
 - **Testing:** run the end-to-end tests on Windows too (`msedgedriver` can't attach to WebView2 in CI yet).

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { filterGraph, type GraphFilters } from './graph'
+import { DEFAULT_GRAPH, filterGraph, type GraphSettings } from './graph'
 import type { Graph, NodeKind } from './vault'
 
 const node = (id: string, kind: NodeKind = 'note') => ({ id, label: id, kind })
@@ -21,24 +21,19 @@ const graph: Graph = {
     { source: 'a', target: '?x' },
   ],
 }
-const everything: GraphFilters = {
-  showTags: true,
-  showUnresolved: true,
-  showOrphans: true,
-  query: '',
-}
+const everything: GraphSettings = { ...DEFAULT_GRAPH, showTags: true }
 const ids = (result: Graph) => result.nodes.map((n) => n.id)
 
 describe('filterGraph', () => {
   it('hides node kinds and drops their links', () => {
-    const result = filterGraph(graph, { ...everything, showTags: false, showUnresolved: false })
+    const result = filterGraph(graph, { ...everything, showTags: false, hideUnresolved: true })
     expect(ids(result)).toEqual(['a', 'b', 'c', 'd', 'lonely'])
     expect(result.links).toHaveLength(3)
   })
 
   it('hides orphans and filters notes by path', () => {
     expect(ids(filterGraph(graph, { ...everything, showOrphans: false }))).not.toContain('lonely')
-    expect(ids(filterGraph(graph, { ...everything, query: 'LONE' }))).toEqual([
+    expect(ids(filterGraph(graph, { ...everything, search: 'LONE' }))).toEqual([
       'lonely',
       '#tag',
       '?x',

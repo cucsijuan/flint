@@ -163,6 +163,11 @@ pub fn search(state: State<AppState>, query: String) -> Result<Vec<SearchResult>
 }
 
 #[tauri::command(async)]
+pub fn matching_notes(state: State<AppState>, queries: Vec<String>) -> Result<Vec<Vec<String>>> {
+    state.read_index(|index| index.matching_notes(&queries))?
+}
+
+#[tauri::command(async)]
 pub fn tags(state: State<AppState>) -> Result<Vec<TagCount>> {
     state.read_index(Index::tags)
 }

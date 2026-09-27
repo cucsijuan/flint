@@ -60,6 +60,8 @@ export const backlinks = (path: string) => invoke<Backlink[]>('backlinks', { pat
 export const incomingLinkCount = (path: string) => invoke<number>('incoming_link_count', { path })
 
 export const search = (query: string) => invoke<SearchResult[]>('search', { query })
+export const matchingNotes = (queries: string[]) =>
+  invoke<string[][]>('matching_notes', { queries })
 export const tags = () => invoke<TagCount[]>('tags')
 
 export type NodeKind = 'note' | 'tag' | 'unresolved'

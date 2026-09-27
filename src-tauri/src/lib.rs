@@ -39,6 +39,7 @@ pub fn run() {
             commands::backlinks,
             commands::incoming_link_count,
             commands::search,
+            commands::matching_notes,
             commands::tags,
             commands::graph,
             commands::save_attachment,

@@ -356,6 +356,31 @@ impl Index {
             .collect())
     }
 
+    /// The paths of the notes matching each query, for coloring graph nodes by group.
+    pub fn matching_notes(&self, queries: &[String]) -> Result<Vec<Vec<String>>> {
+        queries
+            .iter()
+            .map(|query| {
+                let query = Query::parse(query)?;
+                if query.is_empty() {
+                    return Ok(Vec::new());
+                }
+                Ok(self
+                    .notes
+                    .iter()
+                    .filter(|(path, note)| {
+                        query.matches(&Note {
+                            path,
+                            text: &note.text,
+                            tags: &note.tags,
+                        })
+                    })
+                    .map(|(path, _)| path.clone())
+                    .collect())
+            })
+            .collect()
+    }
+
     pub fn headings(&self, path: &str) -> Vec<Heading> {
         self.notes
             .get(path)
@@ -679,6 +704,24 @@ mod tests {
                 ("a.md", "?missing"),
                 ("a.md", "folder/b.md"),
                 ("folder/b.md", "#topic"),
+            ]
+        );
+    }
+
+    #[test]
+    fn matches_notes_for_each_query() {
+        let index = index_of(&[
+            ("a/One.md", "#project alpha"),
+            ("b/Two.md", "beta"),
+            ("Three.md", "#project beta"),
+        ]);
+        let queries = ["tag:#project".into(), "path:b".into(), String::new()];
+        assert_eq!(
+            index.matching_notes(&queries).unwrap(),
+            [
+                vec!["Three.md", "a/One.md"],
+                vec!["b/Two.md"],
+                Vec::<&str>::new()
             ]
         );
     }

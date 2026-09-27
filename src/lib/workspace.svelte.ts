@@ -28,7 +28,7 @@ import { parseHotkeys, serializeHotkeys } from './hotkeys'
 import { documents } from './documents'
 import { activeView } from './editor/active'
 import { noteOpened, vaultChanged } from './events'
-import type { GraphFilters } from './graph'
+import { DEFAULT_GRAPH, type GraphSettings } from './graph'
 import * as layouts from './layout'
 import {
   NOTE_EXTENSION,
@@ -121,12 +121,7 @@ class Workspace {
   searchError = $state<string | null>(null)
   searchFocus = $state(0)
   graph = $state<vault.Graph>({ nodes: [], links: [] })
-  graphFilters = $state<GraphFilters>({
-    showTags: false,
-    showUnresolved: true,
-    showOrphans: true,
-    query: '',
-  })
+  readonly graphConfig = new VaultConfig('graph', DEFAULT_GRAPH)
   localGraphDepth = $state(1)
 
   #legacySettings: Partial<VaultSettings> = {}
@@ -138,6 +133,17 @@ class Workspace {
 
   constructor() {
     documents.onError = (error) => this.notify(String(error))
+    for (const config of this.#configs()) config.onError = (error) => this.notify(String(error))
+  }
+
+  #configs() {
+    return [
+      this.settings,
+      this.dailyNotesConfig,
+      this.templatesConfig,
+      this.appearance,
+      this.graphConfig,
+    ]
   }
 
   get mode() {
@@ -190,6 +196,7 @@ class Workspace {
       await this.dailyNotesConfig.load()
       await this.templatesConfig.load()
       await this.appearance.load()
+      await this.graphConfig.load()
       this.#customHotkeys = parseHotkeys(await vault.readConfig(HOTKEYS_CONFIG))
       commands.setCustomHotkeys(this.#customHotkeys)
       await this.reloadSnippets()
@@ -202,8 +209,8 @@ class Workspace {
     })
   }
 
-  flush() {
-    return documents.flush()
+  async flush() {
+    await Promise.all([documents.flush(), ...this.#configs().map((config) => config.flush())])
   }
 
   updateLayout(update: (layout: layouts.Layout) => layouts.Layout) {
@@ -276,7 +283,7 @@ class Workspace {
   }
 
   setSettings(changes: Partial<VaultSettings>) {
-    void this.#run(() => this.settings.set(changes))
+    this.settings.set(changes)
   }
 
   toggleRightPanel() {
@@ -338,8 +345,12 @@ class Workspace {
     void this.#run(() => vault.writeConfig(HOTKEYS_CONFIG, json))
   }
 
+  setGraph(changes: Partial<GraphSettings>) {
+    this.graphConfig.set(changes)
+  }
+
   setAppearance(changes: Partial<AppearanceSettings>) {
-    void this.#run(() => this.appearance.set(changes))
+    this.appearance.set(changes)
   }
 
   toggleSnippet(name: string, isEnabled: boolean) {
@@ -363,11 +374,11 @@ class Workspace {
   }
 
   setDailyNotes(changes: Partial<DailyNoteSettings>) {
-    void this.#run(() => this.dailyNotesConfig.set(changes))
+    this.dailyNotesConfig.set(changes)
   }
 
   setTemplates(changes: Partial<TemplateSettings>) {
-    void this.#run(() => this.templatesConfig.set(changes))
+    this.templatesConfig.set(changes)
   }
 
   /** Opens today's daily note (creating it from the template), or the closest one before or after. */

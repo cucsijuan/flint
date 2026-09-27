@@ -1,19 +1,44 @@
 <script lang="ts">
+  import {
+    type ForceLink,
+    forceCollide,
+    forceManyBody,
+    forceX,
+    forceY,
+    type SimulationLinkDatum,
+  } from 'd3-force'
   import ForceGraph, { type LinkObject, type NodeObject } from 'force-graph'
   import { onMount } from 'svelte'
+  import type { GraphSettings } from '../lib/graph'
   import type { Graph, GraphNode } from '../lib/vault'
   import { workspace } from '../lib/workspace.svelte'
 
   type Node = NodeObject & GraphNode & { degree: number }
   type Link = LinkObject<Node>
 
-  const LABEL_ZOOM = 1.6
+  type Forces = Pick<
+    GraphSettings,
+    'centerStrength' | 'repelStrength' | 'linkStrength' | 'linkDistance'
+  >
 
-  let {
-    graph,
-    focus,
-    onOpen,
-  }: { graph: Graph; focus?: string; onOpen: (node: GraphNode) => void } = $props()
+  const LABEL_ZOOM = 1.6
+  // Scale Obsidian's slider values (center 0–1, repel 0–20, link distance 30–500) to d3 forces.
+  const GRAVITY = 0.12
+  const REPEL = 25
+  const REPEL_RANGE = 600
+  const DISTANCE = 0.25
+  const NODE_SPACING = 4
+
+  interface Props {
+    graph: Graph
+    focus?: string
+    forces: Forces
+    /** Colors from the color groups, by node id. */
+    nodeColors: Map<string, string>
+    onOpen: (node: GraphNode) => void
+  }
+
+  let { graph, focus, forces, nodeColors, onOpen }: Props = $props()
 
   let container: HTMLDivElement
   let renderer: ForceGraph<Node, Link> | undefined
@@ -53,7 +78,9 @@
     context.globalAlpha = isDimmed ? 0.25 : 1
     context.beginPath()
     context.arc(node.x ?? 0, node.y ?? 0, radius(node), 0, 2 * Math.PI)
-    context.fillStyle = isFocus ? colors.accent : colors[node.kind]
+    context.fillStyle = isFocus
+      ? colors.accent
+      : (nodeColors.get(node.id as string) ?? colors[node.kind])
     context.fill()
     if (scale > LABEL_ZOOM || isFocus || (hovered && !isDimmed)) {
       context.font = `${12 / scale}px system-ui, sans-serif`
@@ -119,7 +146,37 @@
 
   $effect(() => {
     void workspace.appearance.value
+    void nodeColors
     if (renderer) colors = palette()
+    renderer?.nodeCanvasObject(drawNode)
+  })
+
+  /** Obsidian-style layout: gravity toward the middle keeps clusters and orphans together. */
+  $effect(() => {
+    const { centerStrength, repelStrength, linkStrength, linkDistance } = forces
+    if (!renderer) return
+    const link = renderer.d3Force('link') as ForceLink<Node, SimulationLinkDatum<Node>> | undefined
+    const degree = (end: Node | string | number) => (typeof end === 'object' ? end.degree : 1)
+    link
+      ?.distance(linkDistance * DISTANCE)
+      .strength(
+        (edge) => linkStrength / Math.max(1, Math.min(degree(edge.source), degree(edge.target))),
+      )
+    renderer
+      .d3Force('center', null)
+      .d3Force(
+        'charge',
+        forceManyBody()
+          .strength(-repelStrength * REPEL)
+          .distanceMax(REPEL_RANGE),
+      )
+      .d3Force('x', forceX(0).strength(centerStrength * GRAVITY))
+      .d3Force('y', forceY(0).strength(centerStrength * GRAVITY))
+      .d3Force(
+        'collide',
+        forceCollide<Node>((node) => radius(node) + NODE_SPACING),
+      )
+      .d3ReheatSimulation()
   })
 
   $effect(() => {

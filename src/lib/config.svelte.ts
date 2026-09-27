@@ -2,6 +2,8 @@ import * as vault from './vault'
 
 type Config = Record<string, unknown>
 
+const SAVE_DELAY_MS = 300
+
 const isRecord = (value: unknown): value is Config =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
@@ -23,6 +25,8 @@ export function mergeConfig<T extends object>(defaults: T, ...sources: unknown[]
 /** A JSON file in the vault's `.flint` folder, like Obsidian's per-vault settings. */
 export class VaultConfig<T extends object> {
   value = $state() as T
+  onError: (error: unknown) => void = console.error
+  #saveTimer: ReturnType<typeof setTimeout> | undefined
 
   constructor(
     readonly name: string,
@@ -37,8 +41,21 @@ export class VaultConfig<T extends object> {
     this.value = mergeConfig(this.defaults, seed, stored)
   }
 
+  /** Updates the value now and saves it shortly after, so sliders and typing write once. */
   set(changes: Partial<T>) {
     this.value = { ...this.value, ...changes }
-    return vault.writeConfig(this.name, JSON.stringify(this.value, null, 2))
+    clearTimeout(this.#saveTimer)
+    this.#saveTimer = setTimeout(() => void this.flush(), SAVE_DELAY_MS)
+  }
+
+  async flush() {
+    if (this.#saveTimer === undefined) return
+    clearTimeout(this.#saveTimer)
+    this.#saveTimer = undefined
+    try {
+      await vault.writeConfig(this.name, JSON.stringify(this.value, null, 2))
+    } catch (error) {
+      this.onError(error)
+    }
   }
 }

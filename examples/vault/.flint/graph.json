@@ -1,0 +1,14 @@
+{
+  "search": "",
+  "showTags": false,
+  "hideUnresolved": false,
+  "showOrphans": true,
+  "colorGroups": [
+    { "query": "path:Journal", "color": { "a": 1, "rgb": 1867478 } },
+    { "query": "tag:#project", "color": { "a": 1, "rgb": 3120708 } }
+  ],
+  "centerStrength": 0.5,
+  "repelStrength": 10,
+  "linkStrength": 1,
+  "linkDistance": 250
+}

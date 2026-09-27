@@ -77,12 +77,14 @@ impl Query {
         self.alternatives.is_empty()
     }
 
-    pub fn search(&self, note: &Note) -> Option<SearchResult> {
-        let matches = self
-            .alternatives
+    pub fn matches(&self, note: &Note) -> bool {
+        self.alternatives
             .iter()
-            .any(|terms| terms.iter().all(|term| term.matches(note) != term.negated));
-        matches.then(|| SearchResult {
+            .any(|terms| terms.iter().all(|term| term.matches(note) != term.negated))
+    }
+
+    pub fn search(&self, note: &Note) -> Option<SearchResult> {
+        self.matches(note).then(|| SearchResult {
             path: note.path.to_owned(),
             lines: self.matching_lines(note.text),
         })

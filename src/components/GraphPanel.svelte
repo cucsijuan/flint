@@ -1,13 +1,31 @@
 <script lang="ts">
-  import { filterGraph } from '../lib/graph'
+  import { Settings2 } from '@lucide/svelte'
+  import { activeColorGroups, filterGraph, rgbToHex } from '../lib/graph'
+  import * as vault from '../lib/vault'
   import type { GraphNode } from '../lib/vault'
   import { workspace } from '../lib/workspace.svelte'
-  import GraphFilters from './GraphFilters.svelte'
+  import GraphSettingsPanel from './GraphSettingsPanel.svelte'
   import GraphView from './GraphView.svelte'
 
   let { scope }: { scope?: { center: string; depth: number } } = $props()
 
-  const graph = $derived(filterGraph(workspace.graph, workspace.graphFilters, scope))
+  let isPanelOpen = $state(false)
+  let nodeColors = $state(new Map<string, string>())
+
+  const settings = $derived(workspace.graphConfig.value)
+  const graph = $derived(filterGraph(workspace.graph, settings, scope))
+
+  $effect(() => {
+    const groups = activeColorGroups(settings.colorGroups)
+    void workspace.indexVersion
+    void vault.matchingNotes(groups.map((group) => group.query)).then((matches) => {
+      const entries = groups.flatMap((group, index) =>
+        matches[index].map((path) => [path, rgbToHex(group.color.rgb)] as const),
+      )
+      // Reversed so a note keeps the color of the first group it matches.
+      nodeColors = new Map(entries.reverse())
+    })
+  })
 
   function open(node: GraphNode) {
     if (node.kind === 'note') workspace.openNote(node.id)
@@ -17,56 +35,54 @@
 </script>
 
 <section>
-  <header>
-    <GraphFilters />
-  </header>
-  {#if scope}
-    <label class="depth">
-      Depth
-      <input type="range" min="1" max="3" bind:value={workspace.localGraphDepth} />
-      {workspace.localGraphDepth}
-    </label>
-  {/if}
-  <div class="canvas">
-    <GraphView {graph} focus={scope?.center ?? workspace.notePath ?? undefined} onOpen={open} />
+  <GraphView
+    {graph}
+    focus={scope?.center ?? workspace.notePath ?? undefined}
+    forces={settings}
+    {nodeColors}
+    onOpen={open}
+  />
+  <div class="overlay">
+    <button
+      class="icon toggle"
+      class:on={isPanelOpen}
+      title="Graph settings"
+      onclick={() => (isPanelOpen = !isPanelOpen)}
+    >
+      <Settings2 size={16} />
+    </button>
+    {#if isPanelOpen}<GraphSettingsPanel isLocal={scope !== undefined} />{/if}
   </div>
 </section>
 
 <style>
   section {
-    display: flex;
-    flex-direction: column;
+    position: relative;
     height: 100%;
   }
 
-  header {
+  .overlay {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    bottom: 8px;
     display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    padding: 8px;
-    border-bottom: 1px solid var(--border);
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    pointer-events: none;
   }
 
-  header :global(.filters) {
-    flex: 1;
+  .overlay > :global(*) {
+    pointer-events: auto;
   }
 
-  .depth {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 8px;
-    color: var(--text-muted);
-    font-size: 12px;
+  .toggle {
+    background: var(--background);
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.15);
   }
 
-  .depth input {
-    flex: 1;
-    accent-color: var(--accent);
-  }
-
-  .canvas {
-    flex: 1;
-    min-height: 0;
+  .on {
+    color: var(--accent);
   }
 </style>

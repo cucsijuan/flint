@@ -1,11 +1,14 @@
 use std::ops::Range;
 use std::sync::LazyLock;
 
+use percent_encoding::percent_decode_str;
 use pulldown_cmark::{Event, LinkType, Options, Parser, Tag, TagEnd};
 use regex::Regex;
 use serde::Serialize;
 use yaml_rust2::{Yaml, YamlLoader};
 
+static EXTERNAL_URL: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(?:[a-zA-Z][a-zA-Z0-9+.-]*:|//)").expect("valid URL pattern"));
 static INLINE_TAG: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?:^|\s)#([\p{L}\p{N}_/-]+)").expect("valid tag pattern"));
 
@@ -15,8 +18,26 @@ pub struct WikiLink {
     pub subpath: Option<String>,
     pub alias: Option<String>,
     pub is_embed: bool,
+    /// A standard `[text](path.md)` link, whose target is percent-decoded from the source.
+    pub is_markdown: bool,
     pub range: Range<usize>,
     pub target_range: Range<usize>,
+}
+
+impl WikiLink {
+    /// Whether `text` still holds this link's target where it was found.
+    pub fn is_intact(&self, text: &str) -> bool {
+        text.get(self.target_range.clone())
+            .is_some_and(|raw| self.decode(raw) == self.target)
+    }
+
+    fn decode(&self, raw: &str) -> String {
+        if self.is_markdown {
+            percent_decode_str(raw).decode_utf8_lossy().into_owned()
+        } else {
+            raw.to_owned()
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -88,12 +109,25 @@ pub fn summarize(text: &str) -> NoteSummary {
             Event::End(TagEnd::MetadataBlock(_)) => {
                 summary.read_frontmatter(&frontmatter.take().unwrap_or_default());
             }
-            Event::Start(Tag::Link { link_type, .. })
-            | Event::Start(Tag::Image { link_type, .. }) => {
+            Event::Start(Tag::Link {
+                link_type,
+                dest_url,
+                ..
+            }) => {
                 link_depth += 1;
-                if let LinkType::WikiLink { .. } = link_type {
-                    summary.links.extend(parse_wikilink(text, range));
-                }
+                summary
+                    .links
+                    .extend(parse_link(text, range, link_type, &dest_url, false));
+            }
+            Event::Start(Tag::Image {
+                link_type,
+                dest_url,
+                ..
+            }) => {
+                link_depth += 1;
+                summary
+                    .links
+                    .extend(parse_link(text, range, link_type, &dest_url, true));
             }
             Event::End(TagEnd::Link) | Event::End(TagEnd::Image) => {
                 link_depth = link_depth.saturating_sub(1);
@@ -151,6 +185,48 @@ fn scalar_text(value: &Yaml) -> Option<String> {
     }
 }
 
+fn parse_link(
+    text: &str,
+    range: Range<usize>,
+    link_type: LinkType,
+    destination: &str,
+    is_embed: bool,
+) -> Option<WikiLink> {
+    match link_type {
+        LinkType::WikiLink { .. } => parse_wikilink(text, range),
+        LinkType::Inline => parse_markdown_link(text, range, destination, is_embed),
+        _ => None,
+    }
+}
+
+fn parse_markdown_link(
+    text: &str,
+    range: Range<usize>,
+    destination: &str,
+    is_embed: bool,
+) -> Option<WikiLink> {
+    if destination.is_empty() || EXTERNAL_URL.is_match(destination) {
+        return None;
+    }
+    let raw_path = destination
+        .split_once('#')
+        .map_or(destination, |(path, _)| path);
+    let source = &text[range.clone()];
+    let start = range.start + source.rfind(destination)?;
+    let decode = |raw: &str| percent_decode_str(raw).decode_utf8_lossy().into_owned();
+    Some(WikiLink {
+        target: decode(raw_path),
+        subpath: destination
+            .split_once('#')
+            .map(|(_, subpath)| decode(subpath)),
+        alias: None,
+        is_embed,
+        is_markdown: true,
+        target_range: start..start + raw_path.len(),
+        range,
+    })
+}
+
 fn parse_wikilink(text: &str, range: Range<usize>) -> Option<WikiLink> {
     let source = &text[range.clone()];
     let is_embed = source.starts_with('!');
@@ -170,6 +246,7 @@ fn parse_wikilink(text: &str, range: Range<usize>) -> Option<WikiLink> {
         subpath,
         alias,
         is_embed,
+        is_markdown: false,
         target_range: target_start..target_start + target.len(),
         range,
     })
@@ -204,6 +281,35 @@ mod tests {
             ]
         );
         assert_eq!(&text[links[2].range.clone()], "![[Image]]");
+    }
+
+    #[test]
+    fn extracts_local_markdown_links_and_images() {
+        let text = "[a](Other%20Note.md#Part) ![p](<img one.png>) [w](https://x.com/a.md) [r][ref]\n\n[ref]: Ref.md\n";
+        let links = summarize(text).links;
+        let described: Vec<_> = links
+            .iter()
+            .map(|link| {
+                (
+                    link.target.as_str(),
+                    link.subpath.as_deref(),
+                    &text[link.target_range.clone()],
+                    link.is_embed,
+                )
+            })
+            .collect();
+        assert_eq!(
+            described,
+            [
+                ("Other Note.md", Some("Part"), "Other%20Note.md", false),
+                ("img one.png", None, "img one.png", true),
+            ]
+        );
+        assert!(
+            links
+                .iter()
+                .all(|link| link.is_markdown && link.is_intact(text))
+        );
     }
 
     #[test]

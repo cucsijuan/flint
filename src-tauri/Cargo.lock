@@ -1174,6 +1174,7 @@ dependencies = [
  "log",
  "notify",
  "notify-debouncer-full",
+ "percent-encoding",
  "png 0.18.1",
  "pulldown-cmark",
  "regex",

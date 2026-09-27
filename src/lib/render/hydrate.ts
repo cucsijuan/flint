@@ -129,8 +129,21 @@ async function renderCode(code: HTMLElement, markdown: MarkdownContext) {
   await processor(code.textContent ?? '', element, markdown)
 }
 
+/** Turns `[text](Note.md)` links into internal links, like wikilinks. */
+function markInternalLinks(root: HTMLElement) {
+  for (const anchor of root.querySelectorAll<HTMLAnchorElement>(
+    'a[href]:not([data-link], [data-tag])',
+  )) {
+    const href = anchor.getAttribute('href') ?? ''
+    if (!href || isExternalUrl(href)) continue
+    anchor.classList.add('internal-link')
+    anchor.dataset.link = linkTargetOfUrl(href)
+  }
+}
+
 export async function hydrate(root: HTMLElement, context: HydrateContext) {
   const markdown = markdownContext(context)
+  markInternalLinks(root)
   const links = [...root.querySelectorAll<HTMLElement>('a.internal-link[data-link]')]
   const embeds = [...root.querySelectorAll<HTMLElement>('.internal-embed[data-embed]')]
   const images = [...root.querySelectorAll<HTMLImageElement>('img[src]')].filter(

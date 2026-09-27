@@ -21,6 +21,7 @@ ignore = "0.4.33"
 log = "0.4"
 notify = "8.2.0"
 notify-debouncer-full = "0.7.0"
+percent-encoding = "2"
 png = "0.18"
 pulldown-cmark = { version = "0.13.4", default-features = false }
 regex = "1.13.1"

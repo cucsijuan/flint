@@ -136,7 +136,14 @@ impl Index {
     }
 
     pub fn resolve(&self, source: &str, target: &str) -> Option<String> {
-        let target = target.trim().trim_start_matches('/');
+        let target = target.trim();
+        let joined;
+        let target = if is_relative(target) {
+            joined = join_relative(parent_of(source), target)?;
+            joined.as_str()
+        } else {
+            target.trim_start_matches('/')
+        };
         if is_attachment_name(target) {
             return self.resolve_attachment(source, target);
         }
@@ -371,11 +378,14 @@ impl Index {
         self.incoming(|target| is_within(target, path)).len()
     }
 
+    /// Renames `from` to `to`, rewriting links that point into it when `update_incoming` is set.
+    /// Relative links inside moved notes are always fixed, since the move would break them.
     pub fn update_links_for_rename(
         &mut self,
         vault: &Vault,
         from: &str,
         to: &str,
+        update_incoming: bool,
     ) -> Result<usize> {
         let moves: HashMap<String, String> = self
             .notes
@@ -386,12 +396,36 @@ impl Index {
             .collect();
 
         let mut rewrites: BTreeMap<String, Vec<(WikiLink, String)>> = BTreeMap::new();
-        for (source, link) in self.incoming(|target| moves.contains_key(target)) {
+        let mut rewritten = HashSet::new();
+        let incoming = if update_incoming {
+            self.incoming(|target| moves.contains_key(target))
+        } else {
+            Vec::new()
+        };
+        for (source, link) in incoming {
             let target = self.resolve(source, &link.link.target).unwrap_or_default();
+            rewritten.insert((source, link.link.range.start));
             rewrites
                 .entry(source.to_owned())
                 .or_default()
                 .push((link.link.clone(), moves[&target].clone()));
+        }
+        // Relative links in a moved note point somewhere else from its new folder.
+        for (source, note) in self
+            .notes
+            .iter()
+            .filter(|(path, _)| moves.contains_key(*path))
+        {
+            for link in &note.links {
+                let is_new = !rewritten.contains(&(source.as_str(), link.link.range.start));
+                let target = self.resolve(source, &link.link.target);
+                if let Some(target) = target.filter(|_| is_new && is_relative(&link.link.target)) {
+                    rewrites
+                        .entry(source.clone())
+                        .or_default()
+                        .push((link.link.clone(), target));
+                }
+            }
         }
 
         vault.rename(from, to)?;
@@ -411,8 +445,10 @@ impl Index {
             let mut links = links;
             links.sort_by_key(|(link, _)| Reverse(link.target_range.start));
             for (link, new_target) in &links {
-                if text.get(link.target_range.clone()) == Some(link.target.as_str()) {
-                    text.replace_range(link.target_range.clone(), &self.link_text(new_target));
+                if link.is_intact(&text) {
+                    let is_bracketed = text[..link.target_range.start].ends_with('<');
+                    let new_text = self.rewritten_target(link, &source, new_target, is_bracketed);
+                    text.replace_range(link.target_range.clone(), &new_text);
                     updated += 1;
                 }
             }
@@ -420,6 +456,33 @@ impl Index {
             self.insert(source, &text);
         }
         Ok(updated)
+    }
+
+    /// The new text for `link` in `source` once it points to `target`, in the link's own style.
+    fn rewritten_target(
+        &self,
+        link: &WikiLink,
+        source: &str,
+        target: &str,
+        is_bracketed: bool,
+    ) -> String {
+        if !link.is_markdown {
+            return self.link_text(target);
+        }
+        let path = if is_relative(&link.target) {
+            relative_path(parent_of(source), target)
+        } else if link.target.contains('/') {
+            target.to_owned()
+        } else if self.notes.contains_key(target) {
+            format!("{}{NOTE_EXTENSION}", self.link_text(target))
+        } else {
+            self.link_text(target)
+        };
+        if is_bracketed {
+            path
+        } else {
+            path.replace(' ', "%20")
+        }
     }
 
     fn incoming(&self, matches: impl Fn(&str) -> bool) -> Vec<(&str, &IndexedLink)> {
@@ -443,6 +506,43 @@ fn strip_note_extension(path: &str) -> &str {
     match path.get(split..) {
         Some(extension) if extension.eq_ignore_ascii_case(NOTE_EXTENSION) => &path[..split],
         _ => path,
+    }
+}
+
+fn is_relative(target: &str) -> bool {
+    target.starts_with("./") || target.starts_with("../")
+}
+
+fn join_relative(folder: &str, target: &str) -> Option<String> {
+    let mut parts: Vec<&str> = folder.split('/').filter(|part| !part.is_empty()).collect();
+    for part in target.split('/') {
+        match part {
+            "" | "." => {}
+            ".." => {
+                parts.pop()?;
+            }
+            _ => parts.push(part),
+        }
+    }
+    Some(parts.join("/"))
+}
+
+/// `target` as a `./` or `../` path from `folder`.
+fn relative_path(folder: &str, target: &str) -> String {
+    let from: Vec<&str> = folder.split('/').filter(|part| !part.is_empty()).collect();
+    let to: Vec<&str> = target.split('/').collect();
+    let shared = from
+        .iter()
+        .zip(&to)
+        .take_while(|(a, b)| a == b)
+        .count()
+        .min(to.len() - 1);
+    let ups = from.len() - shared;
+    let rest = to[shared..].join("/");
+    if ups == 0 {
+        format!("./{rest}")
+    } else {
+        format!("{}{rest}", "../".repeat(ups))
     }
 }
 
@@ -584,6 +684,63 @@ mod tests {
     }
 
     #[test]
+    fn resolves_markdown_links_relative_to_the_note() {
+        let index = index_of(&[
+            (
+                "a/Source.md",
+                "[up](../Top.md) [down](./sub/Deep%20Note.md) [name](Top.md)",
+            ),
+            ("Top.md", ""),
+            ("a/sub/Deep Note.md", ""),
+        ]);
+        assert_eq!(
+            index.resolve("a/Source.md", "../Top.md").as_deref(),
+            Some("Top.md")
+        );
+        assert_eq!(index.resolve("a/Source.md", "../../Outside.md"), None);
+        let sources: Vec<_> = index
+            .backlinks("Top.md")
+            .into_iter()
+            .map(|link| link.source)
+            .collect();
+        assert_eq!(sources, ["a/Source.md", "a/Source.md"]);
+        assert_eq!(index.backlinks("a/sub/Deep Note.md").len(), 1);
+    }
+
+    #[test]
+    fn rewrites_markdown_links_in_their_own_style() {
+        let dir = TempDir::new().unwrap();
+        let vault = Vault::open(dir.path()).unwrap();
+        vault.create_folder("a").unwrap();
+        vault.write("Top.md", "").unwrap();
+        vault.write("a/Target.md", "").unwrap();
+        vault
+            .write(
+                "a/Source.md",
+                "[r](./Target.md#Part) [s](Target.md) [t](../Top.md) [[Target]]",
+            )
+            .unwrap();
+        let mut index = Index::build(&vault).unwrap();
+
+        index
+            .update_links_for_rename(&vault, "a/Target.md", "a/New Name.md", true)
+            .unwrap();
+        assert_eq!(
+            vault.read("a/Source.md").unwrap(),
+            "[r](./New%20Name.md#Part) [s](New%20Name.md) [t](../Top.md) [[New Name]]"
+        );
+
+        vault.create_folder("b").unwrap();
+        index
+            .update_links_for_rename(&vault, "a/Source.md", "b/Source.md", false)
+            .unwrap();
+        assert_eq!(
+            vault.read("b/Source.md").unwrap(),
+            "[r](../a/New%20Name.md#Part) [s](New%20Name.md) [t](../Top.md) [[New Name]]"
+        );
+    }
+
+    #[test]
     fn resolves_and_renames_attachments() {
         let dir = TempDir::new().unwrap();
         let vault = Vault::open(dir.path()).unwrap();
@@ -613,7 +770,7 @@ mod tests {
         );
 
         let updated = index
-            .update_links_for_rename(&vault, "assets/Photo.PNG", "assets/Cover.png")
+            .update_links_for_rename(&vault, "assets/Photo.PNG", "assets/Cover.png", true)
             .unwrap();
         assert_eq!(updated, 2);
         assert_eq!(
@@ -665,12 +822,12 @@ mod tests {
         let mut index = Index::build(&vault).unwrap();
 
         let updated = index
-            .update_links_for_rename(&vault, "folder", "renamed")
+            .update_links_for_rename(&vault, "folder", "renamed", true)
             .unwrap();
         assert_eq!(updated, 3);
 
         let updated = index
-            .update_links_for_rename(&vault, "renamed/Old.md", "renamed/New.md")
+            .update_links_for_rename(&vault, "renamed/Old.md", "renamed/New.md", true)
             .unwrap();
         assert_eq!(updated, 3);
 

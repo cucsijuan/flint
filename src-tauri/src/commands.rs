@@ -113,12 +113,8 @@ pub fn rename_entry(
     update_links: bool,
 ) -> Result<usize> {
     let open = state.open()?;
-    if !update_links {
-        open.vault.rename(&from, &to)?;
-        return Ok(0);
-    }
     let mut index = open.index.write().unwrap_or_else(|e| e.into_inner());
-    index.update_links_for_rename(&open.vault, &from, &to)
+    index.update_links_for_rename(&open.vault, &from, &to, update_links)
 }
 
 #[tauri::command(async)]

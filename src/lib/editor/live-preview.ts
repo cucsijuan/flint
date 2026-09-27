@@ -10,7 +10,7 @@ import {
 } from '@codemirror/view'
 import type { SyntaxNode, Tree } from '@lezer/common'
 import { isExternalUrl, isImage, linkTargetOfUrl } from '../paths'
-import { resolvedLinks } from './links'
+import { resolvedLinks, urlAttributes } from './links'
 import { pointerDown, pointerReleased } from './pointer'
 import { previewContext } from './preview-context'
 import { wikiLinkParts } from './wikilink'
@@ -145,7 +145,6 @@ const COPIED_MS = 1500
 const hide = Decoration.replace({})
 const bullet = Decoration.replace({ widget: new BulletWidget() })
 const rule = Decoration.replace({ widget: new RuleWidget() })
-const linkText = Decoration.mark({ class: 'cm-live-link' })
 const quoteLine = Decoration.line({ class: 'cm-live-quote' })
 const codeLine = Decoration.line({ class: 'cm-live-code' })
 
@@ -211,9 +210,11 @@ export function previewDecorations(
           const marks = node.getChildren('LinkMark')
           if (marks.length >= 2 && !touchesSelection(node.from, node.to)) {
             const [open, close] = marks
+            const url = node.getChild('URL')
+            const attributes = url ? urlAttributes(doc.sliceString(url.from, url.to)) : {}
             decorations.push(
               hide.range(node.from, open.to),
-              linkText.range(open.to, close.from),
+              Decoration.mark({ class: 'cm-live-link', attributes }).range(open.to, close.from),
               hide.range(close.from, node.to),
             )
           }

@@ -79,6 +79,19 @@ describe('interactive content', () => {
     expect(edits).toEqual(['Note.md: ---\na: 1\n---\n\n- [ ] one\n- [x] two'])
   })
 
+  it('treats Markdown links to vault paths as internal links', async () => {
+    const root = await hydrated('[a](Other%20Note.md#Part) [b](https://x.com) [c](Missing.md)')
+    const links = [...root.querySelectorAll('a')].map((link) => [
+      link.dataset.link ?? null,
+      link.classList.contains('unresolved'),
+    ])
+    expect(links).toEqual([
+      ['Other Note.md#Part', true],
+      [null, false],
+      ['Missing.md', true],
+    ])
+  })
+
   it('adds copy buttons to code blocks', async () => {
     const root = await hydrated('```\ncode\n```')
     expect(root.querySelector('pre button.copy-code')).not.toBeNull()

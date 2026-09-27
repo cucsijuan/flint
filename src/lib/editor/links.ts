@@ -97,9 +97,14 @@ function linkResolution(resolve: LinkResolver) {
 export interface Navigation {
   openLink: (destination: string, options: { newTab: boolean }) => void
   openTag: (tag: string) => void
+  openUrl: (url: string) => void
 }
 
-type Target = { link: string } | { tag: string }
+type Target = { link: string } | { tag: string } | { url: string }
+
+/** Data attributes that make a rendered Markdown link open its note, or its address in the browser. */
+export const urlAttributes = (url: string): Record<string, string> =>
+  isExternalUrl(url) ? { 'data-url': url } : { 'data-link': linkTargetOfUrl(url) }
 
 function targetAt(view: EditorView, position: number): Target | null {
   for (
@@ -108,19 +113,26 @@ function targetAt(view: EditorView, position: number): Target | null {
     node = node.parent
   ) {
     if (node.name === 'WikiLink') return { link: wikiLinkParts(view.state, node).destination }
+    const url = node.name === 'Link' || node.name === 'Image' ? node.getChild('URL') : null
+    if (url) {
+      const address = view.state.sliceDoc(url.from, url.to)
+      return isExternalUrl(address) ? { url: address } : { link: linkTargetOfUrl(address) }
+    }
     if (node.name === 'Hashtag') return { tag: view.state.sliceDoc(node.from + 1, node.to) }
   }
   return null
 }
 
 function renderedTarget(element: HTMLElement): Target | null {
-  const { link, tag } = element.closest<HTMLElement>('[data-link], [data-tag]')?.dataset ?? {}
+  const target = element.closest<HTMLElement>('[data-link], [data-tag], [data-url]')
+  const { link, tag, url } = target?.dataset ?? {}
   if (link !== undefined) return { link }
   if (tag !== undefined) return { tag }
+  if (url !== undefined) return { url }
   return null
 }
 
-function clicks({ openLink, openTag }: Navigation) {
+function clicks({ openLink, openTag, openUrl }: Navigation) {
   return EditorView.domEventHandlers({
     mousedown(event, view) {
       const isMiddle = event.button === 1
@@ -134,7 +146,8 @@ function clicks({ openLink, openTag }: Navigation) {
       if (!target) return false
       event.preventDefault()
       if ('link' in target) openLink(target.link, { newTab: hasModifier || isMiddle })
-      else openTag(target.tag)
+      else if ('tag' in target) openTag(target.tag)
+      else openUrl(target.url)
       return true
     },
   })

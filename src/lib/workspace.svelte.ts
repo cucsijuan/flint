@@ -116,6 +116,8 @@ class Workspace {
   isTemplatePickerOpen = $state(false)
   /** Folders open in the file tree; kept here so they stay open when renamed or moved. */
   readonly expandedFolders = new SvelteSet<string>()
+  /** The file the tree scrolls to and highlights for a moment. */
+  revealed = $state<string | null>(null)
   bookmarks = $state<Bookmark[]>([])
   isSettingsOpen = $state(false)
   isQuickSwitcherOpen = $state(false)
@@ -502,6 +504,19 @@ class Workspace {
     const name =
       isNote && !trimmed.toLowerCase().endsWith(NOTE_EXTENSION) ? trimmed + NOTE_EXTENSION : trimmed
     if (trimmed) await this.#move(path, join(parentOf(path), name))
+  }
+
+  /** Shows `path` in the file tree: opens the files panel and every folder above it. */
+  revealInTree(path: string) {
+    this.leftTab = 'files'
+    for (let folder = parentOf(path); folder; folder = parentOf(folder)) {
+      this.expandedFolders.add(folder)
+    }
+    this.revealed = path
+  }
+
+  showInFileManager(path: string) {
+    void this.#run(() => vault.showInFileManager(path))
   }
 
   /** Copies a note or attachment next to itself as "Name 1", "Name 2"… */

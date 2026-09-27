@@ -12,6 +12,8 @@
 
   type EntryDrag = { type: 'entry'; path: string }
 
+  const REVEAL_MS = 1200
+
   const expanded = workspace.expandedFolders
   let dropFolder = $state<string | null>(null)
   let target = $state<TreeNode>()
@@ -76,6 +78,19 @@
       )
   }
 
+  let treeElement = $state<HTMLElement>()
+
+  $effect(() => {
+    const target = workspace.revealed
+    if (!target || !treeElement) return
+    const row = [...treeElement.querySelectorAll<HTMLElement>('[data-path]')].find(
+      (element) => element.dataset.path === target,
+    )
+    row?.scrollIntoView({ block: 'center' })
+    const timer = setTimeout(() => (workspace.revealed = null), REVEAL_MS)
+    return () => clearTimeout(timer)
+  })
+
   function selectOnMount(input: HTMLInputElement) {
     input.focus()
     input.select()
@@ -97,7 +112,9 @@
       {:else}
         <button
           class="row"
+          data-path={node.path}
           class:active={workspace.notePath === node.path}
+          class:revealed={workspace.revealed === node.path}
           class:drop-target={dropFolder !== null &&
             dropFolder === (node.kind === 'folder' ? node.path : parentOf(node.path))}
           {@attach entryDragAndDrop(node)}
@@ -130,7 +147,7 @@
 
 <ContextMenu.Root onOpenChange={(open) => !open && (target = undefined)}>
   <ContextMenu.Trigger class="tree">
-    <ul class="root" {@attach (element) => moveTarget('', element)}>
+    <ul class="root" bind:this={treeElement} {@attach (element) => moveTarget('', element)}>
       {@render branch(workspace.tree, 0)}
     </ul>
   </ContextMenu.Trigger>
@@ -169,6 +186,9 @@
         <ContextMenu.Item class="menu-item" onSelect={() => (workspace.renaming = path)}>
           Rename
         </ContextMenu.Item>
+        <ContextMenu.Item class="menu-item" onSelect={() => workspace.showInFileManager(path)}>
+          Show in system explorer
+        </ContextMenu.Item>
         <ContextMenu.Item class="menu-item danger" onSelect={() => workspace.trash(path)}>
           Delete
         </ContextMenu.Item>
@@ -193,6 +213,16 @@
 
   .root {
     min-height: 100%;
+  }
+
+  .row.revealed {
+    animation: reveal 1.2s ease-out;
+  }
+
+  @keyframes reveal {
+    from {
+      background: color-mix(in srgb, var(--accent) 35%, transparent);
+    }
   }
 
   .row.drop-target {

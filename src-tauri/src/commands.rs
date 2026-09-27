@@ -325,6 +325,12 @@ pub fn clipboard_files() -> Vec<String> {
 }
 
 #[tauri::command(async)]
+pub fn show_in_file_manager(app: AppHandle, state: State<AppState>, path: String) -> Result<()> {
+    let absolute = state.vault()?.absolute(&path)?;
+    Ok(app.opener().reveal_item_in_dir(absolute)?)
+}
+
+#[tauri::command(async)]
 pub fn open_externally(app: AppHandle, state: State<AppState>, path: String) -> Result<()> {
     let absolute = state.vault()?.absolute(&path)?;
     Ok(app

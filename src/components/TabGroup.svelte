@@ -215,6 +215,16 @@
           >
             Close others
           </ContextMenu.Item>
+          {#if 'path' in menuTab.view}
+            {@const path = menuTab.view.path}
+            <ContextMenu.Separator class="menu-separator" />
+            <ContextMenu.Item class="menu-item" onSelect={() => workspace.revealInTree(path)}>
+              Reveal in navigation
+            </ContextMenu.Item>
+            <ContextMenu.Item class="menu-item" onSelect={() => workspace.showInFileManager(path)}>
+              Show in system explorer
+            </ContextMenu.Item>
+          {/if}
           <ContextMenu.Separator class="menu-separator" />
           <ContextMenu.Item
             class="menu-item"
@@ -285,9 +295,10 @@
   .tab {
     display: flex;
     align-items: center;
+    /* Like Chrome: full width while there's room, then every tab shrinks evenly. */
+    flex: 0 1 200px;
     gap: 6px;
-    min-width: 80px;
-    max-width: 200px;
+    min-width: 48px;
     padding: 0 6px 0 10px;
     border-radius: 6px 6px 0 0;
     color: var(--text-muted);

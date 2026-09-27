@@ -49,6 +49,7 @@ pub fn run() {
             commands::save_clipboard_image,
             commands::clipboard_files,
             commands::open_externally,
+            commands::show_in_file_manager,
             context_menu::show_context_menu,
             commands::system_fonts,
             commands::snippets,

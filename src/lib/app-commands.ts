@@ -153,6 +153,12 @@ export function registerAppCommands() {
       run: () => (workspace.leftTab = 'bookmarks'),
     },
     {
+      id: 'reveal-active-file',
+      name: 'Reveal current file in navigation',
+      isAvailable: hasNote,
+      run: () => workspace.notePath && workspace.revealInTree(workspace.notePath),
+    },
+    {
       id: 'show-outline',
       name: 'Show outline',
       isAvailable: hasVault,

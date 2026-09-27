@@ -424,8 +424,22 @@ class Workspace {
     const isNote = this.entries.find((entry) => entry.path === path)?.kind === 'file'
     const name =
       isNote && !trimmed.toLowerCase().endsWith(NOTE_EXTENSION) ? trimmed + NOTE_EXTENSION : trimmed
-    const target = join(parentOf(path), name)
-    if (!trimmed || target === path) return
+    if (trimmed) await this.#move(path, join(parentOf(path), name))
+  }
+
+  /** Moves a note, attachment or folder into `folder` ('' is the vault root). */
+  async move(path: string, folder: string) {
+    if (folder === parentOf(path) || isWithin(folder, path)) return
+    const target = join(folder, basename(path))
+    if (this.#takenPaths().has(target)) {
+      this.notify(`"${basename(path)}" already exists in ${folder || 'the vault root'}.`)
+      return
+    }
+    await this.#move(path, target)
+  }
+
+  async #move(path: string, target: string) {
+    if (target === path) return
     await this.#run(async () => {
       await this.flush()
       const linkCount = await vault.incomingLinkCount(path)

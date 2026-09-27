@@ -1,12 +1,20 @@
 <script lang="ts">
+  import { combine } from '@atlaskit/pragmatic-drag-and-drop/combine'
+  import {
+    draggable,
+    dropTargetForElements,
+  } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
   import { ChevronRight, File, FileText, Image } from '@lucide/svelte'
   import { ContextMenu } from 'bits-ui'
   import { SvelteSet } from 'svelte/reactivity'
-  import { isImage, noteTitle } from '../lib/paths'
+  import { isImage, isWithin, noteTitle, parentOf } from '../lib/paths'
   import type { TreeNode } from '../lib/tree'
   import { workspace } from '../lib/workspace.svelte'
 
+  type EntryDrag = { type: 'entry'; path: string }
+
   const expanded = new SvelteSet<string>()
+  let dropFolder = $state<string | null>(null)
   let target = $state<TreeNode>()
   let targetFolder = $derived(target?.kind === 'folder' ? target.path : '')
 
@@ -34,6 +42,41 @@
 
   const displayName = (node: TreeNode) => (node.kind === 'file' ? noteTitle(node.path) : node.name)
 
+  const isEntryDrag = (data: Record<string | symbol, unknown>): data is EntryDrag =>
+    data.type === 'entry'
+
+  const canMove = (path: string, folder: string) =>
+    folder !== parentOf(path) && !isWithin(folder, path)
+
+  /** Dropping on a row moves into that folder, or into the folder of the note under the pointer. */
+  function moveTarget(folder: string, element: HTMLElement) {
+    const isInnermost = (targets: { element: Element }[]) => targets[0]?.element === element
+    return dropTargetForElements({
+      element,
+      canDrop: ({ source }) => isEntryDrag(source.data),
+      onDrag: ({ source, location }) => {
+        if (!isInnermost(location.current.dropTargets) || !isEntryDrag(source.data)) return
+        dropFolder = canMove(source.data.path, folder) ? folder : null
+      },
+      onDragLeave: () => {
+        if (dropFolder === folder) dropFolder = null
+      },
+      onDrop: ({ source, location }) => {
+        dropFolder = null
+        if (!isInnermost(location.current.dropTargets) || !isEntryDrag(source.data)) return
+        if (canMove(source.data.path, folder)) void workspace.move(source.data.path, folder)
+      },
+    })
+  }
+
+  function entryDragAndDrop(node: TreeNode) {
+    return (element: HTMLElement) =>
+      combine(
+        draggable({ element, getInitialData: () => ({ type: 'entry', path: node.path }) }),
+        moveTarget(node.kind === 'folder' ? node.path : parentOf(node.path), element),
+      )
+  }
+
   function selectOnMount(input: HTMLInputElement) {
     input.focus()
     input.select()
@@ -56,6 +99,9 @@
         <button
           class="row"
           class:active={workspace.notePath === node.path}
+          class:drop-target={dropFolder !== null &&
+            dropFolder === (node.kind === 'folder' ? node.path : parentOf(node.path))}
+          {@attach entryDragAndDrop(node)}
           style:padding-left="{depth * 12 + 6}px"
           onclick={(event) => toggle(node, event)}
           onauxclick={(event) => event.button === 1 && toggle(node, event)}
@@ -85,7 +131,9 @@
 
 <ContextMenu.Root onOpenChange={(open) => !open && (target = undefined)}>
   <ContextMenu.Trigger class="tree">
-    <ul>{@render branch(workspace.tree, 0)}</ul>
+    <ul class="root" {@attach (element) => moveTarget('', element)}>
+      {@render branch(workspace.tree, 0)}
+    </ul>
   </ContextMenu.Trigger>
   <ContextMenu.Portal>
     <ContextMenu.Content class="menu">
@@ -137,6 +185,14 @@
     list-style: none;
     margin: 0;
     padding: 0;
+  }
+
+  .root {
+    min-height: 100%;
+  }
+
+  .row.drop-target {
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
   }
 
   .row,

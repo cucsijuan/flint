@@ -4,6 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Flint</title>
+    <!-- Paints the theme background before the stylesheets load. -->
+    <style>
+      :root {
+        color-scheme: light dark;
+        background: light-dark(#ffffff, #1e1e1e);
+      }
+    </style>
   </head>
   <body>
     <script type="module" src="/src/main.ts"></script>

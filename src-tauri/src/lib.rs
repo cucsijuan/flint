@@ -11,14 +11,21 @@ mod vault;
 mod watcher;
 
 use commands::AppState;
+use std::{thread, time::Duration};
+
 use tauri::Manager;
+use tauri_plugin_window_state::StateFlags;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_store::Builder::new().build())
-        .plugin(tauri_plugin_window_state::Builder::new().build())
+        .plugin(
+            tauri_plugin_window_state::Builder::new()
+                .with_state_flags(StateFlags::all() - StateFlags::VISIBLE)
+                .build(),
+        )
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_opener::init())
@@ -69,6 +76,12 @@ pub fn run() {
         .setup(|app| {
             if let Some(window) = app.get_webview_window("main") {
                 context_menu::install(&window)?;
+                // The frontend shows the window once it has rendered; this covers a frontend that fails to start.
+                let window = window.clone();
+                thread::spawn(move || {
+                    thread::sleep(Duration::from_secs(5));
+                    let _ = window.show();
+                });
             }
             #[cfg(target_os = "macos")]
             app.set_menu(context_menu::app_menu(app.handle())?)?;

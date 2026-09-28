@@ -1,8 +1,9 @@
 <script lang="ts">
   import { getCurrentWebview } from '@tauri-apps/api/webview'
+  import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
   import { getCurrentWindow } from '@tauri-apps/api/window'
   import { Pane, PaneGroup, PaneResizer } from 'paneforge'
-  import { onMount } from 'svelte'
+  import { onMount, tick } from 'svelte'
   import CommandPalette from './components/CommandPalette.svelte'
   import LayoutView from './components/LayoutView.svelte'
   import QuickSwitcher from './components/QuickSwitcher.svelte'
@@ -27,8 +28,11 @@
   let restored = $state(false)
 
   onMount(() => {
-    void workspace.restore().finally(() => {
+    void workspace.restore().finally(async () => {
       restored = true
+      // The window starts hidden so the empty webview never flashes on screen.
+      await tick()
+      await getCurrentWindow().show()
       if (workspace.checkForUpdates && !import.meta.env.DEV) {
         void checkForUpdates({ isManual: false })
       }
@@ -60,11 +64,21 @@
     if (workspace.info?.root) void pluginHost.load()
   })
 
-  $effect(() =>
-    applyAppearance(workspace.appearance.value, workspace.settings.value.readableLineLength),
-  )
+  $effect(() => {
+    applyAppearance(workspace.appearance.value, workspace.settings.value.readableLineLength)
+    syncWindowBackground()
+  })
 
   $effect(() => applySnippets(workspace.enabledSnippetCss))
+
+  /** Paints the native window in the theme's background, which shows before the webview's first frame. */
+  function syncWindowBackground() {
+    const [red = 0, green = 0, blue = 0] =
+      getComputedStyle(document.body).backgroundColor.match(/\d+/g)?.map(Number) ?? []
+    getCurrentWebviewWindow()
+      .setBackgroundColor([red, green, blue])
+      .catch(() => {})
+  }
 
   function onContextMenu(event: MouseEvent) {
     rememberContextTarget(event.target)

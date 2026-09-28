@@ -1,21 +1,26 @@
 <script lang="ts">
-  import type { Component } from 'svelte'
+  import { Icon, type IconNode } from '@lucide/svelte'
 
   const ICON_SIZE = 16
 
-  /** Every Lucide icon as its own chunk, loaded only when a plugin asks for it by name. */
-  const icons = import.meta.glob<{ default: Component<{ size: number }> }>(
-    '/node_modules/@lucide/svelte/dist/icons/*.js',
-  )
-
   let { name, fallback }: { name?: string; fallback: string } = $props()
-  let Icon = $state<Component<{ size: number }> | null>(null)
+  let iconNode = $state<IconNode | null>(null)
+
+  const exportName = (name: string) =>
+    name.replace(/(?:^|-)([a-z0-9])/g, (_, first: string) => first.toUpperCase())
 
   $effect(() => {
-    Icon = null
-    const load = name ? icons[`/node_modules/@lucide/svelte/dist/icons/${name}.js`] : undefined
-    void load?.().then((module) => (Icon = module.default))
+    iconNode = null
+    if (!name) return
+    const wanted = exportName(name)
+    let isCurrent = true
+    // Lucide's full icon set, aliases included, is loaded only when a plugin asks for an icon.
+    void import('lucide').then((icons: Record<string, unknown>) => {
+      const node = icons[wanted]
+      if (isCurrent && Array.isArray(node)) iconNode = node as IconNode
+    })
+    return () => (isCurrent = false)
   })
 </script>
 
-{#if Icon}<Icon size={ICON_SIZE} />{:else}{fallback}{/if}
+{#if iconNode}<Icon {iconNode} size={ICON_SIZE} />{:else}{fallback}{/if}

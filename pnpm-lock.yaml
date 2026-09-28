@@ -274,6 +274,9 @@ importers:
       fuzzysort:
         specifier: ^4.0.2
         version: 4.0.2
+      lucide:
+        specifier: ^1.48.0
+        version: 1.48.0
       markdown-it:
         specifier: ^15.0.2
         version: 15.0.2
@@ -3047,6 +3050,9 @@ packages:
   lru-cache@7.18.3:
     resolution: {integrity: sha512-jumlc0BIUrS3qJGgIkWZsyfAM7NCWiBcCDhnd+3NNM5KbBmLTgHVfWBcg6W+rLUsIpzpERPsvwUP7CckAQSOoA==}
     engines: {node: '>=12'}
+
+  lucide@1.48.0:
+    resolution: {integrity: sha512-8FglIlGkcIItJjJfLUiqAufUCdbtnTOsdG02/fxXd4oIt+NrcrEVH8t0ZcKAfawxHckorO5qJ9XDfnJbdf0TOg==}
 
   lz-string@1.5.0:
     resolution: {integrity: sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==}
@@ -7067,6 +7073,8 @@ snapshots:
   lru-cache@11.5.3: {}
 
   lru-cache@7.18.3: {}
+
+  lucide@1.48.0: {}
 
   lz-string@1.5.0: {}
 

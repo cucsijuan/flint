@@ -65,7 +65,12 @@
   })
 
   $effect(() => {
+    const { theme } = workspace.appearance.value
     applyAppearance(workspace.appearance.value, workspace.settings.value.readableLineLength)
+    // WebView2 follows the window's theme rather than the page's `color-scheme`.
+    void getCurrentWindow()
+      .setTheme(theme === 'system' ? null : theme)
+      .catch(() => {})
     syncWindowBackground()
   })
 

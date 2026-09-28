@@ -6,8 +6,8 @@
   --text-faint: light-dark(#a0a0a8, #66666e);
   --border: light-dark(#e3e3e6, #363636);
   --hover: light-dark(#ececef, #303030);
-  --selected: light-dark(#e0e0f5, #3a3656);
   --accent: light-dark(#6d5dd3, #8b7cf0);
+  --selected: color-mix(in srgb, var(--accent) 22%, var(--background));
   --code-background: light-dark(#f1f1f4, #2a2a2a);
   --font-text: system-ui, sans-serif;
   --font-mono: ui-monospace, 'Cascadia Code', 'JetBrains Mono', monospace;

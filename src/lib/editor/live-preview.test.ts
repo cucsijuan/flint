@@ -2,14 +2,15 @@ import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import { ensureSyntaxTree } from '@codemirror/language'
 import { EditorState } from '@codemirror/state'
 import { describe, expect, it } from 'vitest'
-import { CheckboxWidget, LanguageWidget, previewDecorations } from './live-preview'
+import { CheckboxWidget, FootnoteWidget, LanguageWidget, previewDecorations } from './live-preview'
+import { obsidianSyntax } from './obsidian-syntax'
 import { wikiLinkSyntax } from './wikilink'
 
 function preview(doc: string, cursor = doc.length) {
   const state = EditorState.create({
     doc,
     selection: { anchor: cursor },
-    extensions: markdown({ base: markdownLanguage, extensions: wikiLinkSyntax }),
+    extensions: markdown({ base: markdownLanguage, extensions: [wikiLinkSyntax, obsidianSyntax] }),
   })
   const tree = ensureSyntaxTree(state, doc.length, 5000)
   if (!tree) throw new Error('Parsing timed out')
@@ -22,6 +23,7 @@ function preview(doc: string, cursor = doc.length) {
       const text = doc.slice(from, to)
       if (widget instanceof CheckboxWidget) replaced.push(`[${widget.checked ? 'x' : ' '}]`)
       else if (widget instanceof LanguageWidget) replaced.push(`<${widget.language}>`)
+      else if (widget instanceof FootnoteWidget) replaced.push(`^${widget.number}`)
       else replaced.push(text)
     }
   })
@@ -73,5 +75,11 @@ describe('live preview', () => {
   it('styles quote and code block lines', () => {
     const { lineClasses } = preview('> quote\n\n```js\nlet a\n```\n\nend')
     expect(lineClasses).toEqual(['cm-live-quote', 'cm-live-code', 'cm-live-code', 'cm-live-code'])
+  })
+
+  it('numbers footnote references by first use, leaving definitions and undefined ones as text', () => {
+    const doc = 'a[^b] c[^a] d[^b] e[^none]\n\n[^a]: A\n[^b]: B\n'
+    expect(preview(doc).replaced).toEqual(['^1', '^2', '^1'])
+    expect(preview(doc, 2).replaced).toEqual(['^2', '^1'])
   })
 })

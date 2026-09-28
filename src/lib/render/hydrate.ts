@@ -8,7 +8,9 @@ import {
   noteTitle,
 } from '../paths'
 import type { MarkdownContext } from '../../../plugin-api'
+import { renderMermaid } from './diagrams'
 import { codeLanguage, highlightBlock } from './highlight'
+import { renderMath } from './math'
 import { renderMarkdown } from './markdown'
 import { processors } from './processors.svelte'
 import { noteContent, replaceLines, toggleTask } from './source'
@@ -113,9 +115,34 @@ function copyButton(code: HTMLElement) {
   return button
 }
 
+/** Languages whose code blocks render as something else: diagrams, or a plugin's output. */
+export const rendersCodeBlock = (language: string) =>
+  language.toLowerCase() === 'mermaid' || processors.codeBlock(language) !== undefined
+
+async function renderDiagram(pre: HTMLElement, source: string) {
+  const figure = document.createElement('div')
+  figure.className = 'diagram'
+  try {
+    figure.innerHTML = await renderMermaid(source)
+    figure.dataset.source = source
+    pre.replaceWith(figure)
+  } catch (error) {
+    figure.className = 'diagram-error'
+    figure.textContent = String(error)
+    pre.after(figure)
+  }
+}
+
+async function renderMathIn(element: HTMLElement) {
+  const tex = element.dataset.tex ?? ''
+  element.replaceChildren(await renderMath(tex, element.classList.contains('math-block')))
+}
+
 async function renderCode(code: HTMLElement, markdown: MarkdownContext) {
   const pre = code.parentElement
-  const processor = processors.codeBlock(codeLanguage(code))
+  const language = codeLanguage(code)
+  if (pre && language.toLowerCase() === 'mermaid') return renderDiagram(pre, code.textContent ?? '')
+  const processor = processors.codeBlock(language)
   if (!pre) return
   if (!processor) {
     pre.append(copyButton(code))
@@ -129,10 +156,26 @@ async function renderCode(code: HTMLElement, markdown: MarkdownContext) {
   await processor(code.textContent ?? '', element, markdown)
 }
 
+/** Footnote links scroll to the nearest matching id: the same ids repeat in every open view and embed. */
+function linkFootnotes(root: HTMLElement) {
+  for (const anchor of root.querySelectorAll<HTMLAnchorElement>(
+    '.footnote-ref > a[href], a.footnote-backref[href]',
+  )) {
+    anchor.dataset.footnote = anchor.getAttribute('href')?.slice(1)
+    anchor.addEventListener('click', (event) => {
+      event.preventDefault()
+      const selector = `[id="${CSS.escape(anchor.dataset.footnote ?? '')}"]`
+      let scope = anchor.parentElement
+      while (scope && !scope.querySelector(selector)) scope = scope.parentElement
+      scope?.querySelector(selector)?.scrollIntoView({ block: 'center' })
+    })
+  }
+}
+
 /** Turns `[text](Note.md)` links into internal links, like wikilinks. */
 function markInternalLinks(root: HTMLElement) {
   for (const anchor of root.querySelectorAll<HTMLAnchorElement>(
-    'a[href]:not([data-link], [data-tag])',
+    'a[href]:not([data-link], [data-tag], [data-footnote])',
   )) {
     const href = anchor.getAttribute('href') ?? ''
     if (!href || isExternalUrl(href)) continue
@@ -143,6 +186,7 @@ function markInternalLinks(root: HTMLElement) {
 
 export async function hydrate(root: HTMLElement, context: HydrateContext) {
   const markdown = markdownContext(context)
+  linkFootnotes(root)
   markInternalLinks(root)
   const links = [...root.querySelectorAll<HTMLElement>('a.internal-link[data-link]')]
   const embeds = [...root.querySelectorAll<HTMLElement>('.internal-embed[data-embed]')]
@@ -151,6 +195,7 @@ export async function hydrate(root: HTMLElement, context: HydrateContext) {
   )
   const tasks = [...root.querySelectorAll<HTMLInputElement>('input.task')]
   const codeBlocks = [...root.querySelectorAll<HTMLElement>('pre > code')]
+  const formulas = [...root.querySelectorAll<HTMLElement>('.math[data-tex]')]
 
   const targetOf = (element: HTMLElement) =>
     splitDestination(element.dataset.link ?? element.dataset.embed ?? '').target
@@ -176,7 +221,10 @@ export async function hydrate(root: HTMLElement, context: HydrateContext) {
         void context.editNote(context.source, (text) => toggleTask(text, line))
     })
   }
-  await Promise.all(codeBlocks.map((code) => renderCode(code, markdown)))
+  await Promise.all([
+    ...codeBlocks.map((code) => renderCode(code, markdown)),
+    ...formulas.map(renderMathIn),
+  ])
   for (const processor of processors.post) await processor(root, markdown)
   await Promise.all(
     embeds.map(async (embed) => {

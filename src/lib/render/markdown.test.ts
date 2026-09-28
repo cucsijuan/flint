@@ -65,6 +65,29 @@ describe('renderMarkdown', () => {
     expect(open.hasAttribute('open')).toBe(true)
   })
 
+  it('renders highlights, footnotes and math placeholders', () => {
+    const root = render('==key== $x^2$ and a note[^1]\n\n$$\n\\sum_i\n$$\n\n[^1]: The note.')
+    expect(root.querySelector('mark')?.textContent).toBe('key')
+    const [inline, block] = root.querySelectorAll<HTMLElement>('.math')
+    expect([inline.dataset.tex, inline.tagName]).toEqual(['x^2', 'SPAN'])
+    expect(block.classList.contains('math-block')).toBe(true)
+    expect(root.querySelector('.footnote-item')?.textContent).toContain('The note.')
+  })
+
+  it('hides comments, keeping the text around them', () => {
+    const text = render(
+      'Shown %%inline%% here\n\n%%\nmany\nlines\n%%\n\n%%start%% then text',
+    ).textContent
+    expect(text).not.toMatch(/inline|many|start/)
+    expect(text).toMatch(/Shown\s+here[\s\S]*then text/)
+  })
+
+  it('hides block ids', () => {
+    const root = render('Para ^one\n\n- item ^two\n\n| a |\n| - |\n\n^three\n\nText\n^four')
+    expect(root.textContent).not.toMatch(/\^|one|two|three|four/)
+    expect(root.querySelectorAll('p')).toHaveLength(2)
+  })
+
   it('removes scripts and event handlers from raw HTML', () => {
     const html = renderMarkdown(
       '<img src=x onerror="alert(1)"><script>alert(2)</script>[x](javascript:alert(3))',

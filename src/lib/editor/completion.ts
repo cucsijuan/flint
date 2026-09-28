@@ -6,15 +6,18 @@ import {
 } from '@codemirror/autocomplete'
 import type { EditorView } from '@codemirror/view'
 import { noteTitle, parentOf } from '../paths'
+import type { BlockId } from '../render/source'
 import type { Heading, LinkTarget, TagCount } from '../vault'
 
 export interface CompletionSources {
   targets: () => LinkTarget[]
   headings: (target: string) => Promise<Heading[]>
+  blocks: (target: string) => Promise<BlockId[]>
   tags: () => TagCount[]
 }
 
 const OPEN_LINK = /\[\[([^[\]|\n]*)$/
+const BLOCK_LABEL_LENGTH = 60
 const OPEN_TAG = /(?:^|\s)#[\p{L}\p{N}_/-]*$/u
 
 function insertLink(text: string) {
@@ -67,6 +70,17 @@ async function completeLink(
   }
 
   const target = query.slice(0, hash)
+  if (query[hash + 1] === '^') {
+    const blocks = await sources.blocks(target)
+    return {
+      from: from + hash + 2,
+      options: blocks.map(({ id, text }) => ({
+        label: text.length > BLOCK_LABEL_LENGTH ? `${text.slice(0, BLOCK_LABEL_LENGTH)}…` : text,
+        detail: `^${id}`,
+        apply: insertLink(id),
+      })),
+    }
+  }
   const headings = await sources.headings(target)
   return {
     from: from + hash + 1,

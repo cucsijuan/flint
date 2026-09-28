@@ -26,6 +26,7 @@ import { type AppearanceSettings, DEFAULT_APPEARANCE } from './appearance'
 import { commands } from './commands.svelte'
 import { VaultConfig } from './config.svelte'
 import { parseHotkeys, serializeHotkeys } from './hotkeys'
+import { blockIds } from './render/source'
 import { documents } from './documents'
 import { activeView } from './editor/active'
 import { noteOpened, vaultChanged } from './events'
@@ -71,6 +72,8 @@ export type RightTab = 'backlinks' | 'outline' | 'properties' | 'tags' | 'graph'
 export interface Jump {
   tabId: string
   heading?: string
+  /** A block id, without its `^`. */
+  block?: string
   line?: number
 }
 
@@ -460,10 +463,15 @@ class Workspace {
     return path ? vault.noteHeadings(path) : []
   }
 
+  async blocksFor(target: string, source = this.notePath ?? '') {
+    const [path] = target ? await this.resolveLinks([target], source) : [source || null]
+    return path?.toLowerCase().endsWith(NOTE_EXTENSION) ? blockIds(await documents.load(path)) : []
+  }
+
   async openLink(destination: string, source = this.notePath ?? '', options?: OpenOptions) {
     const hash = destination.indexOf('#')
     const target = hash === -1 ? destination : destination.slice(0, hash)
-    const heading = hash === -1 ? '' : destination.slice(hash + 1)
+    const subpath = hash === -1 ? '' : destination.slice(hash + 1)
     await this.#run(async () => {
       let [path] = target ? await this.resolveLinks([target], source) : [source || null]
       if (!path) {
@@ -472,7 +480,8 @@ class Workspace {
         await this.#refresh()
       }
       if (!path.toLowerCase().endsWith(NOTE_EXTENSION)) await this.openFile(path, options)
-      else if (heading) this.openNoteAt(path, { heading }, options)
+      else if (subpath.startsWith('^')) this.openNoteAt(path, { block: subpath.slice(1) }, options)
+      else if (subpath) this.openNoteAt(path, { heading: subpath }, options)
       else this.openNote(path, options)
     })
   }

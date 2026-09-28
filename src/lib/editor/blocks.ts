@@ -10,7 +10,7 @@ import {
   WidgetType,
 } from '@codemirror/view'
 import { isExternalUrl, isImage, linkTargetOfUrl, NOTE_EXTENSION } from '../paths'
-import { hydrate } from '../render/hydrate'
+import { hydrate, rendersCodeBlock } from '../render/hydrate'
 import { renderMarkdown } from '../render/markdown'
 import { readProperties } from '../properties'
 import { processors } from '../render/processors.svelte'
@@ -201,13 +201,17 @@ function blockDecorations(state: EditorState): DecorationSet {
         rendered(node, 'cm-live-table')
         return false
       }
+      if (name === 'BlockMath') {
+        rendered(node, 'cm-live-math-block')
+        return false
+      }
       if (name === 'Blockquote' && CALLOUT_START.test(doc.lineAt(node.from).text)) {
         rendered(node, 'cm-live-callout')
         return false
       }
       if (name === 'FencedCode') {
         const info = node.getChild('CodeInfo')
-        if (info && processors.codeBlock(doc.sliceString(info.from, info.to))) {
+        if (info && rendersCodeBlock(doc.sliceString(info.from, info.to))) {
           rendered(node, 'cm-live-code-block')
         }
         return false

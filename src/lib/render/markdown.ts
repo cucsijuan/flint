@@ -1,5 +1,13 @@
 import DOMPurify from 'dompurify'
-import markdownIt, { type MarkdownIt, type StateCore, type StateInline } from 'markdown-it'
+import { footnote } from '@mdit/plugin-footnote'
+import { mark } from '@mdit/plugin-mark'
+import { tex } from '@mdit/plugin-tex'
+import markdownIt, {
+  type MarkdownIt,
+  type StateBlock,
+  type StateCore,
+  type StateInline,
+} from 'markdown-it'
 
 type PluginSimple = (md: MarkdownIt) => void
 
@@ -127,10 +135,80 @@ const sourceLines: PluginSimple = (md) => {
   })
 }
 
+/** Obsidian's `%%comments%%`, inline or across lines, which never render. */
+const comments: PluginSimple = (md) => {
+  md.inline.ruler.before('emphasis', 'comment', (state: StateInline, silent: boolean) => {
+    if (!state.src.startsWith('%%', state.pos)) return false
+    const close = state.src.indexOf('%%', state.pos + 2)
+    if (close === -1) return false
+    if (!silent) state.push('comment', '', 0)
+    state.pos = close + 2
+    return true
+  })
+  md.block.ruler.before('paragraph', 'comment', (state: StateBlock, startLine, endLine, silent) => {
+    const start = state.bMarks[startLine] + state.tShift[startLine]
+    if (!state.src.startsWith('%%', start)) return false
+    let line = startLine
+    let from = start + 2
+    let close = -1
+    while (line < endLine) {
+      close = state.src.slice(from, state.eMarks[line]).indexOf('%%')
+      if (close !== -1) break
+      line++
+      from = state.bMarks[line] + state.tShift[line]
+    }
+    if (line >= endLine || state.src.slice(from + close + 2, state.eMarks[line]).trim()) {
+      return false
+    }
+    if (!silent) state.push('comment', '', 0).map = [startLine, line + 1]
+    state.line = line + 1
+    return true
+  })
+  md.renderer.rules.comment = () => ''
+}
+
+const TRAILING_BLOCK_ID = /(?:^|\s+)\^[A-Za-z0-9-]+\s*$/
+
+/** Hides block ids (`^id`), which only mark blocks for links and embeds. */
+const blockIds: PluginSimple = (md) => {
+  md.core.ruler.after('inline', 'block-ids', (state: StateCore) => {
+    const { tokens } = state
+    for (let index = tokens.length - 1; index >= 0; index--) {
+      const children = tokens[index].children
+      const last = children?.at(-1)
+      if (!children || last?.type !== 'text' || !TRAILING_BLOCK_ID.test(last.content)) continue
+      last.content = last.content.replace(TRAILING_BLOCK_ID, '')
+      if (last.content) continue
+      children.pop()
+      if (children.at(-1)?.type === 'softbreak') children.pop()
+      if (!children.length && tokens[index - 1]?.type === 'paragraph_open') {
+        tokens.splice(index - 1, 3)
+      }
+    }
+  })
+}
+
+const escapeAttribute = (text: string) => text.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+
+/** Math becomes a placeholder that `hydrate` fills in with MathJax. */
+const math: PluginSimple = (md) =>
+  md.use(tex, {
+    render: (content, isDisplay) => {
+      const tag = isDisplay ? 'div' : 'span'
+      const kind = isDisplay ? 'math math-block' : 'math'
+      return `<${tag} class="${kind}" data-tex="${escapeAttribute(content)}"></${tag}>`
+    },
+  })
+
 const markdown = markdownIt({ html: true, linkify: true })
+  .use(comments)
+  .use(math)
+  .use(mark)
+  .use(footnote)
   .use(wikiLinks)
   .use(hashtags)
   .use(taskLists)
+  .use(blockIds)
   .use(callouts)
   .use(sourceLines)
 

@@ -9,9 +9,9 @@
   import { hydrate } from '../lib/render/hydrate'
   import { renderMarkdown } from '../lib/render/markdown'
   import { processors } from '../lib/render/processors.svelte'
-  import { noteContent } from '../lib/render/source'
+  import { blockLines, noteContent } from '../lib/render/source'
   import * as vault from '../lib/vault'
-  import { workspace } from '../lib/workspace.svelte'
+  import { type Jump, workspace } from '../lib/workspace.svelte'
   import NoteHeader from './NoteHeader.svelte'
   import PropertiesEditor from './PropertiesEditor.svelte'
 
@@ -21,6 +21,8 @@
   let { tab, path }: { tab: Tab; path: string } = $props()
 
   let content: HTMLElement | undefined
+  let source = ''
+  let pendingJump: Jump | null = null
   let renderId = 0
   let properties = $state<Property[] | null>(null)
   let frontmatter = $state<string | null>(null)
@@ -41,9 +43,11 @@
       editNote: (note, edit) => documents.update(note, edit),
     })
     if (id !== renderId || !content) return
+    source = text
     content.replaceChildren(...body.childNodes)
     addFoldToggles(content)
     applyFolding(content)
+    applyJump()
   }
 
   function addFoldToggles(root: HTMLElement) {
@@ -86,14 +90,33 @@
 
   $effect(() => {
     const jump = workspace.jump
-    if (jump?.tabId !== tab.id || !jump.heading) return
-    const wanted = jump.heading.trim().toLowerCase()
-    const heading = [...(content?.querySelectorAll(HEADING) ?? [])].find(
-      (element) => element.textContent?.trim().toLowerCase() === wanted,
-    )
-    heading?.scrollIntoView({ block: 'start' })
+    if (jump?.tabId !== tab.id) return
+    pendingJump = jump
     workspace.jump = null
+    applyJump()
   })
+
+  /** Scrolls to the pending jump's heading, block or line once the note has rendered. */
+  function applyJump() {
+    if (!pendingJump || !content?.childElementCount) return
+    const { heading, block, line } = pendingJump
+    pendingJump = null
+    if (heading) {
+      const wanted = heading.trim().toLowerCase()
+      const element = [...content.querySelectorAll(HEADING)].find(
+        (element) => element.textContent?.trim().toLowerCase() === wanted,
+      )
+      element?.scrollIntoView({ block: 'start' })
+      return
+    }
+    const target = block ? blockLines(source.split('\n'), block)?.[0] : line && line - 1
+    if (target === undefined) return
+    const element = [...content.querySelectorAll<HTMLElement>('[data-line]')].findLast(
+      (element) =>
+        Number(element.dataset.line) <= target && target < Number(element.dataset.lineEnd),
+    )
+    element?.scrollIntoView({ block: 'center' })
+  }
 
   function attachContent(element: HTMLElement) {
     content = element

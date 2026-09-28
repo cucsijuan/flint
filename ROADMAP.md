@@ -95,9 +95,12 @@ Builds, installers and automatic updates for macOS (Intel and Apple Silicon), wi
 - Plugin API: settings sections, Lucide icons for sidebar tabs, and types published to npm as [`flint-plugin-api`](https://www.npmjs.com/package/flint-plugin-api).
 - Hot reload for plugin development, and a TypeScript plugin template (`examples/plugin-template`).
 
-### M13: Complete Markdown
+### M13: Complete Markdown ✅
 
-Math (`$…$`, `$$…$$`, KaTeX) and Mermaid diagrams, `==highlights==`, footnotes, `%%comments%%`, and block references (`[[note#^id]]`) with block embeds.
+- Math (`$…$`, `$$…$$`) rendered with MathJax, like Obsidian, in the reading view and live preview; tags and links inside math are ignored.
+- Mermaid diagrams that follow the light or dark theme.
+- `==highlights==`, footnotes (clickable in the reading view, numbered in live preview) and `%%comments%%`, hidden when rendered.
+- Block references: `[[note#^id]]` links jump to the block, `![[note#^id]]` embeds it, and `[[note#^` suggests the note's blocks.
 
 ### M14: A stronger editor
 
@@ -105,7 +108,7 @@ Tables edited as a grid, moving lines and blocks, folding headings and lists in 
 
 ### M15: Advanced search and links
 
-Grouping with parentheses and more operators (`line:`, `section:`, `task:`, `content:`), sorting, search and replace, unlinked mentions in backlinks, and an outgoing links panel.
+Grouping with parentheses and more operators (`line:`, `section:`, `task:`, `content:`), sorting, search and replace, unlinked mentions in backlinks, an outgoing links panel, searching blocks across the vault with `[[^^`, and adding a block id to any block from the link suggestions.
 
 ### M16: Bases
 

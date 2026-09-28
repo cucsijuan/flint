@@ -16,6 +16,7 @@ import {
 import { EditorView, keymap } from '@codemirror/view'
 import { classHighlighter, tags } from '@lezer/highlight'
 import { minimalSetup } from 'codemirror'
+import { blockLines } from '../render/source'
 import type { EditorMode, PropertiesDisplay } from '../settings'
 import { attachmentInput, type SaveAttachment } from './attachments'
 import { blockPreview } from './blocks'
@@ -23,6 +24,7 @@ import { completion, type CompletionSources } from './completion'
 import { hashtagSyntax } from './hashtag'
 import { type LinkResolver, type Navigation, navigation } from './links'
 import { livePreview } from './live-preview'
+import { obsidianSyntax, obsidianTags } from './obsidian-syntax'
 import { pointer } from './pointer'
 import { type PreviewContext, previewContext, propertiesDisplay } from './preview-context'
 import { wikiLinkSyntax } from './wikilink'
@@ -42,6 +44,10 @@ const markdownStyle = HighlightStyle.define([
   { tag: [tags.processingInstruction, tags.contentSeparator, tags.meta], class: 'cm-md-mark' },
   { tag: tags.quote, class: 'cm-md-quote' },
   { tag: tags.labelName, class: 'cm-hashtag' },
+  { tag: obsidianTags.highlight, class: 'cm-highlight' },
+  { tag: obsidianTags.math, class: 'cm-math' },
+  { tag: obsidianTags.footnote, class: 'cm-footnote' },
+  { tag: tags.comment, class: 'cm-comment' },
 ])
 
 const mode = new Compartment()
@@ -89,7 +95,7 @@ export function createEditorState({
         content: markdown({
           base: markdownLanguage,
           codeLanguages: languages,
-          extensions: [wikiLinkSyntax, hashtagSyntax],
+          extensions: [wikiLinkSyntax, hashtagSyntax, obsidianSyntax],
         }),
       }),
       pointer,
@@ -145,6 +151,11 @@ export function scrollToLine(view: EditorView, number: number) {
     effects: EditorView.scrollIntoView(line.from, { y: 'center' }),
   })
   view.focus()
+}
+
+export function scrollToBlock(view: EditorView, id: string) {
+  const range = blockLines(view.state.doc.toString().split('\n'), id)
+  if (range) scrollToLine(view, range[0] + 1)
 }
 
 export function scrollToHeading(view: EditorView, heading: string) {

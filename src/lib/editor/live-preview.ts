@@ -10,6 +10,7 @@ import {
 } from '@codemirror/view'
 import type { SyntaxNode, Tree } from '@lezer/common'
 import { isExternalUrl, isImage, linkTargetOfUrl } from '../paths'
+import { renderMath } from '../render/math'
 import { resolvedLinks, urlAttributes } from './links'
 import { pointerDown, pointerReleased } from './pointer'
 import { previewContext } from './preview-context'
@@ -44,6 +45,67 @@ export class ImageWidget extends WidgetType {
     image.addEventListener('load', () => view.requestMeasure())
     return image
   }
+}
+
+class MathWidget extends WidgetType {
+  constructor(
+    readonly tex: string,
+    readonly isDisplay: boolean,
+  ) {
+    super()
+  }
+
+  eq(other: MathWidget) {
+    return other.tex === this.tex && other.isDisplay === this.isDisplay
+  }
+
+  toDOM(view: EditorView) {
+    const element = document.createElement('span')
+    element.className = 'cm-live-math'
+    void renderMath(this.tex, this.isDisplay).then((math) => {
+      element.replaceChildren(math)
+      view.requestMeasure()
+    })
+    return element
+  }
+
+  ignoreEvent() {
+    return false
+  }
+}
+
+export class FootnoteWidget extends WidgetType {
+  constructor(readonly number: number) {
+    super()
+  }
+
+  eq(other: FootnoteWidget) {
+    return other.number === this.number
+  }
+
+  toDOM() {
+    const footnote = document.createElement('sup')
+    footnote.className = 'cm-live-footnote'
+    footnote.textContent = String(this.number)
+    return footnote
+  }
+}
+
+/** Numbers footnotes like the reading view: by first reference, counting only defined labels. */
+function footnoteNumbers(state: EditorState, tree: Tree) {
+  const text = state.doc.toString()
+  const defined = new Set(
+    Array.from(text.matchAll(/^ {0,3}\[\^([^\]\s]+)\]:/gm), (match) => match[1]),
+  )
+  const numbers = new Map<string, number>()
+  tree.iterate({
+    enter: ({ name, from, to }) => {
+      if (name !== 'FootnoteReference' || text[to] === ':') return
+      const label = text.slice(from + 2, to - 1)
+      if (defined.has(label) && !numbers.has(label)) numbers.set(label, numbers.size + 1)
+    },
+  })
+  return numbers
 }
 
 class RuleWidget extends WidgetType {
@@ -150,6 +212,7 @@ const codeLine = Decoration.line({ class: 'cm-live-code' })
 
 const INLINE_MARK_PARENTS: Record<string, string[]> = {
   EmphasisMark: ['Emphasis', 'StrongEmphasis'],
+  HighlightMark: ['Highlight'],
   StrikethroughMark: ['Strikethrough'],
   CodeMark: ['InlineCode'],
 }
@@ -170,6 +233,7 @@ export function previewDecorations(
     return true
   }
   const decorations: Range<Decoration>[] = []
+  let footnotes: Map<string, number> | undefined
 
   const touchesSelection = (start: number, end: number) =>
     selection.ranges.some((range) => range.from <= end && range.to >= start)
@@ -196,6 +260,7 @@ export function previewDecorations(
           }
           break
         case 'EmphasisMark':
+        case 'HighlightMark':
         case 'StrikethroughMark':
         case 'CodeMark':
           if (
@@ -246,6 +311,31 @@ export function previewDecorations(
             }).range(shown.from, shown.to),
           )
           if (node.to > shown.to) decorations.push(hide.range(shown.to, node.to))
+          break
+        }
+        case 'InlineMath': {
+          if (touchesSelection(node.from, node.to)) break
+          const [open, close] = node.getChildren('MathMark')
+          if (!open || !close) break
+          const widget = new MathWidget(
+            doc.sliceString(open.to, close.from),
+            open.to - open.from === 2,
+          )
+          decorations.push(Decoration.replace({ widget }).range(node.from, node.to))
+          break
+        }
+        case 'FootnoteReference': {
+          if (
+            doc.sliceString(node.to, node.to + 1) === ':' ||
+            touchesSelection(node.from, node.to)
+          ) {
+            break
+          }
+          footnotes ??= footnoteNumbers(state, tree)
+          const number = footnotes.get(doc.sliceString(node.from + 2, node.to - 1))
+          if (number === undefined) break
+          const widget = new FootnoteWidget(number)
+          decorations.push(Decoration.replace({ widget }).range(node.from, node.to))
           break
         }
         case 'Hashtag':

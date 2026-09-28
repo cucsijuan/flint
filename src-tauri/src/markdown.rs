@@ -92,7 +92,10 @@ impl NoteSummary {
 }
 
 pub fn summarize(text: &str) -> NoteSummary {
-    let options = Options::ENABLE_WIKILINKS | Options::ENABLE_YAML_STYLE_METADATA_BLOCKS;
+    let options = Options::ENABLE_WIKILINKS
+        | Options::ENABLE_YAML_STYLE_METADATA_BLOCKS
+        | Options::ENABLE_MATH
+        | Options::ENABLE_FOOTNOTES;
     let mut summary = NoteSummary::default();
     let mut heading: Option<Heading> = None;
     let mut prose = String::new();
@@ -325,6 +328,14 @@ mod tests {
             summarize(text).tags,
             ["start", "Nested/tag", "v2", "inHeading"]
         );
+    }
+
+    #[test]
+    fn ignores_tags_and_links_in_math() {
+        let text = "$#x + [[inline]]$ #real\n\n$$\n#y [[block]]\n$$\n";
+        let summary = summarize(text);
+        assert_eq!(summary.tags, ["real"]);
+        assert!(summary.links.is_empty());
     }
 
     #[test]

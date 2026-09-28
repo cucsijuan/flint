@@ -7,6 +7,7 @@
   import { activeView, setActiveView } from '../lib/editor/active'
   import {
     createEditorState,
+    scrollToBlock,
     scrollToHeading,
     scrollToLine,
     setMode,
@@ -52,6 +53,7 @@
             completion: {
               targets: () => workspace.linkTargets,
               headings: (target) => workspace.headingsFor(target, path),
+              blocks: (target) => workspace.blocksFor(target, path),
               tags: () => workspace.tags,
             },
             plugins: pluginHost.editorExtensions,
@@ -109,6 +111,7 @@
     const jump = workspace.jump
     if (!view || jump?.tabId !== tab.id) return
     if (jump.heading) scrollToHeading(view, jump.heading)
+    else if (jump.block) scrollToBlock(view, jump.block)
     else if (jump.line) scrollToLine(view, jump.line)
     workspace.jump = null
   })

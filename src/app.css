@@ -282,6 +282,59 @@ button.primary {
 }
 
 :root {
+  --highlight-background: light-dark(rgb(255 208 0 / 0.4), rgb(255 208 0 / 0.3));
+}
+
+.cm-highlight,
+.markdown mark {
+  border-radius: 2px;
+  background: var(--highlight-background);
+  color: inherit;
+}
+
+.cm-comment,
+.cm-math {
+  color: var(--text-muted);
+}
+
+.cm-footnote,
+.cm-live-footnote {
+  color: var(--accent);
+}
+
+.cm-live-math mjx-container[display='true'] {
+  display: inline-block;
+}
+
+.markdown .math-block,
+.markdown .diagram {
+  overflow-x: auto;
+  text-align: center;
+}
+
+.markdown .diagram svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.markdown .diagram-error {
+  color: #d04545;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  white-space: pre-wrap;
+}
+
+.markdown .footnote-ref a,
+.markdown a.footnote-backref {
+  text-decoration: none;
+}
+
+.markdown .footnotes {
+  color: var(--text-muted);
+  font-size: 0.9em;
+}
+
+:root {
   --graph-node: light-dark(#8a8a95, #9a9aa4);
   --graph-tag: light-dark(#4f9d69, #6cbf86);
   --graph-unresolved: light-dark(#c9c9cf, #55555c);

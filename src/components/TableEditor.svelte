@@ -12,8 +12,6 @@
 </script>
 
 <script lang="ts">
-  import { GripHorizontal, GripVertical } from '@lucide/svelte'
-  import { DropdownMenu } from 'bits-ui'
   import {
     alignColumn,
     type Alignment,
@@ -29,6 +27,7 @@
   } from '../lib/editor/table'
   import { hydrate, type HydrateContext } from '../lib/render/hydrate'
   import { renderInlineMarkdown } from '../lib/render/markdown'
+  import TableGrip, { type GripItem } from './TableGrip.svelte'
 
   let {
     markdown,
@@ -87,6 +86,40 @@
 
   const align = (column: number, alignment: Alignment) =>
     edits.replace(alignColumn(data, column, alignment))
+
+  let hovered = $state<{ row: number; column: number } | null>(null)
+
+  const rowItems = (row: number): GripItem[] => [
+    ['Add row above', () => edits.replace(insertRow(data, row))],
+    ['Add row below', () => edits.replace(insertRow(data, row + 1))],
+    null,
+    ['Move row up', () => edits.replace(moveRow(data, row, row - 1)), row === 1],
+    [
+      'Move row down',
+      () => edits.replace(moveRow(data, row, row + 1)),
+      row === data.rows.length - 1,
+    ],
+    null,
+    ['Delete row', () => edits.replace(deleteRow(data, row))],
+  ]
+
+  const columnItems = (column: number): GripItem[] => [
+    ['Add column before', () => edits.replace(insertColumn(data, column))],
+    ['Add column after', () => edits.replace(insertColumn(data, column + 1))],
+    null,
+    ['Move column left', () => edits.replace(moveColumn(data, column, column - 1)), column === 0],
+    [
+      'Move column right',
+      () => edits.replace(moveColumn(data, column, column + 1)),
+      column === width - 1,
+    ],
+    null,
+    ['Align left', () => align(column, 'left')],
+    ['Align center', () => align(column, 'center')],
+    ['Align right', () => align(column, 'right')],
+    null,
+    ['Delete column', () => edits.replace(deleteColumn(data, column)), width === 1],
+  ]
 </script>
 
 {#snippet cell(row: number, column: number, text: string)}
@@ -111,57 +144,27 @@
   {/if}
 {/snippet}
 
-{#snippet grip(label: string, vertical: boolean, items: [string, () => void, boolean?][])}
-  <DropdownMenu.Root>
-    <DropdownMenu.Trigger class="table-grip {vertical ? 'row-grip' : 'column-grip'}" title={label}>
-      {#if vertical}<GripVertical size={12} />{:else}<GripHorizontal size={12} />{/if}
-    </DropdownMenu.Trigger>
-    <DropdownMenu.Portal>
-      <DropdownMenu.Content class="menu" align="start">
-        {#each items as [name, run, isDisabled] (name)}
-          {#if name === '-'}
-            <DropdownMenu.Separator class="menu-separator" />
-          {:else}
-            <DropdownMenu.Item class="menu-item" disabled={isDisabled} onSelect={run}>
-              {name}
-            </DropdownMenu.Item>
-          {/if}
-        {/each}
-      </DropdownMenu.Content>
-    </DropdownMenu.Portal>
-  </DropdownMenu.Root>
-{/snippet}
-
-<table class="table-editor" data-interactive>
+<table class="table-editor" data-interactive onmouseleave={() => (hovered = null)}>
   <thead>
     <tr>
       {#each data.rows[0] ?? [] as text, column (column)}
-        <th style:text-align={data.alignments[column]}>
-          {@render grip('Column', false, [
-            ['Add column before', () => edits.replace(insertColumn(data, column))],
-            ['Add column after', () => edits.replace(insertColumn(data, column + 1))],
-            ['-', () => {}],
-            [
-              'Move column left',
-              () => edits.replace(moveColumn(data, column, column - 1)),
-              column === 0,
-            ],
-            [
-              'Move column right',
-              () => edits.replace(moveColumn(data, column, column + 1)),
-              column === width - 1,
-            ],
-            ['-', () => {}],
-            ['Align left', () => align(column, 'left')],
-            ['Align center', () => align(column, 'center')],
-            ['Align right', () => align(column, 'right')],
-            ['-', () => {}],
-            ['Delete column', () => edits.replace(deleteColumn(data, column)), width === 1],
-          ])}
+        <th
+          style:text-align={data.alignments[column]}
+          onmouseenter={() => (hovered = { row: 0, column })}
+        >
+          <TableGrip
+            label="Column"
+            kind="column"
+            isShown={hovered?.column === column}
+            items={columnItems(column)}
+          />
           {#if column === 0}
-            {@render grip('Row', true, [
-              ['Add row below', () => edits.replace(insertRow(data, 1))],
-            ])}
+            <TableGrip
+              label="Row"
+              kind="row"
+              isShown={hovered?.row === 0}
+              items={[['Add row below', () => edits.replace(insertRow(data, 1))]]}
+            />
           {/if}
           {@render cell(0, column, text)}
         </th>
@@ -173,21 +176,17 @@
       {@const row = index + 1}
       <tr>
         {#each cells as text, column (column)}
-          <td style:text-align={data.alignments[column]}>
+          <td
+            style:text-align={data.alignments[column]}
+            onmouseenter={() => (hovered = { row, column })}
+          >
             {#if column === 0}
-              {@render grip('Row', true, [
-                ['Add row above', () => edits.replace(insertRow(data, row))],
-                ['Add row below', () => edits.replace(insertRow(data, row + 1))],
-                ['-', () => {}],
-                ['Move row up', () => edits.replace(moveRow(data, row, row - 1)), row === 1],
-                [
-                  'Move row down',
-                  () => edits.replace(moveRow(data, row, row + 1)),
-                  row === data.rows.length - 1,
-                ],
-                ['-', () => {}],
-                ['Delete row', () => edits.replace(deleteRow(data, row))],
-              ])}
+              <TableGrip
+                label="Row"
+                kind="row"
+                isShown={hovered?.row === row}
+                items={rowItems(row)}
+              />
             {/if}
             {@render cell(row, column, text)}
           </td>
@@ -224,9 +223,7 @@
     outline: none;
   }
 
-  tr:hover :global(.row-grip),
-  th:hover :global(.column-grip),
-  :global(.table-grip[data-state='open']) {
+  :global(.table-grip[data-shown]) {
     opacity: 1;
   }
 

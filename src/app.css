@@ -756,6 +756,11 @@ summary.callout-title {
   margin: 0;
 }
 
+/* Room for the row grips, which hang left of the table. */
+.cm-live-table {
+  padding-left: 24px;
+}
+
 .cm-live-embed .note-embed {
   margin: 0;
 }

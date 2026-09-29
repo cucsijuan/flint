@@ -13,6 +13,9 @@ export interface VaultSettings {
   propertiesDisplay: PropertiesDisplay
   readableLineLength: boolean
   pluginHotReload: boolean
+  vimMode: boolean
+  /** Hunspell dictionary names like `en_US`; empty checks the system's languages. */
+  spellcheckLanguages: string[]
 }
 
 export const DEFAULT_VAULT_SETTINGS: VaultSettings = {
@@ -22,6 +25,8 @@ export const DEFAULT_VAULT_SETTINGS: VaultSettings = {
   propertiesDisplay: 'visible',
   readableLineLength: true,
   pluginHotReload: false,
+  vimMode: false,
+  spellcheckLanguages: [],
 }
 
 /** App-wide settings; the vault settings kept here by older versions seed new vaults. */

@@ -15,16 +15,19 @@ import {
 } from '@codemirror/state'
 import { EditorView, keymap } from '@codemirror/view'
 import { classHighlighter, tags } from '@lezer/highlight'
+import { vim } from '@replit/codemirror-vim'
 import { minimalSetup } from 'codemirror'
 import { blockLines } from '../render/source'
 import type { EditorMode, PropertiesDisplay } from '../settings'
 import { attachmentInput, type SaveAttachment } from './attachments'
 import { blockPreview } from './blocks'
 import { completion, type CompletionSources } from './completion'
+import { type FoldedLines, folding } from './folding'
 import { hashtagSyntax } from './hashtag'
 import { type LinkResolver, type Navigation, navigation } from './links'
 import { livePreview } from './live-preview'
 import { obsidianSyntax, obsidianTags } from './obsidian-syntax'
+import { pasteLink } from './paste-link'
 import { pointer } from './pointer'
 import { type PreviewContext, previewContext, propertiesDisplay } from './preview-context'
 import { wikiLinkSyntax } from './wikilink'
@@ -53,6 +56,7 @@ const markdownStyle = HighlightStyle.define([
 const mode = new Compartment()
 const pluginExtensions = new Compartment()
 const properties = new Compartment()
+const vimMode = new Compartment()
 const remoteChange = Annotation.define<boolean>()
 
 const modeExtension = (editorMode: EditorMode): Extension =>
@@ -61,6 +65,7 @@ const modeExtension = (editorMode: EditorMode): Extension =>
 export interface EditorOptions {
   doc: string
   mode: EditorMode
+  vimMode: boolean
   propertiesDisplay: PropertiesDisplay
   onChange: (changes: ChangeSet, doc: string) => void
   onKeydown: (event: KeyboardEvent) => boolean
@@ -70,11 +75,13 @@ export interface EditorOptions {
   plugins: Extension[]
   preview: PreviewContext
   saveAttachment: SaveAttachment
+  onFoldsChange: (folds: FoldedLines[]) => void
 }
 
 export function createEditorState({
   doc,
   mode: editorMode,
+  vimMode: isVimMode,
   propertiesDisplay: display,
   onChange,
   onKeydown,
@@ -84,11 +91,13 @@ export function createEditorState({
   plugins,
   preview,
   saveAttachment,
+  onFoldsChange,
 }: EditorOptions) {
   return EditorState.create({
     doc,
     extensions: [
       Prec.highest(EditorView.domEventHandlers({ keydown: onKeydown })),
+      vimMode.of(isVimMode ? vim() : []),
       minimalSetup,
       keymap.of([indentWithTab, ...searchKeymap]),
       yamlFrontmatter({
@@ -99,6 +108,7 @@ export function createEditorState({
         }),
       }),
       pointer,
+      folding(onFoldsChange),
       navigation(resolveLinks, handlers),
       completion(sources),
       syntaxHighlighting(markdownStyle),
@@ -109,6 +119,7 @@ export function createEditorState({
       pluginExtensions.of(plugins),
       previewContext.of(preview),
       properties.of(propertiesDisplay.of(display)),
+      pasteLink,
       attachmentInput(saveAttachment),
       EditorView.updateListener.of((update) => {
         const isLocalEdit = !update.transactions.some((tr) => tr.annotation(remoteChange))
@@ -123,6 +134,9 @@ export const setPluginExtensions = (view: EditorView, plugins: Extension[]) =>
 
 export const setMode = (view: EditorView, editorMode: EditorMode) =>
   view.dispatch({ effects: mode.reconfigure(modeExtension(editorMode)) })
+
+export const setVimMode = (view: EditorView, isEnabled: boolean) =>
+  view.dispatch({ effects: vimMode.reconfigure(isEnabled ? vim() : []) })
 
 export const setPropertiesDisplay = (view: EditorView, display: PropertiesDisplay) =>
   view.dispatch({ effects: properties.reconfigure(propertiesDisplay.of(display)) })

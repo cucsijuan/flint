@@ -1,7 +1,10 @@
+import { foldAll, toggleFold, unfoldAll } from '@codemirror/language'
+import type { Command as EditorCommand } from '@codemirror/view'
 import { commands } from './commands.svelte'
 import { documents } from './documents'
 import { activeView } from './editor/active'
 import { insertLink, toggleWrap } from './editor/formatting'
+import { moveLines } from './editor/move-lines'
 import * as layouts from './layout'
 import { readProperties } from './properties'
 import { checkForUpdates } from './updates'
@@ -9,7 +12,9 @@ import { workspace } from './workspace.svelte'
 
 const hasVault = () => workspace.info !== null
 const hasNote = () => workspace.notePath !== null
-const isEditing = () => hasNote() && !workspace.activeTab.isReading && activeView() !== null
+const isInTableCell = () => document.activeElement?.closest('[data-table-cell]') != null
+const isEditing = () =>
+  hasNote() && !workspace.activeTab.isReading && activeView() !== null && !isInTableCell()
 
 let contextTarget: Element | null = null
 
@@ -20,6 +25,17 @@ export function rememberContextTarget(target: EventTarget | null) {
 function wrap(marker: string) {
   const view = activeView()
   if (view) toggleWrap(view, marker)
+}
+
+function runInEditor(command: EditorCommand) {
+  const view = activeView()
+  if (view) command(view)
+}
+
+function move(direction: -1 | 1) {
+  const view = activeView()
+  const transaction = view && moveLines(view.state, direction)
+  if (transaction) view.dispatch(transaction)
 }
 
 export function registerAppCommands() {
@@ -261,6 +277,38 @@ export function registerAppCommands() {
       name: 'Toggle inline code',
       isAvailable: isEditing,
       run: () => wrap('`'),
+    },
+    {
+      id: 'move-line-up',
+      name: 'Move line up',
+      hotkey: 'Alt+ArrowUp',
+      isAvailable: isEditing,
+      run: () => move(-1),
+    },
+    {
+      id: 'move-line-down',
+      name: 'Move line down',
+      hotkey: 'Alt+ArrowDown',
+      isAvailable: isEditing,
+      run: () => move(1),
+    },
+    {
+      id: 'toggle-fold',
+      name: 'Toggle fold on the current line',
+      isAvailable: isEditing,
+      run: () => runInEditor(toggleFold),
+    },
+    {
+      id: 'fold-all',
+      name: 'Fold all headings and lists',
+      isAvailable: isEditing,
+      run: () => runInEditor(foldAll),
+    },
+    {
+      id: 'unfold-all',
+      name: 'Unfold all headings and lists',
+      isAvailable: isEditing,
+      run: () => runInEditor(unfoldAll),
     },
     {
       id: 'insert-link',

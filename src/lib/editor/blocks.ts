@@ -18,6 +18,8 @@ import { linkRevision, resolvedLinks } from './links'
 import { ImageWidget, isAloneOnLine } from './live-preview'
 import { pointerDown, pointerReleased } from './pointer'
 import { mountProperties } from './properties-widget.svelte'
+import { formatTable, parseTable, tableData, type TableData } from './table'
+import { mountTable } from './table-widget.svelte'
 import { type PreviewContext, previewContext, propertiesDisplay } from './preview-context'
 import { wikiLinkParts } from './wikilink'
 
@@ -133,6 +135,61 @@ class PropertiesWidget extends BlockWidget {
   }
 }
 
+const mountedTables = new WeakMap<HTMLElement, ReturnType<typeof mountTable>>()
+
+/** A table edited as a grid: cells turn into text fields when clicked. */
+class TableWidget extends BlockWidget {
+  constructor(
+    readonly markdown: string,
+    readonly context: PreviewContext,
+    readonly revision: string,
+  ) {
+    super()
+  }
+
+  eq(other: TableWidget) {
+    return other.markdown === this.markdown && other.revision === this.revision
+  }
+
+  toDOM(view: EditorView) {
+    const element = this.container(view, 'cm-live-table')
+    const change = (edit: (markdown: string) => { from: number; to: number; insert: string }) => {
+      const start = view.posAtDOM(element)
+      const { from, to, insert } = edit(table.markdown)
+      view.dispatch({
+        changes: { from: start + from, to: start + to, insert },
+        userEvent: 'input.table',
+      })
+    }
+    const replace = (data: TableData) =>
+      change((markdown) => ({ from: 0, to: markdown.length, insert: formatTable(data) }))
+    const table = mountTable(element, this.markdown, this.context, {
+      cell: (row, column, text) =>
+        change((markdown) => {
+          const cell = parseTable(markdown).rows[row]?.[column]
+          if (cell) return { from: cell.from, to: cell.to, insert: text }
+          const data = tableData(parseTable(markdown))
+          data.rows[row][column] = text
+          return { from: 0, to: markdown.length, insert: formatTable(data) }
+        }),
+      replace,
+      leave: () => view.focus(),
+    })
+    mountedTables.set(element, table)
+    return element
+  }
+
+  updateDOM(element: HTMLElement) {
+    mountedTables.get(element)?.update(this.markdown)
+    return true
+  }
+
+  destroy(element: HTMLElement) {
+    super.destroy(element)
+    mountedTables.get(element)?.destroy()
+  }
+}
+
 class ImageBlockWidget extends BlockWidget {
   constructor(readonly image: ImageWidget) {
     super()
@@ -198,7 +255,11 @@ function blockDecorations(state: EditorState): DecorationSet {
         return false
       }
       if (name === 'Table') {
-        rendered(node, 'cm-live-table')
+        const first = doc.lineAt(node.from)
+        const to = doc.lineAt(node.to).to
+        if (context && !isEditing(first.from, to)) {
+          block(first.from, to, new TableWidget(doc.sliceString(first.from, to), context, revision))
+        }
         return false
       }
       if (name === 'BlockMath') {

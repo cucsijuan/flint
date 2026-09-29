@@ -137,6 +137,9 @@ export interface FontFamily {
 }
 
 export const systemFonts = () => invoke<FontFamily[]>('system_fonts')
+export const spellingLanguages = () => invoke<string[]>('spelling_languages')
+export const setSpellingLanguages = (languages: string[]) =>
+  invoke('set_spelling_languages', { languages })
 export const snippets = () => invoke<string[]>('snippets')
 export const readSnippet = (name: string) => invoke<string>('read_snippet', { name })
 export const readConfig = (name: string) => invoke<string | null>('read_config', { name })

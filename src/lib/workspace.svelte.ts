@@ -52,6 +52,7 @@ import {
   setSetting,
 } from './settings'
 import type { AttachmentSource } from './editor/attachments'
+import type { FoldedLines } from './editor/folding'
 import { buildTree } from './tree'
 import * as vault from './vault'
 
@@ -131,6 +132,8 @@ class Workspace {
   searchFocus = $state(0)
   graph = $state<vault.Graph>({ nodes: [], links: [] })
   readonly graphConfig = new VaultConfig('graph', DEFAULT_GRAPH)
+  /** Folded lines per note, restored when the note opens again. */
+  readonly foldsConfig = new VaultConfig('folds', { notes: {} as Record<string, FoldedLines[]> })
   localGraphDepth = $state(1)
 
   #legacySettings: Partial<VaultSettings> = {}
@@ -152,6 +155,7 @@ class Workspace {
       this.templatesConfig,
       this.appearance,
       this.graphConfig,
+      this.foldsConfig,
     ]
   }
 
@@ -200,6 +204,7 @@ class Workspace {
       await this.flush()
       this.info = await vault.openVault(path)
       await this.#refresh()
+      await this.foldsConfig.load()
       this.#setLayout(await this.#storedLayout(), { save: false })
       await this.settings.load(this.#legacySettings)
       await this.dailyNotesConfig.load()
@@ -560,6 +565,7 @@ class Workspace {
       const updateLinks = linkCount > 0 && (await this.#shouldUpdateLinks(linkCount))
       const updated = await vault.renameEntry(path, target, updateLinks)
       documents.rename(path, target)
+      this.#renameFolds(path, target)
       const bookmarks = renameBookmarks(this.bookmarks, path, target)
       if (serializeBookmarks(bookmarks) !== serializeBookmarks(this.bookmarks)) {
         this.#setBookmarks(bookmarks)
@@ -571,6 +577,27 @@ class Workspace {
       }
       await this.#refresh()
       if (updated) this.notify(`Updated ${updated} ${updated === 1 ? 'link' : 'links'}.`)
+    })
+  }
+
+  foldsFor(path: string) {
+    return this.foldsConfig.value.notes[path] ?? []
+  }
+
+  setFolds(path: string, folds: FoldedLines[]) {
+    const others = Object.entries(this.foldsConfig.value.notes).filter(([note]) => note !== path)
+    this.foldsConfig.set({
+      notes: Object.fromEntries(folds.length ? [...others, [path, folds]] : others),
+    })
+  }
+
+  #renameFolds(path: string, target: string) {
+    const notes = Object.entries(this.foldsConfig.value.notes)
+    if (!notes.some(([note]) => isWithin(note, path))) return
+    this.foldsConfig.set({
+      notes: Object.fromEntries(
+        notes.map(([note, folds]) => [replacePrefix(note, path, target), folds]),
+      ),
     })
   }
 

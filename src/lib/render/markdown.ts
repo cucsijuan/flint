@@ -220,3 +220,8 @@ export interface RenderOptions {
 export function renderMarkdown(text: string, options: RenderOptions = {}) {
   return DOMPurify.sanitize(markdown.render(text, { ...options }), { ADD_ATTR: ['target'] })
 }
+
+/** Renders one line of inline Markdown, like a table cell. */
+export function renderInlineMarkdown(text: string) {
+  return DOMPurify.sanitize(markdown.renderInline(text), { ADD_ATTR: ['target'] })
+}

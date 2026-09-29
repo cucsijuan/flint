@@ -71,6 +71,11 @@
 
   $effect(() => applySnippets(workspace.enabledSnippetCss))
 
+  $effect(() => {
+    if (workspace.info)
+      void vault.setSpellingLanguages(workspace.settings.value.spellcheckLanguages)
+  })
+
   /** Paints the native window in the theme's background, which shows before the webview's first frame. */
   function syncWindowBackground() {
     const [red = 0, green = 0, blue = 0] =

@@ -7,6 +7,7 @@ mod index;
 mod markdown;
 mod plugins;
 mod search;
+mod spelling;
 mod vault;
 mod watcher;
 
@@ -59,6 +60,8 @@ pub fn run() {
             commands::show_in_file_manager,
             context_menu::show_context_menu,
             commands::system_fonts,
+            spelling::spelling_languages,
+            spelling::set_spelling_languages,
             commands::snippets,
             commands::read_snippet,
             commands::read_config,

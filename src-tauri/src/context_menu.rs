@@ -54,7 +54,7 @@ pub fn install(window: &WebviewWindow) -> tauri::Result<()> {
     window.with_webview(move |webview| {
         let webview = webview.inner();
         if let Some(context) = webview.context() {
-            let languages = spell_checking_languages();
+            let languages = crate::spelling::system_languages();
             context.set_spell_checking_languages(
                 &languages.iter().map(String::as_str).collect::<Vec<_>>(),
             );
@@ -82,15 +82,6 @@ pub fn install(window: &WebviewWindow) -> tauri::Result<()> {
             false
         });
     })
-}
-
-#[cfg(target_os = "linux")]
-fn spell_checking_languages() -> Vec<String> {
-    webkit2gtk::glib::language_names()
-        .into_iter()
-        .map(String::from)
-        .filter(|name| name != "C" && name != "POSIX" && !name.contains(['.', '@']))
-        .collect()
 }
 
 #[cfg(windows)]

@@ -13,7 +13,9 @@
     setMode,
     setPropertiesDisplay,
     setPluginExtensions,
+    setVimMode,
   } from '../lib/editor/editor'
+  import { restoreFolds } from '../lib/editor/folding'
   import { refreshLinks } from '../lib/editor/links'
   import type { Tab } from '../lib/layout'
   import { pluginHost } from '../lib/plugins/host.svelte'
@@ -39,6 +41,7 @@
           state: createEditorState({
             doc,
             mode: workspace.mode,
+            vimMode: workspace.settings.value.vimMode,
             propertiesDisplay: workspace.propertiesDisplay,
             onChange: (changes, contents) =>
               editor && documents.edit(path, editor, changes, contents),
@@ -65,8 +68,10 @@
               editNote: (note, edit) => documents.update(note, edit),
             },
             saveAttachment: (source) => workspace.saveAttachment(source, path),
+            onFoldsChange: (folds) => workspace.setFolds(path, folds),
           }),
         })
+        restoreFolds(editor, workspace.foldsFor(path))
         documents.attach(path, editor)
         view = editor
       })
@@ -93,6 +98,10 @@
 
   $effect(() => {
     if (view) setPropertiesDisplay(view, workspace.propertiesDisplay)
+  })
+
+  $effect(() => {
+    if (view) setVimMode(view, workspace.settings.value.vimMode)
   })
 
   $effect(() => {

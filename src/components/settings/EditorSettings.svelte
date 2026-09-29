@@ -2,6 +2,7 @@
   import { workspace } from '../../lib/workspace.svelte'
   import Choice from './Choice.svelte'
   import Setting from './Setting.svelte'
+  import SpellingLanguages from './SpellingLanguages.svelte'
 
   const settings = $derived(workspace.settings.value)
 </script>
@@ -29,6 +30,14 @@
     onchange={(event) => workspace.setSettings({ readableLineLength: event.currentTarget.checked })}
   />
 </Setting>
+<Setting name="Vim key bindings" description="Edit notes with Vim's modes and commands.">
+  <input
+    type="checkbox"
+    checked={settings.vimMode}
+    onchange={(event) => workspace.setSettings({ vimMode: event.currentTarget.checked })}
+  />
+</Setting>
+<SpellingLanguages />
 <Setting
   name="Properties in notes"
   description="How frontmatter shows above a note; the Properties panel always edits it."

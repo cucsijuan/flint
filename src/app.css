@@ -297,6 +297,46 @@ button.primary {
   color: var(--text-muted);
 }
 
+/* Zero-width anchor at the start of a foldable line; the arrow hangs to its left. */
+.cm-fold-indicator {
+  position: relative;
+  display: inline-block;
+  width: 0;
+}
+
+.cm-fold-indicator::before {
+  position: absolute;
+  top: -0.85em;
+  right: 0.35em;
+  width: 1em;
+  height: 1em;
+  background: var(--text-faint);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  content: '';
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.cm-line:hover .cm-fold-indicator::before,
+.cm-fold-indicator.is-folded::before {
+  opacity: 1;
+}
+
+.cm-fold-indicator.is-folded::before {
+  transform: rotate(-90deg);
+}
+
+.cm-foldPlaceholder {
+  margin: 0 4px;
+  padding: 0 4px;
+  border: none;
+  border-radius: 4px;
+  background: var(--hover);
+  color: var(--text-muted);
+}
+
 .cm-footnote,
 .cm-live-footnote {
   color: var(--accent);

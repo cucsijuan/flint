@@ -14,7 +14,7 @@ use tauri_plugin_opener::OpenerExt;
 use crate::community::{self, CommunityPlugin};
 use crate::config;
 use crate::error::{Error, Result};
-use crate::index::{Backlink, Graph, Index, LinkTarget, Mention, OutgoingLink, TagCount};
+use crate::index::{Backlink, BaseFile, Graph, Index, LinkTarget, Mention, OutgoingLink, TagCount};
 use crate::markdown::Heading;
 use crate::plugins::{self, PluginListing, PluginManifest};
 use crate::search::{Query, SearchResult};
@@ -159,6 +159,30 @@ pub fn note_headings(state: State<AppState>, path: String) -> Result<Vec<Heading
 #[tauri::command(async)]
 pub fn backlinks(state: State<AppState>, path: String) -> Result<Vec<Backlink>> {
     state.read_index(|index| index.backlinks(&path))
+}
+
+/// Every note as Bases sees it, with its size and times from the file system.
+#[tauri::command(async)]
+pub fn base_files(state: State<AppState>) -> Result<Vec<BaseFile>> {
+    let mut files = state.read_index(Index::base_files)?;
+    let vault = state.vault()?;
+    let millis = |time: std::io::Result<SystemTime>| {
+        time.ok()
+            .and_then(|time| time.duration_since(SystemTime::UNIX_EPOCH).ok())
+            .map_or(0, |elapsed| elapsed.as_millis() as u64)
+    };
+    for file in &mut files {
+        let metadata = vault
+            .absolute(&file.path)
+            .ok()
+            .and_then(|path| fs::metadata(path).ok());
+        if let Some(metadata) = metadata {
+            file.size = metadata.len();
+            file.mtime = millis(metadata.modified());
+            file.ctime = millis(metadata.created().or_else(|_| metadata.modified()));
+        }
+    }
+    Ok(files)
 }
 
 #[tauri::command(async)]

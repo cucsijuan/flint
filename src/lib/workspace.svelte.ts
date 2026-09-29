@@ -32,12 +32,15 @@ import { documents } from './documents'
 import { activeView } from './editor/active'
 import { noteOpened, vaultChanged } from './events'
 import { linkMention } from './mentions'
+import { setProperty } from './properties'
 import { DEFAULT_GRAPH, type GraphSettings } from './graph'
 import * as layouts from './layout'
 import {
   NOTE_EXTENSION,
   basename,
   extensionOf,
+  BASE_EXTENSION,
+  isBase,
   isImage,
   isWithin,
   join,
@@ -55,11 +58,14 @@ import {
 } from './settings'
 import type { AttachmentSource } from './editor/attachments'
 import type { FoldedLines } from './editor/folding'
+import type { PropertyType } from './bases/base'
+import type { NewNoteDefaults } from './bases/edit'
 import { buildTree } from './tree'
 import * as vault from './vault'
 
 export type ReplaceScope = 'note' | 'folder' | 'vault'
 const BLOCK_SEARCH_NOTES = 20
+const NEW_BASE = 'views:\n  - type: table\n    name: Table\n'
 const BLOCK_SEARCH_RESULTS = 50
 
 const SEARCH_DELAY_MS = 200
@@ -140,6 +146,8 @@ class Workspace {
   replaceScope = $state<ReplaceScope>('vault')
   graph = $state<vault.Graph>({ nodes: [], links: [] })
   readonly graphConfig = new VaultConfig('graph', DEFAULT_GRAPH)
+  /** Property types shared by every base, in Obsidian's `types.json` format. */
+  readonly typesConfig = new VaultConfig('types', { types: {} as Record<string, PropertyType> })
   /** Folded lines per note, restored when the note opens again. */
   readonly foldsConfig = new VaultConfig('folds', { notes: {} as Record<string, FoldedLines[]> })
   localGraphDepth = $state(1)
@@ -164,6 +172,7 @@ class Workspace {
       this.appearance,
       this.graphConfig,
       this.foldsConfig,
+      this.typesConfig,
     ]
   }
 
@@ -219,6 +228,7 @@ class Workspace {
       await this.templatesConfig.load()
       await this.appearance.load()
       await this.graphConfig.load()
+      await this.typesConfig.load()
       this.#customHotkeys = parseHotkeys(await vault.readConfig(HOTKEYS_CONFIG))
       commands.setCustomHotkeys(this.#customHotkeys)
       await this.reloadSnippets()
@@ -254,7 +264,7 @@ class Workspace {
   }
 
   async openFile(path: string, { newTab = false }: OpenOptions = {}) {
-    if (!isImage(path)) {
+    if (!isImage(path) && !isBase(path)) {
       await this.#run(() => vault.openExternally(path))
       return
     }
@@ -498,6 +508,33 @@ class Workspace {
     return found.slice(0, BLOCK_SEARCH_RESULTS)
   }
 
+  /** Writes one frontmatter property of a note, as a base's table cell edits it. */
+  setNoteProperty(path: string, key: string, value: unknown) {
+    void this.#run(() => documents.update(path, (text) => setProperty(text, key, value)))
+  }
+
+  /** Creates a note that a base's filters let through, and opens it. */
+  async createNoteFor(defaults: NewNoteDefaults) {
+    await this.#run(async () => {
+      const path = uniqueName(this.#takenPaths(), defaults.folder, 'Untitled', NOTE_EXTENSION)
+      if (defaults.folder) await vault.createFolder(defaults.folder).catch(() => undefined)
+      await vault.createNote(path)
+      const properties = {
+        ...defaults.properties,
+        ...(defaults.tags.length ? { tags: defaults.tags } : {}),
+      }
+      await documents.update(path, (text) =>
+        Object.entries(properties).reduce(
+          (note, [key, value]) => setProperty(note, key, value),
+          text,
+        ),
+      )
+      await documents.flush()
+      await this.#refresh()
+      this.openNote(path)
+    })
+  }
+
   /** Turns an unlinked mention into a link to the note it names. */
   linkMention(mention: vault.Mention) {
     const target = this.linkTargets.find(({ path, alias }) => path === mention.target && !alias)
@@ -545,6 +582,19 @@ class Workspace {
       await vault.createNote(path)
       await this.#refresh()
       this.openNote(path)
+      this.leftTab = 'files'
+      this.renaming = path
+    })
+  }
+
+  /** Creates a base with one table view and opens it. */
+  async createBase(folder = '') {
+    const path = uniqueName(this.#takenPaths(), folder, 'Untitled', `.${BASE_EXTENSION}`)
+    await this.#run(async () => {
+      await vault.createNote(path)
+      await vault.writeNote(path, NEW_BASE)
+      await this.#refresh()
+      await this.openFile(path)
       this.leftTab = 'files'
       this.renaming = path
     })

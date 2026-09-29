@@ -195,6 +195,46 @@ fn property_values(value: &Yaml) -> Vec<String> {
     }
 }
 
+/// The note's frontmatter as JSON, keeping its values' types, for Bases.
+pub fn frontmatter_json(text: &str) -> serde_json::Map<String, serde_json::Value> {
+    let body = text
+        .strip_prefix("---\n")
+        .or_else(|| text.strip_prefix("---\r\n"));
+    let yaml = body.and_then(|body| {
+        let end = body.find("\n---")?;
+        Some(&body[..end])
+    });
+    let document = yaml
+        .and_then(|yaml| YamlLoader::load_from_str(yaml).ok())
+        .and_then(|docs| docs.into_iter().next());
+    match document.map(|document| yaml_json(&document)) {
+        Some(serde_json::Value::Object(map)) => map,
+        _ => serde_json::Map::new(),
+    }
+}
+
+fn yaml_json(value: &Yaml) -> serde_json::Value {
+    use serde_json::Value;
+    match value {
+        Yaml::String(text) => Value::String(text.clone()),
+        Yaml::Integer(number) => Value::from(*number),
+        Yaml::Real(text) => text
+            .parse::<f64>()
+            .ok()
+            .and_then(serde_json::Number::from_f64)
+            .map_or_else(|| Value::String(text.clone()), Value::Number),
+        Yaml::Boolean(value) => Value::Bool(*value),
+        Yaml::Array(items) => Value::Array(items.iter().map(yaml_json).collect()),
+        Yaml::Hash(entries) => Value::Object(
+            entries
+                .iter()
+                .filter_map(|(key, value)| Some((scalar_text(key)?, yaml_json(value))))
+                .collect(),
+        ),
+        _ => Value::Null,
+    }
+}
+
 fn scalar_text(value: &Yaml) -> Option<String> {
     match value {
         Yaml::String(text) | Yaml::Real(text) => Some(text.clone()),
@@ -352,6 +392,18 @@ mod tests {
         let summary = summarize(text);
         assert_eq!(summary.tags, ["real"]);
         assert!(summary.links.is_empty());
+    }
+
+    #[test]
+    fn converts_frontmatter_to_json() {
+        let json = frontmatter_json(
+            "---\nstatus: draft\nrating: 4\nscore: 1.5\ndone: true\nitems: [a, b]\n---\nbody",
+        );
+        assert_eq!(
+            serde_json::Value::Object(json),
+            serde_json::json!({"status": "draft", "rating": 4, "score": 1.5, "done": true, "items": ["a", "b"]})
+        );
+        assert!(frontmatter_json("no frontmatter").is_empty());
     }
 
     #[test]

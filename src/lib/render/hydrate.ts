@@ -11,6 +11,7 @@ import type { MarkdownContext } from '../../../plugin-api'
 import { renderMermaid } from './diagrams'
 import { codeLanguage, highlightBlock } from './highlight'
 import { renderMath } from './math'
+import { mountBase } from '../bases/mount.svelte'
 import { renderMarkdown } from './markdown'
 import { processors } from './processors.svelte'
 import { noteContent, replaceLines, toggleTask } from './source'
@@ -117,7 +118,8 @@ function copyButton(code: HTMLElement) {
 
 /** Languages whose code blocks render as something else: diagrams, or a plugin's output. */
 export const rendersCodeBlock = (language: string) =>
-  language.toLowerCase() === 'mermaid' || processors.codeBlock(language) !== undefined
+  ['mermaid', 'base'].includes(language.toLowerCase()) ||
+  processors.codeBlock(language) !== undefined
 
 async function renderDiagram(pre: HTMLElement, source: string) {
   const figure = document.createElement('div')
@@ -133,6 +135,26 @@ async function renderDiagram(pre: HTMLElement, source: string) {
   }
 }
 
+/** A ` ```base ` block: the base itself, whose edits rewrite the block. */
+function renderBase(pre: HTMLElement, code: HTMLElement, markdown: MarkdownContext) {
+  const element = document.createElement('div')
+  element.className = 'base-block'
+  element.dataset.interactive = ''
+  Object.assign(element.dataset, code.dataset)
+  pre.replaceWith(element)
+  mountBase(
+    element,
+    code.textContent ?? '',
+    (source) => {
+      const section = markdown.sectionOf(element)
+      if (!section) return
+      const block = `\`\`\`base\n${source.trimEnd()}\n\`\`\``
+      void markdown.replaceLines(section.lineStart, section.lineEnd, block)
+    },
+    markdown.sourcePath,
+  )
+}
+
 async function renderMathIn(element: HTMLElement) {
   const tex = element.dataset.tex ?? ''
   element.replaceChildren(await renderMath(tex, element.classList.contains('math-block')))
@@ -142,6 +164,7 @@ async function renderCode(code: HTMLElement, markdown: MarkdownContext) {
   const pre = code.parentElement
   const language = codeLanguage(code)
   if (pre && language.toLowerCase() === 'mermaid') return renderDiagram(pre, code.textContent ?? '')
+  if (pre && language.toLowerCase() === 'base') return renderBase(pre, code, markdown)
   const processor = processors.codeBlock(language)
   if (!pre) return
   if (!processor) {

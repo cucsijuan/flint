@@ -21,6 +21,10 @@ export const extensionOf = (path: string) => {
 
 export const isImage = (path: string) => IMAGE_EXTENSIONS.has(extensionOf(path))
 
+export const BASE_EXTENSION = 'base'
+
+export const isBase = (path: string) => extensionOf(path) === BASE_EXTENSION
+
 const EXTERNAL_URL = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i
 
 export const isExternalUrl = (url: string) => EXTERNAL_URL.test(url)

@@ -78,6 +78,20 @@ export interface OutgoingLink {
 export const unlinkedMentions = (path: string) => invoke<Mention[]>('unlinked_mentions', { path })
 export const outgoingLinks = (path: string) => invoke<OutgoingLink[]>('outgoing_links', { path })
 export const outgoingMentions = (path: string) => invoke<Mention[]>('outgoing_mentions', { path })
+/** A note as Bases sees it. */
+export interface BaseFile {
+  path: string
+  tags: string[]
+  links: string[]
+  backlinks: string[]
+  embeds: string[]
+  properties: Record<string, unknown>
+  size: number
+  ctime: number
+  mtime: number
+}
+
+export const baseFiles = () => invoke<BaseFile[]>('base_files')
 export const incomingLinkCount = (path: string) => invoke<number>('incoming_link_count', { path })
 
 export type SearchSort =

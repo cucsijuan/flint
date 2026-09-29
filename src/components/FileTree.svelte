@@ -4,9 +4,9 @@
     draggable,
     dropTargetForElements,
   } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
-  import { ChevronRight, File, FileText, Image } from '@lucide/svelte'
+  import { ChevronRight, File, FileText, Image, Table } from '@lucide/svelte'
   import { ContextMenu } from 'bits-ui'
-  import { isImage, isWithin, noteTitle, parentOf } from '../lib/paths'
+  import { isBase, isImage, isWithin, noteTitle, parentOf } from '../lib/paths'
   import type { TreeNode } from '../lib/tree'
   import { workspace } from '../lib/workspace.svelte'
 
@@ -130,6 +130,8 @@
             </span>
           {:else if node.kind === 'file'}
             <FileText size={14} />
+          {:else if isBase(node.path)}
+            <Table size={14} />
           {:else if isImage(node.path)}
             <Image size={14} />
           {:else}
@@ -159,6 +161,12 @@
           onSelect={() => expandThen(targetFolder, () => workspace.createNote(targetFolder))}
         >
           New note
+        </ContextMenu.Item>
+        <ContextMenu.Item
+          class="menu-item"
+          onSelect={() => expandThen(targetFolder, () => workspace.createBase(targetFolder))}
+        >
+          New base
         </ContextMenu.Item>
         <ContextMenu.Item
           class="menu-item"

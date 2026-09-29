@@ -9,12 +9,13 @@
     draggable,
     dropTargetForElements,
   } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
-  import { FileText, Image, Plus, Waypoints, X } from '@lucide/svelte'
+  import { FileText, Image, Plus, Table, Waypoints, X } from '@lucide/svelte'
   import { ContextMenu } from 'bits-ui'
   import * as layouts from '../lib/layout'
-  import { basename, noteTitle } from '../lib/paths'
+  import { basename, isBase, noteTitle } from '../lib/paths'
   import { commands } from '../lib/commands.svelte'
   import { workspace } from '../lib/workspace.svelte'
+  import BaseFile from './bases/BaseFile.svelte'
   import EmptyTab from './EmptyTab.svelte'
   import FileView from './FileView.svelte'
   import GraphPanel from './GraphPanel.svelte'
@@ -38,7 +39,9 @@
 
   function title(view: layouts.TabView) {
     if (view.kind === 'note') return noteTitle(view.path)
-    if (view.kind === 'file') return basename(view.path)
+    if (view.kind === 'file') {
+      return isBase(view.path) ? basename(view.path).replace(/\.base$/i, '') : basename(view.path)
+    }
     return view.kind === 'graph' ? 'Graph view' : 'New tab'
   }
 
@@ -175,7 +178,7 @@
             {#if tab.view.kind === 'graph'}
               <Waypoints size={13} />
             {:else if tab.view.kind === 'file'}
-              <Image size={13} />
+              {#if isBase(tab.view.path)}<Table size={13} />{:else}<Image size={13} />{/if}
             {:else}
               <FileText size={13} />
             {/if}
@@ -256,7 +259,11 @@
             {/if}
           {/key}
         {:else if tab.view.kind === 'file'}
-          <FileView path={tab.view.path} />
+          {#if isBase(tab.view.path)}
+            <BaseFile path={tab.view.path} />
+          {:else}
+            <FileView path={tab.view.path} />
+          {/if}
         {:else if tab.view.kind === 'graph'}
           <GraphPanel />
         {:else}

@@ -49,6 +49,7 @@ pub fn run() {
             commands::note_headings,
             commands::backlinks,
             commands::incoming_link_count,
+            commands::base_files,
             commands::unlinked_mentions,
             commands::outgoing_links,
             commands::outgoing_mentions,

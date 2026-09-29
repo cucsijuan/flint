@@ -4,7 +4,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use serde::Serialize;
 
 use crate::error::Result;
-use crate::markdown::{Heading, WikiLink, summarize};
+use crate::markdown::{Heading, WikiLink, frontmatter_json, summarize};
 use crate::mentions;
 use crate::search::{Note, Query, SearchResult};
 use crate::vault::{EntryKind, Vault, is_attachment_name, is_within, parent_of};
@@ -26,6 +26,20 @@ struct IndexedNote {
     tags: Vec<String>,
     aliases: Vec<String>,
     properties: Vec<(String, Vec<String>)>,
+}
+
+/// A note as Bases sees it; the command fills in size and times from the file system.
+#[derive(Debug, Clone, Serialize)]
+pub struct BaseFile {
+    pub path: String,
+    pub tags: Vec<String>,
+    pub links: Vec<String>,
+    pub backlinks: Vec<String>,
+    pub embeds: Vec<String>,
+    pub properties: serde_json::Map<String, serde_json::Value>,
+    pub size: u64,
+    pub ctime: u64,
+    pub mtime: u64,
 }
 
 /// A note's name or alias written in another note without a link.
@@ -422,6 +436,52 @@ impl Index {
                 context: link.context.clone(),
             })
             .collect()
+    }
+
+    /// Every note with its resolved links, backlinks, embeds and typed frontmatter.
+    pub fn base_files(&self) -> Vec<BaseFile> {
+        let mut backlinks: HashMap<String, BTreeSet<String>> = HashMap::new();
+        let mut files: Vec<BaseFile> = self
+            .notes
+            .iter()
+            .map(|(path, note)| {
+                let (mut links, mut embeds) = (BTreeSet::new(), BTreeSet::new());
+                for link in &note.links {
+                    let Some(target) = (!link.link.target.is_empty())
+                        .then(|| self.resolve(path, &link.link.target))
+                        .flatten()
+                    else {
+                        continue;
+                    };
+                    backlinks
+                        .entry(target.clone())
+                        .or_default()
+                        .insert(path.clone());
+                    if link.link.is_embed {
+                        embeds.insert(target);
+                    } else {
+                        links.insert(target);
+                    }
+                }
+                BaseFile {
+                    path: path.clone(),
+                    tags: note.tags.clone(),
+                    links: links.into_iter().collect(),
+                    backlinks: Vec::new(),
+                    embeds: embeds.into_iter().collect(),
+                    properties: frontmatter_json(&note.text),
+                    size: note.text.len() as u64,
+                    ctime: 0,
+                    mtime: 0,
+                }
+            })
+            .collect();
+        for file in &mut files {
+            if let Some(sources) = backlinks.remove(&file.path) {
+                file.backlinks = sources.into_iter().collect();
+            }
+        }
+        files
     }
 
     /// The note's file name and aliases, which other notes may mention.

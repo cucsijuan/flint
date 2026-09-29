@@ -6,6 +6,7 @@ import { activeView } from './editor/active'
 import { insertLink, toggleWrap } from './editor/formatting'
 import { moveLines } from './editor/move-lines'
 import * as layouts from './layout'
+import { parentOf } from './paths'
 import { readProperties } from './properties'
 import { checkForUpdates } from './updates'
 import { workspace } from './workspace.svelte'
@@ -198,6 +199,12 @@ export function registerAppCommands() {
       hotkey: 'Mod+N',
       isAvailable: hasVault,
       run: () => workspace.createNote(),
+    },
+    {
+      id: 'new-base',
+      name: 'Create new base',
+      isAvailable: hasVault,
+      run: () => workspace.createBase(workspace.notePath ? parentOf(workspace.notePath) : ''),
     },
     {
       id: 'open-daily-note',

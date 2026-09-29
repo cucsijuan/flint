@@ -139,5 +139,6 @@ Features that are not scheduled in a milestone yet.
 - **Editor:** formatting hotkeys (bold, italic…) inside table cells, “+” buttons on a table's edges, choosing spell-check languages on Windows and macOS (their webviews offer no API for it).
 - **Distribution:** Windows code signing.
 - **Testing:** run the end-to-end tests on Windows too (`msedgedriver` can't attach to WebView2 in CI yet).
+- **Integrations (after M16):** HTTP requests and secret storage (OS keychain) in the plugin API, then a Jira plugin (Server/Data Center and Cloud) with issue tables, creation and status tracking.
 - **Later:** mobile (iOS and Android), sync between devices.
 - **Testing:** verify light/dark theme switching (graph colors in particular).

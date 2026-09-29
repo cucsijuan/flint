@@ -3,6 +3,7 @@
   import type { Backlink } from '../lib/vault'
   import * as vault from '../lib/vault'
   import { workspace } from '../lib/workspace.svelte'
+  import MentionList from './MentionList.svelte'
 
   let { path }: { path: string } = $props()
 
@@ -50,6 +51,7 @@
       {/each}
     </ul>
   {/if}
+  <MentionList load={() => vault.unlinkedMentions(path)} groupBy="source" />
 </aside>
 
 <style>

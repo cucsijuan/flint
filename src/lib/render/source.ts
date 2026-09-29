@@ -35,22 +35,76 @@ export function blockLines(lines: string[], id: string): [number, number] | null
   return start < end ? [start, end] : null
 }
 
-export interface BlockId {
-  id: string
+export interface NoteBlock {
+  id: string | null
   /** The block's text, for showing it in suggestions. */
   text: string
+  /** The line that holds the block's id, or would. */
+  line: number
+  /** Tables and quotes take their id on a line of its own after them. */
+  isStandalone: boolean
 }
 
-export function blockIds(text: string): BlockId[] {
+const FENCE = /^\s*(?:```|~~~)/
+const STANDALONE_ID = /^\s*\^([A-Za-z0-9-]+)\s*$/
+const flatten = (lines: string[]) =>
+  lines
+    .map((line) => line.replace(BLOCK_ID, ''))
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+/** Every paragraph, list item, table and quote of a note, with its `^id` if it has one. */
+export function noteBlocks(text: string): NoteBlock[] {
   const lines = text.split('\n')
-  return lines.flatMap((line) => {
-    const id = BLOCK_ID.exec(line)?.[1]
-    const range = id ? blockLines(lines, id) : null
-    if (!id || !range) return []
-    const block = lines.slice(...range).map((line) => line.replace(BLOCK_ID, ''))
-    return [{ id, text: block.join(' ').replace(/\s+/g, ' ').trim() }]
-  })
+  const blocks: NoteBlock[] = []
+  let run: number[] = []
+  let isInFence = false
+  const flush = () => {
+    const last = run.at(-1)
+    if (last === undefined) return
+    const isStandalone = /^\s*[|>]/.test(lines[run[0]])
+    blocks.push({
+      id: isStandalone ? null : (BLOCK_ID.exec(lines[last])?.[1] ?? null),
+      text: flatten(run.map((index) => lines[index])),
+      line: last,
+      isStandalone,
+    })
+    run = []
+  }
+  const start = lineCount(text) - lineCount(text.replace(FRONTMATTER, ''))
+  for (let index = start; index < lines.length; index++) {
+    const line = lines[index]
+    if (FENCE.test(line)) isInFence = !isInFence
+    const standaloneId = STANDALONE_ID.exec(line)?.[1]
+    const previous = blocks.at(-1)
+    if (standaloneId && !run.length && isBlank(lines[index - 1]) && previous?.isStandalone) {
+      previous.id = standaloneId
+    } else if (isInFence || FENCE.test(line) || isBlank(line) || HEADING_LINE.test(line)) {
+      flush()
+    } else if (LIST_ITEM.test(line)) {
+      flush()
+      const id = BLOCK_ID.exec(line)?.[1] ?? null
+      const text = flatten([line.replace(LIST_ITEM, '').replace(/^\[[ xX]\]\s*/, '')])
+      blocks.push({ id, text, line: index, isStandalone: false })
+    } else if (!(run.length === 0 && indentOf(line) > 0 && previous && !previous.isStandalone)) {
+      run.push(index)
+    }
+  }
+  flush()
+  return blocks
 }
+
+/** `text` with `id` added to `block`, following Obsidian's rules for where ids go. */
+export function withBlockId(text: string, block: NoteBlock, id: string) {
+  const lines = text.split('\n')
+  if (block.isStandalone) lines.splice(block.line + 1, 0, '', `^${id}`)
+  else lines[block.line] = `${lines[block.line].trimEnd()} ^${id}`
+  return lines.join('\n')
+}
+
+/** A new block id, six random letters and digits like Obsidian's. */
+export const newBlockId = () => Math.random().toString(36).slice(2, 8).padEnd(6, '0')
 
 /** The note without its frontmatter, or only the section under a heading or a `^block`. */
 export function noteContent(text: string, subpath = ''): NoteContent {

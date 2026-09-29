@@ -356,6 +356,12 @@ export function registerAppCommands() {
       run: () => workspace.showRightTab('backlinks'),
     },
     {
+      id: 'show-outgoing-links',
+      name: 'Show outgoing links',
+      isAvailable: hasVault,
+      run: () => workspace.showRightTab('outgoing'),
+    },
+    {
       id: 'show-tags',
       name: 'Show tags',
       isAvailable: hasVault,

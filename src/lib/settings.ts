@@ -1,4 +1,5 @@
 import { LazyStore } from '@tauri-apps/plugin-store'
+import type { SearchSort } from './vault'
 
 export type EditorMode = 'live' | 'source'
 export type LinkUpdate = 'ask' | 'always' | 'never'
@@ -16,6 +17,7 @@ export interface VaultSettings {
   vimMode: boolean
   /** Hunspell dictionary names like `en_US`; empty checks the system's languages. */
   spellcheckLanguages: string[]
+  searchSort: SearchSort
 }
 
 export const DEFAULT_VAULT_SETTINGS: VaultSettings = {
@@ -27,6 +29,7 @@ export const DEFAULT_VAULT_SETTINGS: VaultSettings = {
   pluginHotReload: false,
   vimMode: false,
   spellcheckLanguages: [],
+  searchSort: 'name-ascending',
 }
 
 /** App-wide settings; the vault settings kept here by older versions seed new vaults. */

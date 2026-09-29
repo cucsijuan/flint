@@ -5,6 +5,7 @@ use serde::Serialize;
 
 use crate::error::Result;
 use crate::markdown::{Heading, WikiLink, summarize};
+use crate::mentions;
 use crate::search::{Note, Query, SearchResult};
 use crate::vault::{EntryKind, Vault, is_attachment_name, is_within, parent_of};
 
@@ -24,6 +25,27 @@ struct IndexedNote {
     headings: Vec<Heading>,
     tags: Vec<String>,
     aliases: Vec<String>,
+    properties: Vec<(String, Vec<String>)>,
+}
+
+/// A note's name or alias written in another note without a link.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Mention {
+    pub source: String,
+    pub target: String,
+    pub line: usize,
+    /// The mention as written.
+    pub text: String,
+    pub context: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct OutgoingLink {
+    /// The link's target as written.
+    pub target: String,
+    /// The note or attachment it resolves to, if any.
+    pub path: Option<String>,
+    pub line: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -131,6 +153,7 @@ impl Index {
                 headings: summary.headings,
                 tags: summary.tags,
                 aliases: summary.aliases,
+                properties: summary.properties,
             },
         );
     }
@@ -351,6 +374,7 @@ impl Index {
                     path,
                     text: &note.text,
                     tags: &note.tags,
+                    properties: &note.properties,
                 })
             })
             .collect())
@@ -373,6 +397,7 @@ impl Index {
                             path,
                             text: &note.text,
                             tags: &note.tags,
+                            properties: &note.properties,
                         })
                     })
                     .map(|(path, _)| path.clone())
@@ -395,6 +420,80 @@ impl Index {
                 source: source.to_owned(),
                 line: link.line,
                 context: link.context.clone(),
+            })
+            .collect()
+    }
+
+    /// The note's file name and aliases, which other notes may mention.
+    fn names(&self, path: &str) -> Vec<String> {
+        let Some(note) = self.notes.get(path) else {
+            return Vec::new();
+        };
+        let name = strip_note_extension(path.rsplit('/').next().unwrap_or(path));
+        std::iter::once(name.to_owned())
+            .chain(note.aliases.iter().cloned())
+            .collect()
+    }
+
+    pub fn unlinked_mentions(&self, path: &str) -> Vec<Mention> {
+        let names = self.names(path);
+        self.notes
+            .iter()
+            .filter(|(source, _)| source.as_str() != path)
+            .flat_map(|(source, note)| {
+                mentions::find(&note.text, &names)
+                    .into_iter()
+                    .map(|found| Mention {
+                        source: source.clone(),
+                        target: path.to_owned(),
+                        line: found.line,
+                        text: found.text,
+                        context: found.context,
+                    })
+            })
+            .collect()
+    }
+
+    pub fn outgoing_links(&self, path: &str) -> Vec<OutgoingLink> {
+        let Some(note) = self.notes.get(path) else {
+            return Vec::new();
+        };
+        let mut seen = HashSet::new();
+        note.links
+            .iter()
+            .filter(|link| !link.link.target.is_empty())
+            .filter_map(|link| {
+                let resolved = self.resolve(path, &link.link.target);
+                let key = resolved
+                    .clone()
+                    .unwrap_or_else(|| link.link.target.to_lowercase());
+                seen.insert(key).then(|| OutgoingLink {
+                    target: link.link.target.clone(),
+                    path: resolved,
+                    line: link.line,
+                })
+            })
+            .collect()
+    }
+
+    /// Other notes named in this note's text without a link.
+    pub fn outgoing_mentions(&self, path: &str) -> Vec<Mention> {
+        let Some(note) = self.notes.get(path) else {
+            return Vec::new();
+        };
+        self.notes
+            .keys()
+            .filter(|target| target.as_str() != path)
+            .flat_map(|target| {
+                mentions::find(&note.text, &self.names(target))
+                    .into_iter()
+                    .map(|found| Mention {
+                        source: path.to_owned(),
+                        target: target.clone(),
+                        line: found.line,
+                        text: found.text,
+                        context: found.context,
+                    })
             })
             .collect()
     }

@@ -56,6 +56,8 @@
               targets: () => workspace.linkTargets,
               headings: (target) => workspace.headingsFor(target, path),
               blocks: (target) => workspace.blocksFor(target, path),
+              searchBlocks: (query) => workspace.searchBlocks(query),
+              addBlockId: (note, block) => workspace.addBlockId(note, block),
               tags: () => workspace.tags,
             },
             plugins: pluginHost.editorExtensions,

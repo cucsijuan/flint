@@ -52,6 +52,8 @@ pub struct NoteSummary {
     pub headings: Vec<Heading>,
     pub tags: Vec<String>,
     pub aliases: Vec<String>,
+    /// Frontmatter properties with their values as text, for `[property:value]` searches.
+    pub properties: Vec<(String, Vec<String>)>,
 }
 
 impl NoteSummary {
@@ -87,6 +89,12 @@ impl NoteSummary {
         }
         for key in ["aliases", "alias"] {
             self.aliases.extend(string_list(&document[key], &[',']));
+        }
+        if let Yaml::Hash(entries) = &document {
+            self.properties = entries
+                .iter()
+                .filter_map(|(key, value)| Some((scalar_text(key)?, property_values(value))))
+                .collect();
         }
     }
 }
@@ -180,10 +188,18 @@ fn string_list(value: &Yaml, separators: &[char]) -> Vec<String> {
         .collect()
 }
 
+fn property_values(value: &Yaml) -> Vec<String> {
+    match value {
+        Yaml::Array(items) => items.iter().filter_map(scalar_text).collect(),
+        other => scalar_text(other).into_iter().collect(),
+    }
+}
+
 fn scalar_text(value: &Yaml) -> Option<String> {
     match value {
         Yaml::String(text) | Yaml::Real(text) => Some(text.clone()),
         Yaml::Integer(number) => Some(number.to_string()),
+        Yaml::Boolean(value) => Some(value.to_string()),
         _ => None,
     }
 }

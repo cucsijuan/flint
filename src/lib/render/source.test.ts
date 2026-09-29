@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { blockIds, blockLines, noteContent, replaceLines, toggleTask } from './source'
+import {
+  blockLines,
+  noteBlocks,
+  noteContent,
+  replaceLines,
+  toggleTask,
+  withBlockId,
+} from './source'
 
 const note = '---\ntags: [a]\n---\n# Other\n\nIntro\n\n## Part\n\nPart body\n\n## Next\n\nNext body'
 
@@ -34,11 +41,22 @@ describe('note source', () => {
       text: '- two ^item\n  - child',
       firstLine: 7,
     })
-    expect(blockIds(text).map(({ id, text }) => `${id}: ${text}`)).toEqual([
-      'para: Intro first para',
-      'item: - two - child',
-      'table: | a | | - |',
+    expect(noteBlocks(text).map(({ id, text, line }) => `${line} ${id}: ${text}`)).toEqual([
+      '1 para: Intro first para',
+      '3 null: one',
+      '4 item: two',
+      '5 null: child',
+      '6 null: three',
+      '9 table: | a | | - |',
     ])
+  })
+
+  it('adds block ids where Obsidian expects them', () => {
+    const text = '---\na: 1\n---\nA paragraph\n\n> quote\n\n```\ncode\n```'
+    const [paragraph, quote] = noteBlocks(text)
+    expect(noteBlocks(text)).toHaveLength(2)
+    expect(withBlockId(text, paragraph, 'abc')).toContain('A paragraph ^abc\n')
+    expect(withBlockId(text, quote, 'q1')).toContain('> quote\n\n^q1\n')
   })
 
   it('toggles tasks only on task lines', () => {

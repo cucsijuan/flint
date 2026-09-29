@@ -57,9 +57,42 @@ export const resolveLinks = (source: string, targets: string[]) =>
   invoke<(string | null)[]>('resolve_links', { source, targets })
 export const noteHeadings = (path: string) => invoke<Heading[]>('note_headings', { path })
 export const backlinks = (path: string) => invoke<Backlink[]>('backlinks', { path })
+/** A note's name or alias written in another note without a link. */
+export interface Mention {
+  source: string
+  target: string
+  line: number
+  /** The mention as written. */
+  text: string
+  context: string
+}
+
+export interface OutgoingLink {
+  /** The link's target as written. */
+  target: string
+  /** The note or attachment it resolves to, if any. */
+  path: string | null
+  line: number
+}
+
+export const unlinkedMentions = (path: string) => invoke<Mention[]>('unlinked_mentions', { path })
+export const outgoingLinks = (path: string) => invoke<OutgoingLink[]>('outgoing_links', { path })
+export const outgoingMentions = (path: string) => invoke<Mention[]>('outgoing_mentions', { path })
 export const incomingLinkCount = (path: string) => invoke<number>('incoming_link_count', { path })
 
-export const search = (query: string) => invoke<SearchResult[]>('search', { query })
+export type SearchSort =
+  | 'name-ascending'
+  | 'name-descending'
+  | 'modified-newest'
+  | 'modified-oldest'
+  | 'created-newest'
+  | 'created-oldest'
+
+export const search = (query: string, sort: SearchSort) =>
+  invoke<SearchResult[]>('search', { query, sort })
+/** `text` with the search's matches replaced, everywhere or only on `line`. */
+export const replaceText = (query: string, replacement: string, text: string, line?: number) =>
+  invoke<{ text: string; count: number }>('replace_text', { query, replacement, text, line })
 export const matchingNotes = (queries: string[]) =>
   invoke<string[][]>('matching_notes', { queries })
 export const tags = () => invoke<TagCount[]>('tags')

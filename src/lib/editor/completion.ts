@@ -6,13 +6,17 @@ import {
 } from '@codemirror/autocomplete'
 import type { EditorView } from '@codemirror/view'
 import { noteTitle, parentOf } from '../paths'
-import type { BlockId } from '../render/source'
+import type { NoteBlock } from '../render/source'
 import type { Heading, LinkTarget, TagCount } from '../vault'
 
 export interface CompletionSources {
   targets: () => LinkTarget[]
   headings: (target: string) => Promise<Heading[]>
-  blocks: (target: string) => Promise<BlockId[]>
+  blocks: (target: string) => Promise<{ path: string; blocks: NoteBlock[] } | null>
+  /** Blocks anywhere in the vault matching `query`. */
+  searchBlocks: (query: string) => Promise<{ path: string; block: NoteBlock }[]>
+  /** Gives a block an id in its note and returns it. */
+  addBlockId: (path: string, block: NoteBlock) => string
   tags: () => TagCount[]
 }
 
@@ -28,6 +32,22 @@ function insertLink(text: string) {
       changes: { from, to, insert },
       selection: { anchor: from + insert.length + (isClosed ? 2 : 0) },
     })
+  }
+}
+
+const blockLabel = ({ text }: NoteBlock) =>
+  text.length > BLOCK_LABEL_LENGTH ? `${text.slice(0, BLOCK_LABEL_LENGTH)}…` : text
+
+/** Links to a block, first giving it an id when it has none. */
+function insertBlockLink(
+  sources: CompletionSources,
+  path: string,
+  block: NoteBlock,
+  link: (id: string) => string,
+) {
+  return (view: EditorView, completion: Completion, from: number, to: number) => {
+    const id = block.id ?? sources.addBlockId(path, block)
+    insertLink(link(id))(view, completion, from, to)
   }
 }
 
@@ -54,6 +74,30 @@ async function completeLink(
   const from = match.from + 2
   const hash = query.indexOf('#')
 
+  if (query.startsWith('^^')) {
+    const blocks = await sources.searchBlocks(query.slice(2))
+    const linkTexts = new Map(
+      sources
+        .targets()
+        .filter(({ alias }) => !alias)
+        .map(({ path, linkText }) => [path, linkText]),
+    )
+    return {
+      from,
+      filter: false,
+      options: blocks.map(({ path, block }) => ({
+        label: blockLabel(block),
+        detail: noteTitle(path),
+        apply: insertBlockLink(
+          sources,
+          path,
+          block,
+          (id) => `${linkTexts.get(path) ?? noteTitle(path)}#^${id}`,
+        ),
+      })),
+    }
+  }
+
   if (hash === -1) {
     return {
       from,
@@ -71,13 +115,14 @@ async function completeLink(
 
   const target = query.slice(0, hash)
   if (query[hash + 1] === '^') {
-    const blocks = await sources.blocks(target)
+    const note = await sources.blocks(target)
+    if (!note) return null
     return {
       from: from + hash + 2,
-      options: blocks.map(({ id, text }) => ({
-        label: text.length > BLOCK_LABEL_LENGTH ? `${text.slice(0, BLOCK_LABEL_LENGTH)}…` : text,
-        detail: `^${id}`,
-        apply: insertLink(id),
+      options: note.blocks.map((block) => ({
+        label: blockLabel(block),
+        detail: block.id ? `^${block.id}` : undefined,
+        apply: insertBlockLink(sources, note.path, block, (id) => id),
       })),
     }
   }

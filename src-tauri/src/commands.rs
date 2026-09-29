@@ -1,20 +1,23 @@
+use std::cmp::Reverse;
 use std::collections::BTreeMap;
+use std::fs;
 use std::path::Path;
 use std::sync::{Arc, Mutex, RwLock};
+use std::time::SystemTime;
 
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_opener::OpenerExt;
 
 use crate::community::{self, CommunityPlugin};
 use crate::config;
 use crate::error::{Error, Result};
-use crate::index::{Backlink, Graph, Index, LinkTarget, TagCount};
+use crate::index::{Backlink, Graph, Index, LinkTarget, Mention, OutgoingLink, TagCount};
 use crate::markdown::Heading;
 use crate::plugins::{self, PluginListing, PluginManifest};
-use crate::search::SearchResult;
+use crate::search::{Query, SearchResult};
 use crate::vault::{Entry, Vault, is_attachment_name};
 use crate::watcher::{VaultWatcher, watch};
 
@@ -159,13 +162,95 @@ pub fn backlinks(state: State<AppState>, path: String) -> Result<Vec<Backlink>> 
 }
 
 #[tauri::command(async)]
+pub fn unlinked_mentions(state: State<AppState>, path: String) -> Result<Vec<Mention>> {
+    state.read_index(|index| index.unlinked_mentions(&path))
+}
+
+#[tauri::command(async)]
+pub fn outgoing_links(state: State<AppState>, path: String) -> Result<Vec<OutgoingLink>> {
+    state.read_index(|index| index.outgoing_links(&path))
+}
+
+#[tauri::command(async)]
+pub fn outgoing_mentions(state: State<AppState>, path: String) -> Result<Vec<Mention>> {
+    state.read_index(|index| index.outgoing_mentions(&path))
+}
+
+#[tauri::command(async)]
 pub fn incoming_link_count(state: State<AppState>, path: String) -> Result<usize> {
     state.read_index(|index| index.incoming_link_count(&path))
 }
 
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum SearchSort {
+    NameAscending,
+    NameDescending,
+    ModifiedNewest,
+    ModifiedOldest,
+    CreatedNewest,
+    CreatedOldest,
+}
+
 #[tauri::command(async)]
-pub fn search(state: State<AppState>, query: String) -> Result<Vec<SearchResult>> {
-    state.read_index(|index| index.search(&query))?
+pub fn search(
+    state: State<AppState>,
+    query: String,
+    sort: SearchSort,
+) -> Result<Vec<SearchResult>> {
+    let mut results = state.read_index(|index| index.search(&query))??;
+    let vault = state.vault()?;
+    let time = |path: &str, created: bool| {
+        let metadata = vault
+            .absolute(path)
+            .ok()
+            .and_then(|path| fs::metadata(path).ok());
+        metadata
+            .and_then(|metadata| {
+                if created {
+                    metadata.created().or_else(|_| metadata.modified()).ok()
+                } else {
+                    metadata.modified().ok()
+                }
+            })
+            .unwrap_or(SystemTime::UNIX_EPOCH)
+    };
+    let name = |path: &str| path.rsplit('/').next().unwrap_or(path).to_lowercase();
+    match sort {
+        SearchSort::NameAscending => results.sort_by_cached_key(|result| name(&result.path)),
+        SearchSort::NameDescending => {
+            results.sort_by_cached_key(|result| Reverse(name(&result.path)));
+        }
+        SearchSort::ModifiedNewest => {
+            results.sort_by_cached_key(|result| Reverse(time(&result.path, false)));
+        }
+        SearchSort::ModifiedOldest => {
+            results.sort_by_cached_key(|result| time(&result.path, false))
+        }
+        SearchSort::CreatedNewest => {
+            results.sort_by_cached_key(|result| Reverse(time(&result.path, true)));
+        }
+        SearchSort::CreatedOldest => results.sort_by_cached_key(|result| time(&result.path, true)),
+    }
+    Ok(results)
+}
+
+#[derive(Serialize)]
+pub struct Replaced {
+    text: String,
+    count: usize,
+}
+
+/// `text` with the search's matches replaced, everywhere or only on `line`.
+#[tauri::command(async)]
+pub fn replace_text(
+    query: String,
+    replacement: String,
+    text: String,
+    line: Option<usize>,
+) -> Result<Replaced> {
+    let (text, count) = Query::parse(&query)?.replace(&text, &replacement, line);
+    Ok(Replaced { text, count })
 }
 
 #[tauri::command(async)]

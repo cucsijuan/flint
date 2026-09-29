@@ -5,6 +5,7 @@ mod context_menu;
 mod error;
 mod index;
 mod markdown;
+mod mentions;
 mod plugins;
 mod search;
 mod spelling;
@@ -48,7 +49,11 @@ pub fn run() {
             commands::note_headings,
             commands::backlinks,
             commands::incoming_link_count,
+            commands::unlinked_mentions,
+            commands::outgoing_links,
+            commands::outgoing_mentions,
             commands::search,
+            commands::replace_text,
             commands::matching_notes,
             commands::tags,
             commands::graph,

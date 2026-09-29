@@ -27,10 +27,11 @@ import { type AppearanceSettings, DEFAULT_APPEARANCE } from './appearance'
 import { commands } from './commands.svelte'
 import { VaultConfig } from './config.svelte'
 import { parseHotkeys, serializeHotkeys } from './hotkeys'
-import { blockIds } from './render/source'
+import { newBlockId, type NoteBlock, noteBlocks, withBlockId } from './render/source'
 import { documents } from './documents'
 import { activeView } from './editor/active'
 import { noteOpened, vaultChanged } from './events'
+import { linkMention } from './mentions'
 import { DEFAULT_GRAPH, type GraphSettings } from './graph'
 import * as layouts from './layout'
 import {
@@ -57,6 +58,10 @@ import type { FoldedLines } from './editor/folding'
 import { buildTree } from './tree'
 import * as vault from './vault'
 
+export type ReplaceScope = 'note' | 'folder' | 'vault'
+const BLOCK_SEARCH_NOTES = 20
+const BLOCK_SEARCH_RESULTS = 50
+
 const SEARCH_DELAY_MS = 200
 const LAYOUT_SAVE_DELAY_MS = 500
 const NOTICE_MS = 5000
@@ -69,7 +74,8 @@ const ATTACHMENTS_FOLDER = 'attachments'
 const timestamp = () => new Date().toISOString().replace(/\D/g, '').slice(0, 14)
 
 export type LeftTab = 'files' | 'search' | 'bookmarks'
-export type RightTab = 'backlinks' | 'outline' | 'properties' | 'tags' | 'graph' | (string & {})
+export type RightTab =
+  'backlinks' | 'outgoing' | 'outline' | 'properties' | 'tags' | 'graph' | (string & {})
 
 export interface Jump {
   tabId: string
@@ -131,6 +137,7 @@ class Workspace {
   searchResults = $state<vault.SearchResult[]>([])
   searchError = $state<string | null>(null)
   searchFocus = $state(0)
+  replaceScope = $state<ReplaceScope>('vault')
   graph = $state<vault.Graph>({ nodes: [], links: [] })
   readonly graphConfig = new VaultConfig('graph', DEFAULT_GRAPH)
   /** Folded lines per note, restored when the note opens again. */
@@ -471,7 +478,47 @@ class Workspace {
 
   async blocksFor(target: string, source = this.notePath ?? '') {
     const [path] = target ? await this.resolveLinks([target], source) : [source || null]
-    return path?.toLowerCase().endsWith(NOTE_EXTENSION) ? blockIds(await documents.load(path)) : []
+    if (!path?.toLowerCase().endsWith(NOTE_EXTENSION)) return null
+    return { path, blocks: noteBlocks(await documents.load(path)) }
+  }
+
+  /** Blocks anywhere in the vault containing every word of `query`, for `[[^^` links. */
+  async searchBlocks(query: string) {
+    const words = query.toLowerCase().split(/\s+/).filter(Boolean)
+    if (!words.length) return []
+    const quoted = words.map((word) => `"${word.replaceAll('"', '')}"`).join(' ')
+    const notes = await vault.search(quoted, 'modified-newest')
+    const found: { path: string; block: NoteBlock }[] = []
+    for (const { path } of notes.slice(0, BLOCK_SEARCH_NOTES)) {
+      for (const block of noteBlocks(await documents.load(path))) {
+        const text = block.text.toLowerCase()
+        if (words.every((word) => text.includes(word))) found.push({ path, block })
+      }
+    }
+    return found.slice(0, BLOCK_SEARCH_RESULTS)
+  }
+
+  /** Turns an unlinked mention into a link to the note it names. */
+  linkMention(mention: vault.Mention) {
+    const target = this.linkTargets.find(({ path, alias }) => path === mention.target && !alias)
+    const linkText = target?.linkText ?? noteTitle(mention.target)
+    void this.#run(() =>
+      documents.update(mention.source, (text) =>
+        linkMention(text, mention.line, mention.text, linkText),
+      ),
+    )
+  }
+
+  /** Gives `block` of `path` a new `^id` and returns it; the note is left alone if the block changed. */
+  addBlockId(path: string, block: NoteBlock) {
+    const id = newBlockId()
+    void documents.update(path, (text) => {
+      const current = noteBlocks(text).find(
+        (candidate) => candidate.line === block.line && candidate.text === block.text,
+      )
+      return current && !current.id ? withBlockId(text, current, id) : null
+    })
+    return id
   }
 
   async openLink(destination: string, source = this.notePath ?? '', options?: OpenOptions) {
@@ -673,11 +720,56 @@ class Workspace {
 
   async #runSearch() {
     try {
-      this.searchResults = await vault.search(this.searchQuery)
+      this.searchResults = await vault.search(this.searchQuery, this.settings.value.searchSort)
       this.searchError = null
     } catch (error) {
       this.searchError = String(error)
     }
+  }
+
+  setSearchSort(searchSort: vault.SearchSort) {
+    this.setSettings({ searchSort })
+    void this.#runSearch()
+  }
+
+  /** The search results a replacement may touch, given `replaceScope`. */
+  get replaceTargets() {
+    const note = this.notePath
+    if (this.replaceScope === 'vault') return this.searchResults
+    if (!note) return []
+    const folder = parentOf(note)
+    return this.searchResults.filter(({ path }) =>
+      this.replaceScope === 'note' ? path === note : isWithin(path, folder) || !folder,
+    )
+  }
+
+  /** Replaces the search's matches in `path` (only on `line`, when given); returns the count. */
+  async #replaceIn(path: string, replacement: string, line?: number) {
+    const contents = await documents.load(path)
+    const replaced = await vault.replaceText(this.searchQuery, replacement, contents, line)
+    if (replaced.count) {
+      await documents.update(path, (current) => (current === contents ? replaced.text : null))
+    }
+    return replaced.count
+  }
+
+  async replaceAll(replacement: string) {
+    await this.#run(async () => {
+      const targets = this.replaceTargets
+      let count = 0
+      for (const { path } of targets) count += await this.#replaceIn(path, replacement)
+      await documents.flush()
+      await this.#runSearch()
+      this.notify(`Replaced ${count} ${count === 1 ? 'match' : 'matches'}.`)
+    })
+  }
+
+  async replaceLine(path: string, line: number, replacement: string) {
+    await this.#run(async () => {
+      await this.#replaceIn(path, replacement, line)
+      await documents.flush()
+      await this.#runSearch()
+    })
   }
 
   async #onExternalChange(paths: string[]) {

@@ -110,9 +110,12 @@ Builds, installers and automatic updates for macOS (Intel and Apple Silicon), wi
 - Pasting a URL over selected text makes a link.
 - Optional Vim key bindings, and choosing spell-check languages on Linux.
 
-### M15: Advanced search and links
+### M15: Advanced search and links ✅
 
-Grouping with parentheses and more operators (`line:`, `section:`, `task:`, `content:`), sorting, search and replace, unlinked mentions in backlinks, an outgoing links panel, searching blocks across the vault with `[[^^`, and adding a block id to any block from the link suggestions.
+- Search groups terms with parentheses and adds `line:`, `block:`, `section:`, `task:`, `task-todo:`, `task-done:`, `content:`, `match-case:`, `ignore-case:` and `[property:value]`; results sort by name, modified or created time.
+- Search and replace in the current note, its folder or the whole vault, all at once or one result line at a time.
+- Unlinked mentions in the backlinks panel with a Link button, and an outgoing links panel with the note's links and unlinked mentions.
+- `[[^^` finds blocks across the vault, and linking a block without an id gives it one. Jumping to a heading, block or line highlights it briefly.
 
 ### M16: Bases
 
@@ -132,6 +135,7 @@ Features that are not scheduled in a milestone yet.
 
 - **Core workflows:** bookmark groups, code block processors in the editor's source mode, a calendar view for daily notes.
 - **Rich content:** pasting or dropping non-image attachments, dropping images on the reading view.
+- **Search:** replacing a single match rather than a whole result line.
 - **Editor:** formatting hotkeys (bold, italic…) inside table cells, “+” buttons on a table's edges, choosing spell-check languages on Windows and macOS (their webviews offer no API for it).
 - **Distribution:** Windows code signing.
 - **Testing:** run the end-to-end tests on Windows too (`msedgedriver` can't attach to WebView2 in CI yet).

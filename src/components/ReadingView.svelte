@@ -5,6 +5,7 @@
   import { frontmatterOf, type Property, readProperties } from '../lib/properties'
   import { isExternalUrl } from '../lib/paths'
   import type { Tab } from '../lib/layout'
+  import { flash } from '../lib/flash'
   import { hydrate } from '../lib/render/hydrate'
   import { renderMarkdown } from '../lib/render/markdown'
   import { processors } from '../lib/render/processors.svelte'
@@ -106,6 +107,7 @@
         (element) => element.textContent?.trim().toLowerCase() === wanted,
       )
       element?.scrollIntoView({ block: 'start' })
+      flash(element)
       return
     }
     const target = block ? blockLines(source.split('\n'), block)?.[0] : line && line - 1
@@ -115,6 +117,7 @@
         Number(element.dataset.line) <= target && target < Number(element.dataset.lineEnd),
     )
     element?.scrollIntoView({ block: 'center' })
+    flash(element)
   }
 
   function attachContent(element: HTMLElement) {

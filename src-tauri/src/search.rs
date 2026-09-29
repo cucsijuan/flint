@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::ops::Range;
 
 use regex::{Captures, Regex, RegexBuilder};
@@ -102,28 +103,40 @@ impl Query {
     pub fn search(&self, note: &Note) -> Option<SearchResult> {
         self.matches(note).then(|| SearchResult {
             path: note.path.to_owned(),
-            lines: self.matching_lines(note.text),
+            lines: self.matching_lines(note),
         })
     }
 
-    fn patterns(&self) -> Vec<&Pattern> {
-        let mut patterns = Vec::new();
+    /// The terms to highlight in `note`, each limited to the lines its operators allow.
+    fn highlights<'q>(&'q self, note: &Note) -> Vec<Highlight<'q>> {
+        let mut highlights = Vec::new();
         if let Some(expr) = &self.expr {
-            expr.collect_patterns(&mut patterns);
+            expr.collect_highlights(note, None, &mut highlights);
         }
-        patterns
+        highlights
     }
 
-    /// Byte ranges of the highlighted matches in `line`, sorted and without overlaps.
-    fn ranges<'t>(&self, line: &'t str) -> Vec<(Range<usize>, Captures<'t>, bool)> {
-        let mut found: Vec<(Range<usize>, Captures<'t>, bool)> = self
-            .patterns()
-            .into_iter()
-            .flat_map(|pattern| {
-                pattern
+    /// Byte ranges of the highlighted matches on the 0-based line `index`, without overlaps.
+    fn ranges<'t>(
+        highlights: &[Highlight],
+        index: usize,
+        line: &'t str,
+    ) -> Vec<(Range<usize>, Captures<'t>, bool)> {
+        let mut found: Vec<(Range<usize>, Captures<'t>, bool)> = highlights
+            .iter()
+            .filter(|highlight| {
+                highlight
+                    .lines
+                    .as_ref()
+                    .is_none_or(|lines| lines.contains(&index))
+            })
+            .flat_map(|highlight| {
+                let expands = highlight.pattern.expands;
+                highlight
+                    .pattern
                     .regex
                     .captures_iter(line)
-                    .map(move |captures| (captures, pattern.expands))
+                    .map(move |captures| (captures, expands))
             })
             .filter_map(|(captures, expands)| {
                 let range = captures.get(0)?.range();
@@ -143,12 +156,13 @@ impl Query {
         kept
     }
 
-    fn matching_lines(&self, text: &str) -> Vec<SearchLine> {
-        text.lines()
+    fn matching_lines(&self, note: &Note) -> Vec<SearchLine> {
+        let highlights = self.highlights(note);
+        note.text
+            .lines()
             .enumerate()
             .filter_map(|(index, line)| {
-                let ranges: Vec<Range<usize>> = self
-                    .ranges(line)
+                let ranges: Vec<Range<usize>> = Self::ranges(&highlights, index, line)
                     .into_iter()
                     .map(|(range, _, _)| range)
                     .collect();
@@ -164,6 +178,13 @@ impl Query {
     /// Replaces the highlighted matches in `text` (only on the 1-based `line`, when given) and
     /// returns the new text with the number of replacements.
     pub fn replace(&self, text: &str, replacement: &str, line: Option<usize>) -> (String, usize) {
+        let note = Note {
+            path: "",
+            text,
+            tags: &[],
+            properties: &[],
+        };
+        let highlights = self.highlights(&note);
         let mut count = 0;
         let lines: Vec<String> = text
             .split('\n')
@@ -174,7 +195,7 @@ impl Query {
                 }
                 let mut result = String::with_capacity(text.len());
                 let mut cursor = 0;
-                for (range, captures, expands) in self.ranges(text) {
+                for (range, captures, expands) in Self::ranges(&highlights, index, text) {
                     result.push_str(&text[cursor..range.start]);
                     if expands {
                         captures.expand(replacement, &mut result);
@@ -190,6 +211,12 @@ impl Query {
             .collect();
         (lines.join("\n"), count)
     }
+}
+
+/// A term to highlight, on any line or only on the 0-based `lines` its operators allow.
+struct Highlight<'q> {
+    pattern: &'q Pattern,
+    lines: Option<HashSet<usize>>,
 }
 
 impl Expr {
@@ -226,20 +253,37 @@ impl Expr {
                         .is_none_or(|value| values.iter().any(|item| value.is_match(item)))
             }),
             Self::Within(unit, inner) => {
-                units(text, *unit).any(|part| inner.matches(note, part, false))
+                units(text, *unit).any(|(_, part)| inner.matches(note, part, false))
             }
         }
     }
 
-    fn collect_patterns<'a>(&'a self, patterns: &mut Vec<&'a Pattern>) {
+    /// Collects the terms to highlight; a unit operator limits its terms to the lines of the
+    /// parts that satisfy it.
+    fn collect_highlights<'q>(
+        &'q self,
+        note: &Note,
+        lines: Option<&HashSet<usize>>,
+        highlights: &mut Vec<Highlight<'q>>,
+    ) {
         match self {
             Self::And(parts) | Self::Or(parts) => {
                 for part in parts {
-                    part.collect_patterns(patterns);
+                    part.collect_highlights(note, lines, highlights);
                 }
             }
-            Self::Term(Field::Anywhere | Field::Content, pattern) => patterns.push(pattern),
-            Self::Within(_, inner) => inner.collect_patterns(patterns),
+            Self::Term(Field::Anywhere | Field::Content, pattern) => highlights.push(Highlight {
+                pattern,
+                lines: lines.cloned(),
+            }),
+            Self::Within(unit, inner) => {
+                let allowed: HashSet<usize> = units(note.text, *unit)
+                    .filter(|(_, part)| inner.matches(note, part, false))
+                    .flat_map(|(first, part)| first..first + part.lines().count().max(1))
+                    .filter(|line| lines.is_none_or(|lines| lines.contains(line)))
+                    .collect();
+                inner.collect_highlights(note, Some(&allowed), highlights);
+            }
             Self::Not(_) | Self::Term(..) | Self::Tag(_) | Self::Property(..) => {}
         }
     }
@@ -266,19 +310,19 @@ fn is_heading(line: &str) -> bool {
     (1..=6).contains(&hashes) && line[hashes..].starts_with([' ', '\t'])
 }
 
-/// Splits `text` into the parts a unit operator looks within.
-fn units(text: &str, unit: Unit) -> Box<dyn Iterator<Item = &str> + '_> {
+/// Splits `text` into the parts a unit operator looks within, each with its 0-based first line.
+fn units(text: &str, unit: Unit) -> Box<dyn Iterator<Item = (usize, &str)> + '_> {
     match unit {
-        Unit::Line => Box::new(text.lines()),
+        Unit::Line => Box::new(text.lines().enumerate()),
         Unit::Task | Unit::TaskTodo | Unit::TaskDone => {
-            Box::new(text.lines().filter_map(move |line| {
+            Box::new(text.lines().enumerate().filter_map(move |(index, line)| {
                 let (done, content) = task_state(line)?;
                 let wanted = match unit {
                     Unit::TaskTodo => !done,
                     Unit::TaskDone => done,
                     _ => true,
                 };
-                wanted.then_some(content)
+                wanted.then_some((index, content))
             }))
         }
         Unit::Block => Box::new(split_before(text, |line, previous| {
@@ -292,24 +336,24 @@ fn units(text: &str, unit: Unit) -> Box<dyn Iterator<Item = &str> + '_> {
 fn split_before<'t>(
     text: &'t str,
     starts: impl Fn(&str, Option<&str>) -> bool + 't,
-) -> impl Iterator<Item = &'t str> {
-    let mut start = 0;
+) -> impl Iterator<Item = (usize, &'t str)> {
+    let mut runs = Vec::new();
+    let (mut start, mut start_line) = (0, 0);
     let mut previous: Option<&str> = None;
-    let mut boundaries = Vec::new();
     let mut offset = 0;
-    for line in text.split_inclusive('\n') {
-        if offset > 0 && starts(line.trim_end_matches('\n'), previous) {
-            boundaries.push(start..offset);
-            start = offset;
+    for (index, line) in text.split_inclusive('\n').enumerate() {
+        let content = line.trim_end_matches('\n');
+        if offset > 0 && starts(content, previous) {
+            runs.push((start_line, start..offset));
+            (start, start_line) = (offset, index);
         }
-        previous = Some(line.trim_end_matches('\n'));
+        previous = Some(content);
         offset += line.len();
     }
-    boundaries.push(start..text.len());
-    boundaries
-        .into_iter()
-        .map(move |range| &text[range])
-        .filter(|part| !part.trim().is_empty())
+    runs.push((start_line, start..text.len()));
+    runs.into_iter()
+        .map(move |(line, range)| (line, &text[range]))
+        .filter(|(_, part)| !part.trim().is_empty())
 }
 
 #[derive(Clone, Copy)]
@@ -692,6 +736,24 @@ mod tests {
                 .0,
             "$5"
         );
+    }
+
+    #[test]
+    fn highlights_only_where_unit_operators_hold() {
+        let text = "Plant tomatoes\nWater the tomatoes\n- [ ] buy tomatoes\n- [x] eat tomatoes";
+        let sample = note("a.md", text, &[]);
+        let lines = |query: &str| -> Vec<usize> {
+            let result = Query::parse(query).unwrap().search(&sample).unwrap();
+            result.lines.iter().map(|line| line.line).collect()
+        };
+        assert_eq!(lines("line:(water tomatoes)"), [2]);
+        assert_eq!(lines("task-todo:tomatoes"), [3]);
+        assert_eq!(lines("plant line:(water tomatoes)"), [1, 2]);
+        let (replaced, count) = Query::parse("task-todo:tomatoes")
+            .unwrap()
+            .replace(text, "beans", None);
+        assert_eq!(count, 1);
+        assert!(replaced.contains("buy beans") && replaced.contains("eat tomatoes"));
     }
 
     #[test]

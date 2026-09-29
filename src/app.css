@@ -764,3 +764,14 @@ summary.callout-title {
 .cm-live-embed .note-embed {
   margin: 0;
 }
+
+/* Where a link jumped to (see lib/flash.ts). */
+.is-flashing {
+  animation: flash 1.5s ease-out;
+}
+
+@keyframes flash {
+  from {
+    background-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+}

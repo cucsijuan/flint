@@ -17,6 +17,7 @@ import { EditorView, keymap } from '@codemirror/view'
 import { classHighlighter, tags } from '@lezer/highlight'
 import { vim } from '@replit/codemirror-vim'
 import { minimalSetup } from 'codemirror'
+import { flash } from '../flash'
 import { blockLines } from '../render/source'
 import type { EditorMode, PropertiesDisplay } from '../settings'
 import { attachmentInput, type SaveAttachment } from './attachments'
@@ -158,18 +159,27 @@ export const applyChanges = (view: EditorView, changes: ChangeSet) =>
 
 const HEADING_LINE = /^#{1,6}\s+(.*?)\s*#*\s*$/
 
-export function scrollToLine(view: EditorView, number: number) {
-  const line = view.state.doc.line(Math.min(Math.max(number, 1), view.state.doc.lines))
+/** Moves to line `number` and flashes it and the `count - 1` lines after it. */
+export function scrollToLine(view: EditorView, number: number, count = 1) {
+  const { doc } = view.state
+  const line = doc.line(Math.min(Math.max(number, 1), doc.lines))
   view.dispatch({
     selection: { anchor: line.from },
     effects: EditorView.scrollIntoView(line.from, { y: 'center' }),
   })
   view.focus()
+  requestAnimationFrame(() => {
+    for (let index = 0; index < count && line.number + index <= doc.lines; index++) {
+      const { from } = doc.line(line.number + index)
+      const node = view.domAtPos(from).node
+      flash((node instanceof Element ? node : node.parentElement)?.closest('.cm-line'))
+    }
+  })
 }
 
 export function scrollToBlock(view: EditorView, id: string) {
   const range = blockLines(view.state.doc.toString().split('\n'), id)
-  if (range) scrollToLine(view, range[0] + 1)
+  if (range) scrollToLine(view, range[0] + 1, range[1] - range[0])
 }
 
 export function scrollToHeading(view: EditorView, heading: string) {

@@ -17,6 +17,7 @@
     "updater:default",
     "process:allow-restart",
     "opener:allow-open-url",
+    "opener:allow-default-urls",
     "os:allow-platform"
   ]
 }

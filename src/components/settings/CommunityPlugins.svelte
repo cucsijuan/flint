@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { openUrl } from '@tauri-apps/plugin-opener'
   import { ArrowLeft, ExternalLink } from '@lucide/svelte'
   import { onMount } from 'svelte'
   import { SvelteMap } from 'svelte/reactivity'
@@ -83,7 +82,7 @@
 {:else if plugins.length === 0}
   <p class="message">
     No community plugins yet. Share yours by adding it to
-    <button class="link" onclick={() => void openUrl(REGISTRY)}>flint-plugins</button>.
+    <button class="link" onclick={() => workspace.openUrl(REGISTRY)}>flint-plugins</button>.
   </p>
 {:else}
   <ul>
@@ -97,7 +96,7 @@
             <button
               class="link"
               title="Open its repository"
-              onclick={() => void openUrl(`https://github.com/${plugin.repo}`)}
+              onclick={() => workspace.openUrl(`https://github.com/${plugin.repo}`)}
             >
               {plugin.repo}
               <ExternalLink size={11} />

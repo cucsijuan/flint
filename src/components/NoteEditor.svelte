@@ -1,6 +1,5 @@
 <script lang="ts">
   import { EditorView } from '@codemirror/view'
-  import { openUrl } from '@tauri-apps/plugin-opener'
   import { onMount } from 'svelte'
   import { commands } from '../lib/commands.svelte'
   import { documents } from '../lib/documents'
@@ -51,7 +50,7 @@
               openLink: (destination, options) =>
                 void workspace.openLink(destination, path, options),
               openTag: (tag) => workspace.openSearch(`tag:#${tag}`),
-              openUrl: (url) => void openUrl(url),
+              openUrl: (url) => workspace.openUrl(url),
             },
             completion: {
               targets: () => workspace.linkTargets,

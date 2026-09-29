@@ -1,4 +1,5 @@
 import { ask, open } from '@tauri-apps/plugin-dialog'
+import { openUrl } from '@tauri-apps/plugin-opener'
 import { SvelteSet } from 'svelte/reactivity'
 import {
   adjacentDailyNote,
@@ -531,6 +532,11 @@ class Workspace {
 
   showInFileManager(path: string) {
     void this.#run(() => vault.showInFileManager(path))
+  }
+
+  /** Opens a web or mail link in the system's default app. */
+  openUrl(url: string) {
+    void this.#run(() => openUrl(url))
   }
 
   /** Copies a note or attachment next to itself as "Name 1", "Name 2"… */

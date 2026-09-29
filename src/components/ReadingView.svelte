@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { openUrl } from '@tauri-apps/plugin-opener'
   import { onMount } from 'svelte'
   import { SvelteSet } from 'svelte/reactivity'
   import { documents } from '../lib/documents'
@@ -138,7 +137,7 @@
     const href = anchor.getAttribute('href') ?? ''
     if (link !== undefined) void workspace.openLink(link, path, { newTab })
     else if (tag !== undefined) workspace.openSearch(`tag:#${tag}`)
-    else if (isExternalUrl(href)) void openUrl(href)
+    else if (isExternalUrl(href)) workspace.openUrl(href)
   }
 </script>
 

@@ -102,9 +102,13 @@ Builds, installers and automatic updates for macOS (Intel and Apple Silicon), wi
 - `==highlights==`, footnotes (clickable in the reading view, numbered in live preview) and `%%comments%%`, hidden when rendered.
 - Block references: `[[note#^id]]` links jump to the block, `![[note#^id]]` embeds it, and `[[note#^` suggests the note's blocks.
 
-### M14: A stronger editor
+### M14: A stronger editor ✅
 
-Tables edited as a grid, moving lines and blocks, folding headings and lists in the editor, pasting a URL onto selected text to make a link, an optional Vim mode, and choosing spell-check languages.
+- Tables edited as a grid in live preview: click a cell to edit it, Tab/Shift+Tab/Enter move between cells, and row and column grips add, move, delete and align.
+- Move line up/down (Alt+↑/↓) carries a list item's sub-items and folded sections.
+- Folding headings and lists from an arrow beside them, fold/unfold all commands, and folds remembered per note.
+- Pasting a URL over selected text makes a link.
+- Optional Vim key bindings, and choosing spell-check languages on Linux.
 
 ### M15: Advanced search and links
 
@@ -128,6 +132,7 @@ Features that are not scheduled in a milestone yet.
 
 - **Core workflows:** bookmark groups, code block processors in the editor's source mode, a calendar view for daily notes.
 - **Rich content:** pasting or dropping non-image attachments, dropping images on the reading view.
+- **Editor:** formatting hotkeys (bold, italic…) inside table cells, “+” buttons on a table's edges, choosing spell-check languages on Windows and macOS (their webviews offer no API for it).
 - **Distribution:** Windows code signing.
 - **Testing:** run the end-to-end tests on Windows too (`msedgedriver` can't attach to WebView2 in CI yet).
 - **Later:** mobile (iOS and Android), sync between devices.

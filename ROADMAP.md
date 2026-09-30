@@ -125,6 +125,13 @@ Builds, installers and automatic updates for macOS (Intel and Apple Silicon), wi
 - Editing properties right in the table, vault-wide property types (`types.json`), and a New button that creates a note matching the filters.
 - Plugins can show their own rows with the same views through `renderDataView`.
 
+### Plugin integrations ✅
+
+- Plugin API: HTTP requests through Flint's backend (no CORS, system certificates trusted), secrets in the OS keychain, opening links, and `minAppVersion` in manifests.
+- Community plugins can share one repository, each found by its release tag prefix.
+- The [Jira plugin](https://github.com/cucsijuan/flint-official-plugins/tree/main/jira): JQL tables, your issues in the sidebar, edits pushed on demand (the server wins on conflicts), creating issues, comments and worklogs.
+- A configurable readable line width and a command to toggle it; base tables fill the available width.
+
 ### M17: Export and history
 
 Exporting notes to PDF and HTML, and file recovery with earlier versions of each note.
@@ -143,6 +150,5 @@ Features that are not scheduled in a milestone yet.
 - **Editor:** formatting hotkeys (bold, italic…) inside table cells, “+” buttons on a table's edges, choosing spell-check languages on Windows and macOS (their webviews offer no API for it).
 - **Distribution:** Windows code signing.
 - **Testing:** run the end-to-end tests on Windows too (`msedgedriver` can't attach to WebView2 in CI yet).
-- **Integrations (after M16):** HTTP requests and secret storage (OS keychain) in the plugin API, then a Jira plugin (Server/Data Center and Cloud) with issue tables, creation and status tracking.
 - **Later:** mobile (iOS and Android), sync between devices.
 - **Testing:** verify light/dark theme switching (graph colors in particular).

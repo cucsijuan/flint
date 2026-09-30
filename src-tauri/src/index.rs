@@ -3,6 +3,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use serde::Serialize;
 
+use crate::canvas;
 use crate::error::Result;
 use crate::markdown::{Heading, WikiLink, frontmatter_json, summarize};
 use crate::mentions;
@@ -116,6 +117,8 @@ pub struct TagCount {
 pub struct Index {
     notes: BTreeMap<String, IndexedNote>,
     attachments: BTreeSet<String>,
+    /// Each canvas's file cards, as vault paths.
+    canvases: BTreeMap<String, Vec<String>>,
 }
 
 impl Index {
@@ -129,6 +132,7 @@ impl Index {
         self.notes.retain(|note, _| !is_within(note, path));
         self.attachments
             .retain(|attachment| !is_within(attachment, path));
+        self.canvases.retain(|canvas, _| !is_within(canvas, path));
         for entry in vault.entries_under(path)? {
             match entry.kind {
                 EntryKind::File => {
@@ -136,6 +140,11 @@ impl Index {
                     self.insert(entry.path, &text);
                 }
                 EntryKind::Attachment => {
+                    if is_canvas(&entry.path) {
+                        let text = vault.read(&entry.path)?;
+                        self.canvases
+                            .insert(entry.path.clone(), canvas::file_references(&text));
+                    }
                     self.attachments.insert(entry.path);
                 }
                 EntryKind::Folder => {}
@@ -344,7 +353,12 @@ impl Index {
                     continue;
                 }
                 let target = match self.resolve(source, &link.link.target) {
-                    Some(target) if self.attachments.contains(&target) => continue,
+                    Some(target)
+                        if self.attachments.contains(&target)
+                            && !self.canvases.contains_key(&target) =>
+                    {
+                        continue;
+                    }
                     Some(target) => target,
                     None => {
                         let id = format!("?{}", note_key(link.link.target.trim()));
@@ -366,6 +380,22 @@ impl Index {
                     kind: NodeKind::Tag,
                 });
                 connect(source, id);
+            }
+        }
+
+        for (source, files) in &self.canvases {
+            let label = source.rsplit('/').next().unwrap_or(source);
+            let label = label.strip_suffix(".canvas").unwrap_or(label);
+            nodes.insert(
+                source.clone(),
+                GraphNode {
+                    id: source.clone(),
+                    label: label.to_owned(),
+                    kind: NodeKind::Note,
+                },
+            );
+            for file in files.iter().filter(|file| self.notes.contains_key(*file)) {
+                connect(source, file.clone());
             }
         }
 
@@ -438,7 +468,22 @@ impl Index {
                 line: link.line,
                 context: link.context.clone(),
             })
+            .chain(
+                self.canvases_using(|file| file == path)
+                    .map(|source| Backlink {
+                        source: source.to_owned(),
+                        line: 0,
+                        context: String::new(),
+                    }),
+            )
             .collect()
+    }
+
+    fn canvases_using(&self, matches: impl Fn(&str) -> bool) -> impl Iterator<Item = &str> {
+        self.canvases
+            .iter()
+            .filter(move |(_, files)| files.iter().any(|file| matches(file)))
+            .map(|(canvas, _)| canvas.as_str())
     }
 
     /// Every note with its resolved links, backlinks, embeds and typed frontmatter.
@@ -571,7 +616,12 @@ impl Index {
     }
 
     pub fn incoming_link_count(&self, path: &str) -> usize {
-        self.incoming(|target| is_within(target, path)).len()
+        let canvas_links: usize = self
+            .canvases
+            .values()
+            .map(|files| files.iter().filter(|file| is_within(file, path)).count())
+            .sum();
+        self.incoming(|target| is_within(target, path)).len() + canvas_links
     }
 
     /// Renames `from` to `to`, rewriting links that point into it when `update_incoming` is set.
@@ -624,8 +674,19 @@ impl Index {
             }
         }
 
+        let canvas_sources: Vec<String> = if update_incoming {
+            self.canvases_using(|file| moves.contains_key(file))
+                .map(str::to_owned)
+                .collect()
+        } else {
+            Vec::new()
+        };
+
         vault.rename(from, to)?;
         for (old, new) in &moves {
+            if let Some(files) = self.canvases.remove(old) {
+                self.canvases.insert(new.clone(), files);
+            }
             if let Some(note) = self.notes.remove(old) {
                 self.notes.insert(new.clone(), note);
             }
@@ -650,6 +711,15 @@ impl Index {
             }
             vault.write(&source, &text)?;
             self.insert(source, &text);
+        }
+        for source in canvas_sources {
+            let source = moves.get(&source).cloned().unwrap_or(source);
+            let text = vault.read(&source)?;
+            if let Some((text, changed)) = canvas::rewrite_files(&text, &moves) {
+                vault.write(&source, &text)?;
+                self.canvases.insert(source, canvas::file_references(&text));
+                updated += changed;
+            }
         }
         Ok(updated)
     }
@@ -695,6 +765,11 @@ impl Index {
         }
         found
     }
+}
+
+fn is_canvas(path: &str) -> bool {
+    path.rsplit_once('.')
+        .is_some_and(|(_, extension)| extension.eq_ignore_ascii_case("canvas"))
 }
 
 fn strip_note_extension(path: &str) -> &str {
@@ -1051,5 +1126,42 @@ mod tests {
         );
         assert_eq!(vault.read("renamed/Sibling.md").unwrap(), "[[New]]");
         assert_eq!(index.backlinks("renamed/New.md").len(), 3);
+    }
+
+    #[test]
+    fn canvases_link_to_their_file_cards() {
+        let dir = TempDir::new().unwrap();
+        let vault = Vault::open(dir.path()).unwrap();
+        vault.write("Note.md", "[[Board.canvas]]").unwrap();
+        vault
+            .write(
+                "Board.canvas",
+                r#"{"nodes":[{"id":"a","type":"file","file":"Note.md","x":0,"y":0,"width":1,"height":1}],"edges":[]}"#,
+            )
+            .unwrap();
+        let mut index = Index::build(&vault).unwrap();
+
+        assert_eq!(index.backlinks("Note.md")[0].source, "Board.canvas");
+        assert_eq!(index.incoming_link_count("Note.md"), 1);
+        let graph = index.graph();
+        assert!(
+            graph
+                .nodes
+                .iter()
+                .any(|node| node.id == "Board.canvas" && node.label == "Board")
+        );
+        assert_eq!(graph.links.len(), 2);
+
+        let updated = index
+            .update_links_for_rename(&vault, "Note.md", "Renamed.md", true)
+            .unwrap();
+        assert_eq!(updated, 1);
+        assert!(
+            vault
+                .read("Board.canvas")
+                .unwrap()
+                .contains("\"file\": \"Renamed.md\"")
+        );
+        assert_eq!(index.backlinks("Renamed.md")[0].source, "Board.canvas");
     }
 }

@@ -2,6 +2,7 @@ import {
   basename,
   extensionOf,
   isBase,
+  isCanvas,
   isExternalUrl,
   isImage,
   linkTargetOfUrl,
@@ -13,6 +14,7 @@ import { renderMermaid } from './diagrams'
 import { codeLanguage, highlightBlock } from './highlight'
 import { renderMath } from './math'
 import { mountBase } from '../bases/mount.svelte'
+import { mountCanvas } from '../canvas/mount.svelte'
 import { renderMarkdown } from './markdown'
 import { processors } from './processors.svelte'
 import { noteContent, replaceFencedContent, replaceLines, toggleTask } from './source'
@@ -100,6 +102,24 @@ async function embedBase(element: HTMLElement, path: string, context: HydrateCon
     context.source,
     `${context.source}:${path}`,
   )
+}
+
+/** `![[name.canvas]]`: the canvas itself, or only a link inside embeds and canvas cards. */
+function embedCanvas(element: HTMLElement, path: string, context: HydrateContext) {
+  if (context.depth) {
+    const link = Object.assign(document.createElement('a'), {
+      className: 'internal-link',
+      href: '#',
+      textContent: basename(path),
+    })
+    link.dataset.link = element.dataset.embed ?? ''
+    element.replaceChildren(link)
+    return
+  }
+  element.replaceChildren()
+  element.classList.add('canvas-embed')
+  element.dataset.interactive = ''
+  mountCanvas(element, path)
 }
 
 function markdownContext(context: HydrateContext): MarkdownContext {
@@ -283,6 +303,8 @@ export async function hydrate(root: HTMLElement, context: HydrateContext) {
         await embedNote(embed, path, subpath, context)
       } else if (isBase(path)) {
         await embedBase(embed, path, context)
+      } else if (isCanvas(path)) {
+        embedCanvas(embed, path, context)
       } else {
         embed.replaceChildren(mediaElement(path, context.assetUrl(path), embed))
       }

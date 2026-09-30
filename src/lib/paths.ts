@@ -25,6 +25,10 @@ export const BASE_EXTENSION = 'base'
 
 export const isBase = (path: string) => extensionOf(path) === BASE_EXTENSION
 
+export const CANVAS_EXTENSION = 'canvas'
+
+export const isCanvas = (path: string) => extensionOf(path) === CANVAS_EXTENSION
+
 const EXTERNAL_URL = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i
 
 export const isExternalUrl = (url: string) => EXTERNAL_URL.test(url)

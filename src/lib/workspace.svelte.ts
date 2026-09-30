@@ -41,7 +41,9 @@ import {
   basename,
   extensionOf,
   BASE_EXTENSION,
+  CANVAS_EXTENSION,
   isBase,
+  isCanvas,
   isImage,
   isWithin,
   join,
@@ -67,6 +69,7 @@ import * as vault from './vault'
 export type ReplaceScope = 'note' | 'folder' | 'vault'
 const BLOCK_SEARCH_NOTES = 20
 const NEW_BASE = 'views:\n  - type: table\n    name: Table\n'
+const NEW_CANVAS = '{\n\t"nodes": [],\n\t"edges": []\n}'
 const BLOCK_SEARCH_RESULTS = 50
 
 const SEARCH_DELAY_MS = 200
@@ -263,6 +266,10 @@ class Workspace {
   }
 
   openNote(path: string, { newTab = false }: OpenOptions = {}) {
+    if (!path.toLowerCase().endsWith(NOTE_EXTENSION)) {
+      void this.openFile(path, { newTab })
+      return
+    }
     const view: layouts.TabView = { kind: 'note', path }
     this.updateLayout((layout) =>
       newTab ? layouts.addTab(layout, view) : layouts.navigate(layout, view),
@@ -270,7 +277,7 @@ class Workspace {
   }
 
   async openFile(path: string, { newTab = false }: OpenOptions = {}) {
-    if (!isImage(path) && !isBase(path)) {
+    if (!isImage(path) && !isBase(path) && !isCanvas(path)) {
       await this.#run(() => vault.openExternally(path))
       return
     }
@@ -589,6 +596,16 @@ class Workspace {
     })
   }
 
+  /** Writes `contents` to a new note named after `title` in `folder`, and returns its path. */
+  async createNoteWith(folder: string, title: string, contents: string) {
+    const name = title.replace(/[\\/:*?"<>|#^[\]]/g, '').trim() || 'Untitled'
+    const path = uniqueName(this.#takenPaths(), folder, name, NOTE_EXTENSION)
+    await vault.createNote(path)
+    await vault.writeNote(path, contents)
+    await this.#refresh()
+    return path
+  }
+
   /** Turns an unlinked mention into a link to the note it names. */
   linkMention(mention: vault.Mention) {
     const target = this.linkTargets.find(({ path, alias }) => path === mention.target && !alias)
@@ -642,11 +659,19 @@ class Workspace {
   }
 
   /** Creates a base with one table view and opens it. */
-  async createBase(folder = '') {
-    const path = uniqueName(this.#takenPaths(), folder, 'Untitled', `.${BASE_EXTENSION}`)
+  createBase(folder = '') {
+    return this.#createFile(folder, BASE_EXTENSION, NEW_BASE)
+  }
+
+  createCanvas(folder = '') {
+    return this.#createFile(folder, CANVAS_EXTENSION, NEW_CANVAS)
+  }
+
+  async #createFile(folder: string, extension: string, contents: string) {
+    const path = uniqueName(this.#takenPaths(), folder, 'Untitled', `.${extension}`)
     await this.#run(async () => {
       await vault.createNote(path)
-      await vault.writeNote(path, NEW_BASE)
+      await vault.writeNote(path, contents)
       await this.#refresh()
       await this.openFile(path)
       this.leftTab = 'files'

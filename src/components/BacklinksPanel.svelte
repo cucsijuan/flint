@@ -45,7 +45,7 @@
             {noteTitle(source)}
           </button>
           {#each links as link (link.line)}
-            <p class="context">{link.context}</p>
+            {#if link.context}<p class="context">{link.context}</p>{/if}
           {/each}
         </li>
       {/each}

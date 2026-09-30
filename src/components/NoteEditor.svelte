@@ -1,7 +1,6 @@
 <script lang="ts">
   import { EditorView } from '@codemirror/view'
   import { onMount } from 'svelte'
-  import { commands } from '../lib/commands.svelte'
   import { documents } from '../lib/documents'
   import { activeView, setActiveView } from '../lib/editor/active'
   import {
@@ -16,10 +15,10 @@
   } from '../lib/editor/editor'
   import { restoreFolds } from '../lib/editor/folding'
   import { refreshLinks } from '../lib/editor/links'
+  import { editorOptions } from '../lib/editor/options'
   import type { Tab } from '../lib/layout'
   import { pluginHost } from '../lib/plugins/host.svelte'
   import { processors } from '../lib/render/processors.svelte'
-  import * as vault from '../lib/vault'
   import { workspace } from '../lib/workspace.svelte'
   import NoteHeader from './NoteHeader.svelte'
 
@@ -37,40 +36,11 @@
         if (!isMounted) return
         editor = new EditorView({
           parent: container,
-          state: createEditorState({
-            doc,
-            mode: workspace.mode,
-            vimMode: workspace.settings.value.vimMode,
-            propertiesDisplay: workspace.propertiesDisplay,
-            onChange: (changes, contents) =>
-              editor && documents.edit(path, editor, changes, contents),
-            onKeydown: (event) => commands.handleKeydown(event),
-            resolveLinks: (targets) => workspace.resolveLinks(targets, path),
-            navigation: {
-              openLink: (destination, options) =>
-                void workspace.openLink(destination, path, options),
-              openTag: (tag) => workspace.openSearch(`tag:#${tag}`),
-              openUrl: (url) => workspace.openUrl(url),
-            },
-            completion: {
-              targets: () => workspace.linkTargets,
-              headings: (target) => workspace.headingsFor(target, path),
-              blocks: (target) => workspace.blocksFor(target, path),
-              searchBlocks: (query) => workspace.searchBlocks(query),
-              addBlockId: (note, block) => workspace.addBlockId(note, block),
-              tags: () => workspace.tags,
-            },
-            plugins: pluginHost.editorExtensions,
-            preview: {
-              source: path,
-              resolve: (targets, source) => workspace.resolveLinks(targets, source),
-              assetUrl: (asset) => workspace.assetUrl(asset),
-              readNote: vault.readNote,
-              editNote: (note, edit) => documents.update(note, edit),
-            },
-            saveAttachment: (source) => workspace.saveAttachment(source, path),
-            onFoldsChange: (folds) => workspace.setFolds(path, folds),
-          }),
+          state: createEditorState(
+            editorOptions(path, doc, (changes, contents) => {
+              if (editor) documents.edit(path, editor, changes, contents)
+            }),
+          ),
         })
         restoreFolds(editor, workspace.foldsFor(path))
         documents.attach(path, editor)

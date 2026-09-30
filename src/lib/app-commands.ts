@@ -207,6 +207,12 @@ export function registerAppCommands() {
       run: () => workspace.createBase(workspace.notePath ? parentOf(workspace.notePath) : ''),
     },
     {
+      id: 'new-canvas',
+      name: 'Create new canvas',
+      isAvailable: hasVault,
+      run: () => workspace.createCanvas(workspace.notePath ? parentOf(workspace.notePath) : ''),
+    },
+    {
       id: 'open-daily-note',
       name: "Open today's daily note",
       isAvailable: hasVault,

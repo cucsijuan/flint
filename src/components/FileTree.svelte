@@ -4,13 +4,12 @@
     draggable,
     dropTargetForElements,
   } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
-  import { ChevronRight, File, FileText, Image, Table } from '@lucide/svelte'
+  import { ChevronRight, File, FileText, Image, LayoutDashboard, Table } from '@lucide/svelte'
   import { ContextMenu } from 'bits-ui'
-  import { isBase, isImage, isWithin, noteTitle, parentOf } from '../lib/paths'
+  import { isEntryDrag } from '../lib/entry-drag'
+  import { isBase, isCanvas, isImage, isWithin, noteTitle, parentOf } from '../lib/paths'
   import type { TreeNode } from '../lib/tree'
   import { workspace } from '../lib/workspace.svelte'
-
-  type EntryDrag = { type: 'entry'; path: string }
 
   const REVEAL_MS = 1200
 
@@ -43,11 +42,10 @@
 
   const displayName = (node: TreeNode) => {
     if (node.kind === 'file') return noteTitle(node.path)
-    return isBase(node.path) ? node.name.slice(0, -'.base'.length) : node.name
+    return isBase(node.path) || isCanvas(node.path)
+      ? node.name.slice(0, node.name.lastIndexOf('.'))
+      : node.name
   }
-
-  const isEntryDrag = (data: Record<string | symbol, unknown>): data is EntryDrag =>
-    data.type === 'entry'
 
   const canMove = (path: string, folder: string) =>
     folder !== parentOf(path) && !isWithin(folder, path)
@@ -135,6 +133,8 @@
             <FileText size={14} />
           {:else if isBase(node.path)}
             <Table size={14} />
+          {:else if isCanvas(node.path)}
+            <LayoutDashboard size={14} />
           {:else if isImage(node.path)}
             <Image size={14} />
           {:else}
@@ -170,6 +170,12 @@
           onSelect={() => expandThen(targetFolder, () => workspace.createBase(targetFolder))}
         >
           New base
+        </ContextMenu.Item>
+        <ContextMenu.Item
+          class="menu-item"
+          onSelect={() => expandThen(targetFolder, () => workspace.createCanvas(targetFolder))}
+        >
+          New canvas
         </ContextMenu.Item>
         <ContextMenu.Item
           class="menu-item"

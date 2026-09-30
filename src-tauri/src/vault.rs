@@ -9,9 +9,9 @@ use tempfile::NamedTempFile;
 use crate::error::{Error, Result};
 
 const NOTE_EXTENSION: &str = "md";
-const ATTACHMENT_EXTENSIONS: [&str; 17] = [
+const ATTACHMENT_EXTENSIONS: [&str; 18] = [
     "png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "avif", "pdf", "mp3", "wav", "ogg", "m4a",
-    "mp4", "webm", "mov", "base",
+    "mp4", "webm", "mov", "base", "canvas",
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

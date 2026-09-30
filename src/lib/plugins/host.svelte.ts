@@ -240,6 +240,7 @@ class PluginHost {
       },
       ui: {
         notice: (message) => workspace.notify(message),
+        openUrl: (url) => workspace.openUrl(url),
         registerSidebarTab: (tab) => {
           const key = `${manifest.id}:${tab.id}`
           this.sidebarTabs = [...this.sidebarTabs, { ...tab, key }]

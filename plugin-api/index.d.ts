@@ -151,6 +151,8 @@ export interface FlintApi {
 
   ui: {
     notice(message: string): void
+    /** Opens a web or mail link in the system's default app. */
+    openUrl(url: string): void
     registerSidebarTab(tab: SidebarTab): Disposer
     /** Adds a section named after the plugin to Settings. */
     registerSettingsTab(tab: SettingsTab): Disposer

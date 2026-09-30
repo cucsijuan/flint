@@ -22,7 +22,7 @@ pub struct PluginManifest {
     #[serde(default)]
     pub license: String,
     /// The oldest Flint version the plugin works with.
-    #[serde(default, rename = "minAppVersion", skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub min_app_version: Option<String>,
 }
 

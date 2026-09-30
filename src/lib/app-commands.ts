@@ -363,6 +363,13 @@ export function registerAppCommands() {
       run: () => workspace.showRightTab('backlinks'),
     },
     {
+      id: 'toggle-readable-line-length',
+      name: 'Toggle readable line length',
+      isAvailable: hasVault,
+      run: () =>
+        workspace.setSettings({ readableLineLength: !workspace.settings.value.readableLineLength }),
+    },
+    {
       id: 'show-outgoing-links',
       name: 'Show outgoing links',
       isAvailable: hasVault,

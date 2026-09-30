@@ -13,6 +13,8 @@ export interface VaultSettings {
   attachmentFolder: AttachmentFolder
   propertiesDisplay: PropertiesDisplay
   readableLineLength: boolean
+  /** In pixels, while `readableLineLength` is on. */
+  readableLineWidth: number
   pluginHotReload: boolean
   vimMode: boolean
   /** Hunspell dictionary names like `en_US`; empty checks the system's languages. */
@@ -26,6 +28,7 @@ export const DEFAULT_VAULT_SETTINGS: VaultSettings = {
   attachmentFolder: 'root',
   propertiesDisplay: 'visible',
   readableLineLength: true,
+  readableLineWidth: 760,
   pluginHotReload: false,
   vimMode: false,
   spellcheckLanguages: [],

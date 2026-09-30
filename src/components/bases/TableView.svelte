@@ -150,7 +150,7 @@
 </script>
 
 <div class="table-scroll">
-  <table style:width="{columns.reduce((sum, id) => sum + widthOf(id), 0)}px">
+  <table style:width="{columns.reduce((sum, id) => sum + widthOf(id), 0)}px" style:min-width="100%">
     <colgroup>
       {#each columns as id (id)}<col style:width="{widthOf(id)}px" />{/each}
     </colgroup>

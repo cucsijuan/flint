@@ -20,11 +20,10 @@ export const DEFAULT_APPEARANCE: AppearanceSettings = {
   enabledCssSnippets: [],
 }
 
-const READABLE_LINE_WIDTH = '760px'
-
 export function applyAppearance(
   settings: AppearanceSettings,
   readableLineLength: boolean,
+  readableLineWidth: number,
   root = document.documentElement,
 ) {
   const set = (name: string, value: string) =>
@@ -34,7 +33,7 @@ export function applyAppearance(
   set('--font-text', settings.textFontFamily && `${settings.textFontFamily}, system-ui, sans-serif`)
   set('--font-mono', settings.monospaceFontFamily && `${settings.monospaceFontFamily}, monospace`)
   set('--font-size', `${settings.baseFontSize}px`)
-  set('--line-width', readableLineLength ? READABLE_LINE_WIDTH : '100%')
+  set('--line-width', readableLineLength ? `${readableLineWidth}px` : '100%')
 }
 
 /** Replaces the page's snippet stylesheets with `snippets` (name → CSS). */

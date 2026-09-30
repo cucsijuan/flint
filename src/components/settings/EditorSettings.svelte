@@ -4,6 +4,9 @@
   import Setting from './Setting.svelte'
   import SpellingLanguages from './SpellingLanguages.svelte'
 
+  const MIN_LINE_WIDTH = 400
+  const MAX_LINE_WIDTH = 3000
+
   const settings = $derived(workspace.settings.value)
 </script>
 
@@ -28,6 +31,25 @@
     type="checkbox"
     checked={settings.readableLineLength}
     onchange={(event) => workspace.setSettings({ readableLineLength: event.currentTarget.checked })}
+  />
+</Setting>
+<Setting
+  name="Readable line width"
+  description="How wide notes, tables and bases get while readable line length is on, in pixels."
+>
+  <input
+    type="number"
+    min={MIN_LINE_WIDTH}
+    max={MAX_LINE_WIDTH}
+    step="20"
+    disabled={!settings.readableLineLength}
+    value={settings.readableLineWidth}
+    onchange={(event) => {
+      const width = Math.round(Number(event.currentTarget.value))
+      const readableLineWidth = Math.min(MAX_LINE_WIDTH, Math.max(MIN_LINE_WIDTH, width || 760))
+      event.currentTarget.value = String(readableLineWidth)
+      workspace.setSettings({ readableLineWidth })
+    }}
   />
 </Setting>
 <Setting name="Vim key bindings" description="Edit notes with Vim's modes and commands.">

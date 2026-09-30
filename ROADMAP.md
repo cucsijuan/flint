@@ -117,9 +117,13 @@ Builds, installers and automatic updates for macOS (Intel and Apple Silicon), wi
 - Unlinked mentions in the backlinks panel with a Link button, and an outgoing links panel with the note's links and unlinked mentions.
 - `[[^^` finds blocks across the vault, and linking a block without an id gives it one. Jumping to a heading, block or line highlights it briefly.
 
-### M16: Bases
+### M16: Bases ✅
 
-Table and card views of notes filtered and sorted by their properties, with property types shared across the vault.
+- Obsidian-compatible `.base` files, and bases embedded in notes with ` ```base ` code blocks.
+- Table, cards, list and map views, with sorting, grouping, limits, column summaries, and columns you can reorder, resize and hide.
+- Filters for a view or the whole base, with nested groups built visually or written as expressions; formulas with Obsidian's expression language and functions.
+- Editing properties right in the table, vault-wide property types (`types.json`), and a New button that creates a note matching the filters.
+- Plugins can show their own rows with the same views through `renderDataView`.
 
 ### M17: Export and history
 

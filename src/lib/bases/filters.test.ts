@@ -28,8 +28,9 @@ describe('filter builder', () => {
     const node = { and: ['a == 1', { or: ['b == 2', 'c == 3'] }] }
     expect(fromGroup(toGroup(node))).toEqual(node)
     expect(fromGroup(toGroup('a == 1'))).toEqual({ and: ['a == 1'] })
-    expect(
-      fromGroup({ kind: 'not', children: ['', { kind: 'and', children: [] }] }),
-    ).toBeUndefined()
+    expect(fromGroup({ kind: 'not', children: [''] })).toBeUndefined()
+    expect(fromGroup({ kind: 'and', children: [{ kind: 'or', children: [] }] })).toEqual({
+      and: [{ or: [] }],
+    })
   })
 })

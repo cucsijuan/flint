@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DropdownMenu } from 'bits-ui'
+  import { ContextMenu } from 'bits-ui'
   import {
     type BaseConfig,
     type Context,
@@ -36,7 +36,10 @@
     edit: (change: (view: ViewConfig) => void) => void
   } = $props()
 
-  let dragged = $state<number | null>(null)
+  const DRAG_THRESHOLD = 4
+
+  const headers: HTMLTableCellElement[] = $state([])
+  let moving = $state<{ from: number; over: number } | null>(null)
   let resizing = $state<{ id: string; width: number } | null>(null)
 
   const widthOf = (id: string) =>
@@ -51,12 +54,30 @@
     edit((view) => (view.sort = [{ property: id, direction }]))
   }
 
-  function drop(target: number) {
-    if (dragged === null || dragged === target) return
-    const order = [...columns]
-    order.splice(target, 0, ...order.splice(dragged, 1))
-    edit((view) => (view.order = order))
-    dragged = null
+  /** Drags a column header to a new place; a press without movement is left alone. */
+  function startMove(event: PointerEvent, from: number) {
+    if (event.button !== 0) return
+    const startX = event.clientX
+    const move = (moved: PointerEvent) => {
+      if (!moving && Math.abs(moved.clientX - startX) < DRAG_THRESHOLD) return
+      const over = headers.findIndex((header) => {
+        const { left, right } = header.getBoundingClientRect()
+        return moved.clientX >= left && moved.clientX < right
+      })
+      moving = { from, over: over === -1 ? (moving?.over ?? from) : over }
+    }
+    const up = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      const done = moving
+      moving = null
+      if (!done || done.over === done.from) return
+      const order = [...columns]
+      order.splice(done.over, 0, ...order.splice(done.from, 1))
+      edit((view) => (view.order = order))
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
   }
 
   function startResize(event: PointerEvent, id: string) {
@@ -101,43 +122,42 @@
       <tr>
         {#each columns as id, index (id)}
           <th
-            draggable="true"
-            class:drop-target={dragged !== null && dragged !== index}
-            ondragstart={() => (dragged = index)}
-            ondragend={() => (dragged = null)}
-            ondragover={(event) => event.preventDefault()}
-            ondrop={() => drop(index)}
+            bind:this={headers[index]}
+            class:dragging={moving?.from === index}
+            class:drop-before={moving && moving.over === index && moving.over < moving.from}
+            class:drop-after={moving && moving.over === index && moving.over > moving.from}
+            onpointerdown={(event) => startMove(event, index)}
           >
-            <DropdownMenu.Root>
-              <DropdownMenu.Trigger class="column-name"
-                >{propertyName(id, config)}</DropdownMenu.Trigger
+            <ContextMenu.Root>
+              <ContextMenu.Trigger class="column-name"
+                >{propertyName(id, config)}</ContextMenu.Trigger
               >
-              <DropdownMenu.Portal>
-                <DropdownMenu.Content class="menu" align="start">
-                  <DropdownMenu.Item class="menu-item" onSelect={() => sortBy(id, 'ASC')}>
+              <ContextMenu.Portal>
+                <ContextMenu.Content class="menu">
+                  <ContextMenu.Item class="menu-item" onSelect={() => sortBy(id, 'ASC')}>
                     Sort ascending
-                  </DropdownMenu.Item>
-                  <DropdownMenu.Item class="menu-item" onSelect={() => sortBy(id, 'DESC')}>
+                  </ContextMenu.Item>
+                  <ContextMenu.Item class="menu-item" onSelect={() => sortBy(id, 'DESC')}>
                     Sort descending
-                  </DropdownMenu.Item>
-                  <DropdownMenu.Item
+                  </ContextMenu.Item>
+                  <ContextMenu.Item
                     class="menu-item"
                     onSelect={() =>
                       edit((view) => (view.groupBy = { property: id, direction: 'ASC' }))}
                   >
                     Group by this property
-                  </DropdownMenu.Item>
-                  <DropdownMenu.Separator class="menu-separator" />
-                  <DropdownMenu.Item
+                  </ContextMenu.Item>
+                  <ContextMenu.Separator class="menu-separator" />
+                  <ContextMenu.Item
                     class="menu-item"
                     onSelect={() =>
                       edit((view) => (view.order = columns.filter((other) => other !== id)))}
                   >
                     Hide column
-                  </DropdownMenu.Item>
-                </DropdownMenu.Content>
-              </DropdownMenu.Portal>
-            </DropdownMenu.Root>
+                  </ContextMenu.Item>
+                </ContextMenu.Content>
+              </ContextMenu.Portal>
+            </ContextMenu.Root>
             <span
               class="resizer"
               role="separator"
@@ -227,10 +247,19 @@
     background: var(--background-secondary);
     font-weight: 600;
     cursor: grab;
+    user-select: none;
   }
 
-  th.drop-target {
-    box-shadow: inset 2px 0 0 var(--accent);
+  th.dragging {
+    opacity: 0.5;
+  }
+
+  th.drop-before {
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+
+  th.drop-after {
+    box-shadow: inset -3px 0 0 var(--accent);
   }
 
   :global(.column-name) {
@@ -244,7 +273,7 @@
     text-align: left;
     text-overflow: ellipsis;
     white-space: nowrap;
-    cursor: pointer;
+    cursor: inherit;
   }
 
   .resizer {

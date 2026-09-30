@@ -144,11 +144,14 @@ export function toGroup(node: FilterNode | undefined): FilterGroup {
   }
 }
 
-export function fromGroup(group: FilterGroup): FilterNode | undefined {
+/** The filter a group stands for; empty groups stay while they're being filled in. */
+export function fromGroup(group: FilterGroup, isRoot = true): FilterNode | undefined {
   const children = group.children
-    .map((child) => (typeof child === 'string' ? child.trim() || undefined : fromGroup(child)))
+    .map((child) =>
+      typeof child === 'string' ? child.trim() || undefined : fromGroup(child, false),
+    )
     .filter((child): child is FilterNode => child !== undefined)
-  if (!children.length) return undefined
+  if (!children.length && isRoot) return undefined
   if (group.kind === 'and') return { and: children }
   if (group.kind === 'or') return { or: children }
   return { not: children }

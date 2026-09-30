@@ -163,8 +163,17 @@
     font-size: 12px;
   }
 
-  input {
-    flex: 1;
+  .statement select {
+    flex: 1 1 0;
+  }
+
+  .statement input {
+    flex: 2 1 0;
+  }
+
+  .statement :global(.icon),
+  .group-head :global(.icon) {
+    flex-shrink: 0;
   }
 
   .raw {

@@ -141,7 +141,10 @@ export function matchesFilter(filter: FilterNode | undefined, row: Row, context:
     return !(result instanceof ExpressionError) && isTruthy(result)
   }
   if ('and' in filter) return (filter.and ?? []).every((part) => matchesFilter(part, row, context))
-  if ('or' in filter) return (filter.or ?? []).some((part) => matchesFilter(part, row, context))
+  if ('or' in filter) {
+    const parts = filter.or ?? []
+    return !parts.length || parts.some((part) => matchesFilter(part, row, context))
+  }
   if ('not' in filter) return !(filter.not ?? []).some((part) => matchesFilter(part, row, context))
   return true
 }

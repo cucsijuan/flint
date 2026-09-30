@@ -398,21 +398,23 @@ export function compare(a: Value, b: Value): number {
   return String(left).localeCompare(String(right), undefined, { numeric: true })
 }
 
-export function equals(a: Value, b: Value): boolean {
-  if (isList(a) && isList(b))
-    return a.length === b.length && a.every((item, i) => equals(item, b[i]))
-  if (a instanceof Link || b instanceof Link || a instanceof FileValue || b instanceof FileValue) {
-    return linkKey(a) === linkKey(b)
+/** Finds a note by path or link target, so links and files compare by the note they mean. */
+type FindFile = (target: string) => FileInfo | null
+
+export function equals(a: Value, b: Value, findFile?: FindFile): boolean {
+  if (isList(a) && isList(b)) {
+    return a.length === b.length && a.every((item, i) => equals(item, b[i], findFile))
   }
-  const left = comparable(a)
-  const right = comparable(b)
-  return left === right
+  if (a instanceof Link || b instanceof Link || a instanceof FileValue || b instanceof FileValue) {
+    return linkKey(a, findFile) === linkKey(b, findFile)
+  }
+  return comparable(a) === comparable(b)
 }
 
-function linkKey(value: Value) {
+function linkKey(value: Value, findFile?: FindFile) {
   if (value instanceof FileValue) return value.file.path.toLowerCase()
-  if (value instanceof Link) return value.target.toLowerCase()
-  return display(value).toLowerCase()
+  const target = value instanceof Link ? value.target : display(value).replace(/^\[\[|\]\]$/g, '')
+  return (findFile?.(target)?.path ?? target).toLowerCase()
 }
 
 function toNumber(value: Value): number {
@@ -655,14 +657,14 @@ const NUMBER_METHODS: Record<string, (number: number, args: Value[]) => Value> =
 
 const LIST_METHODS: Record<string, Method> = {
   contains: (scope, target, args) =>
-    (target as Value[]).some((item) => equals(item, evaluate(args[0], scope))),
+    (target as Value[]).some((item) => equals(item, evaluate(args[0], scope), scope.findFile)),
   containsAll: (scope, target, args) =>
     evaluated(scope, args).every((wanted) =>
-      (target as Value[]).some((item) => equals(item, wanted)),
+      (target as Value[]).some((item) => equals(item, wanted, scope.findFile)),
     ),
   containsAny: (scope, target, args) =>
     evaluated(scope, args).some((wanted) =>
-      (target as Value[]).some((item) => equals(item, wanted)),
+      (target as Value[]).some((item) => equals(item, wanted, scope.findFile)),
     ),
   filter: (scope, target, [body]) =>
     (target as Value[]).filter((value, index) =>
@@ -686,9 +688,9 @@ const LIST_METHODS: Record<string, Method> = {
     return (target as Value[]).slice(toNumber(start), end === undefined ? undefined : toNumber(end))
   },
   sort: (_, target) => [...(target as Value[])].sort(compare),
-  unique: (_, target) =>
+  unique: (scope, target) =>
     (target as Value[]).filter(
-      (item, index, all) => all.findIndex((other) => equals(other, item)) === index,
+      (item, index, all) => all.findIndex((other) => equals(other, item, scope.findFile)) === index,
     ),
 }
 
@@ -881,9 +883,9 @@ export function evaluate(expr: Expr, scope: Scope): Value {
       const right = evaluate(expr.right, scope)
       switch (expr.op) {
         case '==':
-          return equals(left, right)
+          return equals(left, right, scope.findFile)
         case '!=':
-          return !equals(left, right)
+          return !equals(left, right, scope.findFile)
         case '<':
           return compare(left, right) < 0 && left !== null && right !== null
         case '>':

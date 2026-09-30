@@ -41,7 +41,10 @@
     }
   }
 
-  const displayName = (node: TreeNode) => (node.kind === 'file' ? noteTitle(node.path) : node.name)
+  const displayName = (node: TreeNode) => {
+    if (node.kind === 'file') return noteTitle(node.path)
+    return isBase(node.path) ? node.name.slice(0, -'.base'.length) : node.name
+  }
 
   const isEntryDrag = (data: Record<string | symbol, unknown>): data is EntryDrag =>
     data.type === 'entry'

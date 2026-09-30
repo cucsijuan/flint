@@ -135,7 +135,9 @@
 
   function setSummary(id: string, name: string) {
     edit((view) => {
-      const others = Object.entries(view.summaries ?? {}).filter(([column]) => column !== id)
+      const others = Object.entries(view.summaries ?? {}).filter(
+        ([column]) => propertyId(column) !== propertyId(id),
+      )
       view.summaries = Object.fromEntries(name ? [...others, [id, name]] : others)
     })
   }

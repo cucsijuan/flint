@@ -137,6 +137,25 @@ export function replaceLines(text: string, start: number, end: number, replaceme
   return lines.join('\n')
 }
 
+const FENCE_LINE = /^((?:[ \t]*>)*[ \t]*)(`{3,}|~{3,})/
+
+/** `text` with the inside of the fenced block on lines `[start, end)` replaced, keeping its
+ * fences and the `> ` or indentation that puts it in a quote or a list. */
+export function replaceFencedContent(text: string, start: number, end: number, content: string) {
+  const lines = text.split('\n')
+  const opening = FENCE_LINE.exec(lines[start] ?? '')
+  if (!opening) return null
+  const [, prefix, fence] = opening
+  const closing = FENCE_LINE.exec(lines[end - 1] ?? '')
+  const isClosed = end - 1 > start && closing?.[2].startsWith(fence[0]) === true
+  const inner = content
+    .trimEnd()
+    .split('\n')
+    .map((line) => (line ? prefix + line : prefix.trimEnd()))
+  lines.splice(start + 1, (isClosed ? end - 1 : end) - start - 1, ...inner)
+  return lines.join('\n')
+}
+
 export function toggleTask(text: string, line: number) {
   const lines = text.split('\n')
   const match = TASK_LINE.exec(lines[line] ?? '')

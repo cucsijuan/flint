@@ -14,11 +14,15 @@
     $props()
 
   const external = $derived(externalRow(row.file.path))
-  const key = $derived(
-    id.startsWith('note.') && (!external || external.handlers.edit)
-      ? id.slice('note.'.length)
-      : null,
-  )
+  const isScalar = (value: unknown) => value === null || typeof value !== 'object'
+  /** Nested values can't round-trip through a text field, so they stay read-only. */
+  const isEditable = (value: unknown) =>
+    isScalar(value) || (Array.isArray(value) && value.every(isScalar))
+  const key = $derived.by(() => {
+    if (!id.startsWith('note.') || (external && !external.handlers.edit)) return null
+    const name = id.slice('note.'.length)
+    return isEditable(row.file.properties[name]) ? name : null
+  })
 
   function write(property: string, value: unknown) {
     if (external) external.handlers.edit?.(external.id, property, value)
@@ -37,6 +41,7 @@
   )
   let isEditing = $state(false)
   let draft = $state('')
+  let initialDraft = ''
 
   function start() {
     if (!key || kind === 'checkbox') return
@@ -45,12 +50,14 @@
       : raw === undefined || raw === null
         ? ''
         : String(raw)
+    initialDraft = draft
     isEditing = true
   }
 
   function commit() {
     if (!isEditing || !key) return
     isEditing = false
+    if (draft === initialDraft) return
     const text = draft.trim()
     const next =
       kind === 'number'

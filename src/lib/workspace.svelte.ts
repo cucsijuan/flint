@@ -618,8 +618,11 @@ class Workspace {
     this.renaming = null
     const trimmed = newName.trim()
     const isNote = this.entries.find((entry) => entry.path === path)?.kind === 'file'
-    const name =
-      isNote && !trimmed.toLowerCase().endsWith(NOTE_EXTENSION) ? trimmed + NOTE_EXTENSION : trimmed
+    const extension = isNote ? NOTE_EXTENSION : `.${extensionOf(path)}`
+    const keepsExtension = isNote
+      ? trimmed.toLowerCase().endsWith(NOTE_EXTENSION)
+      : extensionOf(trimmed) !== '' || extension === '.'
+    const name = keepsExtension ? trimmed : trimmed + extension
     if (trimmed) await this.#move(path, join(parentOf(path), name))
   }
 

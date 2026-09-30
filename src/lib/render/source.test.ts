@@ -3,6 +3,7 @@ import {
   blockLines,
   noteBlocks,
   noteContent,
+  replaceFencedContent,
   replaceLines,
   toggleTask,
   withBlockId,
@@ -70,5 +71,16 @@ describe('note source', () => {
   it('replaces and removes lines', () => {
     expect(replaceLines('a\nb\nc', 1, 2, 'x\ny')).toBe('a\nx\ny\nc')
     expect(replaceLines('a\nb\nc', 0, 2, '')).toBe('c')
+  })
+
+  it('replaces fenced content inside quotes and lists, keeping the fences', () => {
+    const text = 'intro\n> ~~~~base\n> old: 1\n> ~~~~\n- item\n  ```base\n  a: 1\n  ```'
+    expect(replaceFencedContent(text, 1, 4, 'views:\n  - type: table\n')).toBe(
+      'intro\n> ~~~~base\n> views:\n>   - type: table\n> ~~~~\n- item\n  ```base\n  a: 1\n  ```',
+    )
+    expect(replaceFencedContent(text, 5, 8, 'b: 2')).toBe(
+      'intro\n> ~~~~base\n> old: 1\n> ~~~~\n- item\n  ```base\n  b: 2\n  ```',
+    )
+    expect(replaceFencedContent(text, 0, 1, 'x')).toBeNull()
   })
 })

@@ -24,13 +24,29 @@ class BaseData {
   async load(version: number) {
     if (version === this.#loadedVersion) return
     this.#loadedVersion = version
-    const files = (await vault.baseFiles()).map(fileInfo)
+    let found: vault.BaseFile[]
+    try {
+      found = await vault.baseFiles()
+    } catch (error) {
+      if (this.#loadedVersion === version) this.#loadedVersion = -1
+      throw error
+    }
+    // A newer load started meanwhile; its answer wins.
+    if (this.#loadedVersion !== version) return
+    const files = found.map(fileInfo)
     this.#byKey = new Map()
     const byLength = [...files].sort((a, b) => b.path.length - a.path.length)
     for (const file of byLength) {
       const withoutExtension = file.path.slice(0, -NOTE_EXTENSION.length).toLowerCase()
       for (const key of [file.basename.toLowerCase(), withoutExtension, file.path.toLowerCase()]) {
         this.#byKey.set(key, file)
+      }
+    }
+    for (const file of files) {
+      const aliases = [file.properties.aliases ?? file.properties.alias].flat()
+      for (const alias of aliases) {
+        const key = typeof alias === 'string' ? alias.trim().toLowerCase() : ''
+        if (key && !this.#byKey.has(key)) this.#byKey.set(key, file)
       }
     }
     this.files = files

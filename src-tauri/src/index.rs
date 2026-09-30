@@ -26,6 +26,8 @@ struct IndexedNote {
     tags: Vec<String>,
     aliases: Vec<String>,
     properties: Vec<(String, Vec<String>)>,
+    /// The frontmatter as typed JSON, parsed once per change for Bases.
+    frontmatter: serde_json::Map<String, serde_json::Value>,
 }
 
 /// A note as Bases sees it; the command fills in size and times from the file system.
@@ -168,6 +170,7 @@ impl Index {
                 tags: summary.tags,
                 aliases: summary.aliases,
                 properties: summary.properties,
+                frontmatter: frontmatter_json(text),
             },
         );
     }
@@ -469,7 +472,7 @@ impl Index {
                     links: links.into_iter().collect(),
                     backlinks: Vec::new(),
                     embeds: embeds.into_iter().collect(),
-                    properties: frontmatter_json(&note.text),
+                    properties: note.frontmatter.clone(),
                     size: note.text.len() as u64,
                     ctime: 0,
                     mtime: 0,

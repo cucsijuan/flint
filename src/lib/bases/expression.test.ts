@@ -119,6 +119,8 @@ describe('Bases expressions', () => {
     expect(value('file.hasProperty("status")')).toBe(true)
     expect(value('if(price > 10, "big", "small")')).toBe('big')
     expect(value('link("Tools").asFile().name')).toBe('Tools.md')
+    expect(value('link("Tools") == file("Tools.md")')).toBe(true)
+    expect(value('file.links.contains(link("Tools"))')).toBe(true)
   })
 
   it('reports broken expressions instead of throwing', () => {

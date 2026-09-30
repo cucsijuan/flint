@@ -63,12 +63,17 @@ function toRows(viewId: string, rows: DataRow[]): Row[] {
 export function renderDataView(target: HTMLElement, initial: DataViewOptions) {
   const viewId = crypto.randomUUID()
   let options = initial
-  const unregister = registerExternalView(viewId, {
-    open: (id) => options.onOpen?.(id),
-    edit: options.onEdit
-      ? (id, property, value) => options.onEdit?.(id, property, value)
-      : undefined,
-  })
+  let unregister = () => {}
+  const register = () => {
+    unregister()
+    unregister = registerExternalView(viewId, {
+      open: (id) => options.onOpen?.(id),
+      edit: options.onEdit
+        ? (id, property, value) => options.onEdit?.(id, property, value)
+        : undefined,
+    })
+  }
+  register()
   const props = $state({
     source: initial.config ?? initialConfig(initial),
     rows: toRows(viewId, initial.rows),
@@ -91,7 +96,10 @@ export function renderDataView(target: HTMLElement, initial: DataViewOptions) {
   return {
     update(changes: Partial<DataViewOptions>) {
       options = { ...options, ...changes }
-      if (changes.rows) props.rows = toRows(viewId, changes.rows)
+      if ('onEdit' in changes) register()
+      if ('onNew' in changes) props.onNew = options.onNew ? () => options.onNew?.() : undefined
+      if (changes.rows || 'onEdit' in changes)
+        props.rows = toRows(viewId, changes.rows ?? options.rows)
       if (changes.config !== undefined) props.source = changes.config
     },
     destroy,

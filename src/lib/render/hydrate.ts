@@ -1,6 +1,7 @@
 import {
   basename,
   extensionOf,
+  isBase,
   isExternalUrl,
   isImage,
   linkTargetOfUrl,
@@ -14,7 +15,7 @@ import { renderMath } from './math'
 import { mountBase } from '../bases/mount.svelte'
 import { renderMarkdown } from './markdown'
 import { processors } from './processors.svelte'
-import { noteContent, replaceLines, toggleTask } from './source'
+import { noteContent, replaceFencedContent, replaceLines, toggleTask } from './source'
 
 const MAX_EMBED_DEPTH = 3
 const AUDIO = new Set(['mp3', 'wav', 'ogg', 'm4a'])
@@ -86,6 +87,21 @@ async function embedNote(
   await hydrate(body, { ...context, source: path, depth: depth + 1 })
 }
 
+/** `![[name.base]]`: the base itself, saving its changes to the `.base` file. */
+async function embedBase(element: HTMLElement, path: string, context: HydrateContext) {
+  const source = await context.readNote(path)
+  element.replaceChildren()
+  element.classList.add('base-block')
+  element.dataset.interactive = ''
+  mountBase(
+    element,
+    source,
+    (next) => void context.editNote(path, () => next),
+    context.source,
+    `${context.source}:${path}`,
+  )
+}
+
 function markdownContext(context: HydrateContext): MarkdownContext {
   return {
     sourcePath: context.source,
@@ -136,7 +152,12 @@ async function renderDiagram(pre: HTMLElement, source: string) {
 }
 
 /** A ` ```base ` block: the base itself, whose edits rewrite the block. */
-function renderBase(pre: HTMLElement, code: HTMLElement, markdown: MarkdownContext) {
+function renderBase(
+  pre: HTMLElement,
+  code: HTMLElement,
+  markdown: MarkdownContext,
+  context: HydrateContext,
+) {
   const element = document.createElement('div')
   element.className = 'base-block'
   element.dataset.interactive = ''
@@ -148,10 +169,12 @@ function renderBase(pre: HTMLElement, code: HTMLElement, markdown: MarkdownConte
     (source) => {
       const section = markdown.sectionOf(element)
       if (!section) return
-      const block = `\`\`\`base\n${source.trimEnd()}\n\`\`\``
-      void markdown.replaceLines(section.lineStart, section.lineEnd, block)
+      void context.editNote(context.source, (text) =>
+        replaceFencedContent(text, section.lineStart, section.lineEnd, source),
+      )
     },
-    markdown.sourcePath,
+    context.source,
+    `${context.source}:${element.dataset.line ?? ''}`,
   )
 }
 
@@ -160,11 +183,11 @@ async function renderMathIn(element: HTMLElement) {
   element.replaceChildren(await renderMath(tex, element.classList.contains('math-block')))
 }
 
-async function renderCode(code: HTMLElement, markdown: MarkdownContext) {
+async function renderCode(code: HTMLElement, markdown: MarkdownContext, context: HydrateContext) {
   const pre = code.parentElement
   const language = codeLanguage(code)
   if (pre && language.toLowerCase() === 'mermaid') return renderDiagram(pre, code.textContent ?? '')
-  if (pre && language.toLowerCase() === 'base') return renderBase(pre, code, markdown)
+  if (pre && language.toLowerCase() === 'base') return renderBase(pre, code, markdown, context)
   const processor = processors.codeBlock(language)
   if (!pre) return
   if (!processor) {
@@ -245,7 +268,7 @@ export async function hydrate(root: HTMLElement, context: HydrateContext) {
     })
   }
   await Promise.all([
-    ...codeBlocks.map((code) => renderCode(code, markdown)),
+    ...codeBlocks.map((code) => renderCode(code, markdown, context)),
     ...formulas.map(renderMathIn),
   ])
   for (const processor of processors.post) await processor(root, markdown)
@@ -258,6 +281,8 @@ export async function hydrate(root: HTMLElement, context: HydrateContext) {
         embed.classList.add('missing')
       } else if (path.toLowerCase().endsWith(NOTE_EXTENSION)) {
         await embedNote(embed, path, subpath, context)
+      } else if (isBase(path)) {
+        await embedBase(embed, path, context)
       } else {
         embed.replaceChildren(mediaElement(path, context.assetUrl(path), embed))
       }

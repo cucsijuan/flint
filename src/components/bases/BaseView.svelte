@@ -1,6 +1,12 @@
+<script lang="ts" module>
+  /** The view picked in each base, so it survives the base being rendered again. */
+  const pickedViews: Record<string, number> = {}
+</script>
+
 <script lang="ts">
   import { ArrowUpDown, Columns3, Filter, Group, Plus, Settings2, Trash2 } from '@lucide/svelte'
   import { DropdownMenu, Popover } from 'bits-ui'
+  import { untrack } from 'svelte'
   import {
     type BaseConfig,
     type Context,
@@ -52,6 +58,7 @@
     currentPath = null,
     rows: externalRows,
     onNew,
+    viewKey,
   }: {
     source: string
     onchange: (source: string) => void
@@ -61,9 +68,16 @@
     rows?: Row[]
     /** Replaces creating a note, for plugin rows; without it they get no New button. */
     onNew?: () => void
+    /** Identifies the base, to remember which view was picked. */
+    viewKey?: string
   } = $props()
 
-  let viewIndex = $state(0)
+  let viewIndex = $state(untrack(() => (viewKey && pickedViews[viewKey]) || 0))
+
+  function pickView(index: number) {
+    viewIndex = index
+    if (viewKey) pickedViews[viewKey] = index
+  }
   let filterScope = $state<'view' | 'all'>('view')
   let newFormula = $state({ name: '', expression: '' })
 
@@ -79,7 +93,7 @@
   const view = $derived(config.views[index])
 
   $effect(() => {
-    void baseData.load(workspace.indexVersion)
+    baseData.load(workspace.indexVersion).catch((error: unknown) => workspace.notify(String(error)))
   })
 
   const types = $derived(workspace.typesConfig.value.types)
@@ -128,7 +142,7 @@
     edit((config) => {
       config.views.push({ type: 'table', name: `View ${config.views.length + 1}` })
     })
-    viewIndex = config.views.length
+    pickView(config.views.length)
   }
 
   function addFormula() {
@@ -154,7 +168,7 @@
       <DropdownMenu.Portal>
         <DropdownMenu.Content class="menu" align="start">
           {#each config.views as candidate, candidateIndex (candidateIndex)}
-            <DropdownMenu.Item class="menu-item" onSelect={() => (viewIndex = candidateIndex)}>
+            <DropdownMenu.Item class="menu-item" onSelect={() => pickView(candidateIndex)}>
               {candidate.name}
               <small>{candidate.type}</small>
             </DropdownMenu.Item>

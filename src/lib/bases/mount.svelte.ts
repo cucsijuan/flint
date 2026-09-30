@@ -8,7 +8,8 @@ export function mountBase(
   source: string,
   onchange: (source: string) => void,
   currentPath: string,
+  viewKey: string,
 ) {
-  const component = mount(BaseView, { target, props: { source, onchange, currentPath } })
+  const component = mount(BaseView, { target, props: { source, onchange, currentPath, viewKey } })
   whenRemoved(target, () => void unmount(component))
 }

@@ -3,6 +3,7 @@
   import 'leaflet/dist/leaflet.css'
   import { type Context, type QueryResult, valueOf, type ViewConfig } from '../../lib/bases/base'
   import { display, ExpressionError, isList, type Value } from '../../lib/bases/expression'
+  import { externalRow } from '../../lib/bases/external'
   import { workspace } from '../../lib/workspace.svelte'
 
   const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
@@ -58,7 +59,11 @@
     for (const { path, name, point } of markers) {
       const marker = L.circleMarker(point, { radius: 7, color, fillOpacity: 0.8 })
       marker.bindTooltip(name)
-      marker.on('click', () => workspace.openNote(path))
+      marker.on('click', () => {
+        const external = externalRow(path)
+        if (external) external.handlers.open?.(external.id)
+        else workspace.openNote(path)
+      })
       marker.addTo(layer)
     }
     if (markers.length) {

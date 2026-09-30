@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { documents } from '../../lib/documents'
+  import { vaultChanged } from '../../lib/events'
+  import * as vault from '../../lib/vault'
   import { workspace } from '../../lib/workspace.svelte'
   import BaseView from './BaseView.svelte'
 
@@ -9,13 +10,17 @@
 
   $effect(() => {
     let isCurrent = true
-    void documents.load(path).then(
-      (contents) => {
-        if (isCurrent) source = contents
-      },
-      (error: unknown) => workspace.notify(String(error)),
-    )
-    const unsubscribe = documents.subscribe(path, (contents) => (source = contents))
+    const load = () =>
+      vault.readNote(path).then(
+        (contents) => {
+          if (isCurrent) source = contents
+        },
+        (error: unknown) => workspace.notify(String(error)),
+      )
+    void load()
+    const unsubscribe = vaultChanged.on((paths) => {
+      if (paths.includes(path)) void load()
+    })
     return () => {
       isCurrent = false
       unsubscribe()
@@ -24,13 +29,13 @@
 
   function save(next: string) {
     source = next
-    void documents.update(path, () => next)
+    vault.writeNote(path, next).catch((error: unknown) => workspace.notify(String(error)))
   }
 </script>
 
 <section>
   {#if source !== null}
-    <BaseView {source} onchange={save} currentPath={path} />
+    <BaseView {source} onchange={save} currentPath={path} viewKey={path} />
   {/if}
 </section>
 

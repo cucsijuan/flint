@@ -54,7 +54,7 @@ export function newNoteDefaults(filters: (FilterNode | undefined)[]): NewNoteDef
       const tag = HAS_TAG.exec(node)?.[1]
       if (tag) defaults.tags.push(tag)
     } else if ('and' in node) {
-      node.and.forEach(visit)
+      ;(node.and ?? []).forEach(visit)
     }
   }
   filters.forEach(visit)

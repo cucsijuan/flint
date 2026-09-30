@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { noteTitle, parentOf, replacePrefix, uniqueName } from './paths'
+import { noteTitle, parentOf, relativePath, replacePrefix, uniqueName } from './paths'
 
 describe('paths', () => {
   it('derives parents and note titles', () => {
@@ -17,5 +17,12 @@ describe('paths', () => {
     const taken = new Set(['dir/Untitled.md', 'dir/Untitled 1.md'])
     expect(uniqueName(taken, 'dir', 'Untitled', '.md')).toBe('dir/Untitled 2.md')
     expect(uniqueName(taken, '', 'Untitled', '.md')).toBe('Untitled.md')
+  })
+
+  it('builds relative links between exported pages', () => {
+    expect(relativePath('', 'Notes/a.html')).toBe('Notes/a.html')
+    expect(relativePath('Notes/Deep', 'Notes/a.html')).toBe('../a.html')
+    expect(relativePath('Notes', 'Other/b.html')).toBe('../Other/b.html')
+    expect(relativePath('Notes', 'style.css')).toBe('../style.css')
   })
 })

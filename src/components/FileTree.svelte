@@ -198,6 +198,17 @@
           <ContextMenu.Item class="menu-item" onSelect={() => (workspace.historyNote = path)}>
             Version history
           </ContextMenu.Item>
+          <ContextMenu.Item class="menu-item" onSelect={() => (workspace.pdfNote = path)}>
+            Export to PDF
+          </ContextMenu.Item>
+          <ContextMenu.Item class="menu-item" onSelect={() => void workspace.exportHtml(path)}>
+            Export to HTML
+          </ContextMenu.Item>
+        {/if}
+        {#if target.kind === 'folder'}
+          <ContextMenu.Item class="menu-item" onSelect={() => void workspace.exportSite(path)}>
+            Export as a website
+          </ContextMenu.Item>
         {/if}
         <ContextMenu.Item class="menu-item" onSelect={() => (workspace.renaming = path)}>
           Rename

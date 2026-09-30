@@ -49,3 +49,12 @@ export const uniqueName = (taken: Set<string>, folder: string, base: string, ext
     if (!taken.has(join(folder, name))) return join(folder, name)
   }
 }
+
+/** `to` as a relative link from the folder `from`; both are relative to the same root. */
+export function relativePath(from: string, to: string) {
+  const fromParts = from ? from.split('/') : []
+  const toParts = to.split('/')
+  let common = 0
+  while (common < fromParts.length && fromParts[common] === toParts[common]) common++
+  return [...fromParts.slice(common).map(() => '..'), ...toParts.slice(common)].join('/')
+}

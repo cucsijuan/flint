@@ -11,6 +11,7 @@
     "core:window:allow-set-background-color",
     "core:webview:allow-set-webview-background-color",
     "dialog:allow-open",
+    "dialog:allow-save",
     "dialog:allow-message",
     "store:default",
     "window-state:default",

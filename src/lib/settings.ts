@@ -1,4 +1,5 @@
 import { LazyStore } from '@tauri-apps/plugin-store'
+import { DEFAULT_PDF, type PdfSettings } from './export/pdf-settings'
 import type { SearchSort } from './vault'
 
 export type EditorMode = 'live' | 'source'
@@ -24,6 +25,8 @@ export interface VaultSettings {
   historyInterval: number
   /** Days snapshots are kept. */
   historyRetention: number
+  /** The last options picked in the PDF export dialog. */
+  pdfExport: PdfSettings
 }
 
 export const DEFAULT_VAULT_SETTINGS: VaultSettings = {
@@ -39,6 +42,7 @@ export const DEFAULT_VAULT_SETTINGS: VaultSettings = {
   searchSort: 'name-ascending',
   historyInterval: 5,
   historyRetention: 7,
+  pdfExport: DEFAULT_PDF,
 }
 
 /** App-wide settings; the vault settings kept here by older versions seed new vaults. */

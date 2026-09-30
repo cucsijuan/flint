@@ -14,6 +14,8 @@ pub enum Error {
     InvalidAttachment,
     #[error("{0}")]
     Plugin(String),
+    #[error("{0}")]
+    Export(String),
     #[error(transparent)]
     Http(#[from] reqwest::Error),
     #[error(transparent)]

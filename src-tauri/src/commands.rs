@@ -39,7 +39,7 @@ impl AppState {
         guard.clone().ok_or(Error::NoVault)
     }
 
-    fn vault(&self) -> Result<Vault> {
+    pub fn vault(&self) -> Result<Vault> {
         Ok(self.open()?.vault)
     }
 

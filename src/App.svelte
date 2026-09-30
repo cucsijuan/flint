@@ -8,6 +8,7 @@
   import LayoutView from './components/LayoutView.svelte'
   import QuickSwitcher from './components/QuickSwitcher.svelte'
   import RightPanel from './components/RightPanel.svelte'
+  import ExportPdfDialog from './components/ExportPdfDialog.svelte'
   import RecoverDeleted from './components/RecoverDeleted.svelte'
   import SettingsDialog from './components/SettingsDialog.svelte'
   import VersionHistory from './components/VersionHistory.svelte'
@@ -150,6 +151,7 @@
 
 <SettingsDialog />
 <VersionHistory />
+<ExportPdfDialog />
 <RecoverDeleted />
 <QuickSwitcher />
 <CommandPalette />

@@ -363,6 +363,24 @@ export function registerAppCommands() {
       run: () => workspace.showRightTab('backlinks'),
     },
     {
+      id: 'export-pdf',
+      name: 'Export to PDF',
+      isAvailable: hasNote,
+      run: () => (workspace.pdfNote = workspace.notePath),
+    },
+    {
+      id: 'export-html',
+      name: 'Export to HTML',
+      isAvailable: hasNote,
+      run: () => workspace.notePath && void workspace.exportHtml(workspace.notePath),
+    },
+    {
+      id: 'export-site',
+      name: 'Export vault as a website',
+      isAvailable: hasVault,
+      run: () => void workspace.exportSite(),
+    },
+    {
       id: 'open-version-history',
       name: 'Open version history',
       isAvailable: hasNote,

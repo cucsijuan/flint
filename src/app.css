@@ -775,3 +775,47 @@ summary.callout-title {
     background-color: color-mix(in srgb, var(--accent) 30%, transparent);
   }
 }
+
+/* The note being exported to PDF: hidden on screen, the only thing printed. */
+#print-root {
+  display: none;
+}
+
+@media print {
+  :root {
+    color-scheme: light !important;
+  }
+
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+    background: white;
+  }
+
+  body > :not(#print-root) {
+    display: none !important;
+  }
+
+  #print-root {
+    display: block;
+  }
+
+  #print-root .markdown {
+    max-width: none;
+    padding: 0;
+  }
+
+  #print-root pre,
+  #print-root table,
+  #print-root img,
+  #print-root .diagram,
+  #print-root .callout {
+    break-inside: avoid;
+  }
+
+  #print-root .copy-code,
+  #print-root .base .toolbar {
+    display: none !important;
+  }
+}

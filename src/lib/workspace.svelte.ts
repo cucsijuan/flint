@@ -1,4 +1,4 @@
-import { ask, open } from '@tauri-apps/plugin-dialog'
+import { ask, open, save } from '@tauri-apps/plugin-dialog'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { SvelteSet } from 'svelte/reactivity'
 import {
@@ -31,6 +31,7 @@ import { newBlockId, type NoteBlock, noteBlocks, withBlockId } from './render/so
 import { documents } from './documents'
 import { activeView } from './editor/active'
 import { noteOpened, vaultChanged } from './events'
+import { exportNoteHtml, exportSite } from './export/html'
 import { linkMention } from './mentions'
 import { setProperty } from './properties'
 import { DEFAULT_GRAPH, type GraphSettings } from './graph'
@@ -140,6 +141,8 @@ class Workspace {
   /** The note whose version history is open. */
   historyNote = $state<string | null>(null)
   isRecoveryOpen = $state(false)
+  /** The note the PDF export dialog is open for. */
+  pdfNote = $state<string | null>(null)
   isQuickSwitcherOpen = $state(false)
   isCommandPaletteOpen = $state(false)
   searchQuery = $state('')
@@ -509,6 +512,32 @@ class Workspace {
       }
     }
     return found.slice(0, BLOCK_SEARCH_RESULTS)
+  }
+
+  /** Saves the note as one self-contained HTML file, asking where. */
+  async exportHtml(path: string) {
+    const target = await save({
+      title: 'Export to HTML',
+      defaultPath: `${noteTitle(path)}.html`,
+      filters: [{ name: 'HTML', extensions: ['html'] }],
+    })
+    if (!target) return
+    await this.#run(async () => {
+      await exportNoteHtml(path, target)
+      this.notify(`Exported to ${target}`)
+    })
+  }
+
+  /** Saves every note in `folder` (the whole vault when empty) as a website, asking where. */
+  async exportSite(folder = '') {
+    const target = await open({ directory: true, title: 'Export as a website into…' })
+    if (!target) return
+    await this.#run(async () => {
+      const count = await exportSite(folder, target, (done, total) => {
+        if (done % 20 === 0) this.notify(`Exporting ${done} of ${total} notes…`)
+      })
+      this.notify(`Exported ${count} ${count === 1 ? 'note' : 'notes'} to ${target}`)
+    })
   }
 
   /** Puts an earlier version back as the note's text; it's an ordinary edit, so it can be undone. */

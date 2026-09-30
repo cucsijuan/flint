@@ -93,6 +93,32 @@ export interface BaseFile {
 
 export const baseFiles = () => invoke<BaseFile[]>('base_files')
 
+export interface PdfOptions {
+  widthMm: number
+  heightMm: number
+  landscape: boolean
+  marginMm: number
+  /** 1 prints at 100%. */
+  scale: number
+}
+
+export interface ExportFile {
+  /** Relative to the export folder. */
+  path: string
+  contents: string
+}
+
+/** Writes exported pages into `folder`, copying the vault attachments they use. */
+export const exportFiles = (
+  folder: string,
+  files: ExportFile[],
+  attachments: { source: string; path: string }[],
+) => invoke('export_files', { folder, files, attachments })
+
+/** Prints the page, showing only the print area, to a PDF at `path`. */
+export const exportPdf = (path: string, options: PdfOptions) =>
+  invoke('export_pdf', { path, options })
+
 /** A snapshot of a note kept for file recovery. */
 export interface Snapshot {
   /** Milliseconds since the epoch. */

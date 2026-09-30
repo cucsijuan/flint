@@ -3,11 +3,13 @@ mod community;
 mod config;
 mod context_menu;
 mod error;
+mod export;
 mod history;
 mod index;
 mod markdown;
 mod mentions;
 mod net;
+mod pdf;
 mod plugins;
 mod search;
 mod secrets;
@@ -84,6 +86,8 @@ pub fn run() {
             commands::latest_plugin_versions,
             commands::install_plugin,
             net::plugin_http_request,
+            pdf::export_pdf,
+            export::export_files,
             secrets::plugin_secret_get,
             secrets::plugin_secret_set,
             secrets::plugin_secret_delete,

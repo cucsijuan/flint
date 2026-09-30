@@ -36,7 +36,7 @@
     try {
       plugins = await vault.communityPlugins()
       const mine = plugins.filter((plugin) => installed.has(plugin.id))
-      const versions = await vault.latestPluginVersions(mine.map((plugin) => plugin.repo))
+      const versions = await vault.latestPluginVersions(mine)
       mine.forEach((plugin, index) => {
         const version = versions[index]
         if (version) latest.set(plugin.id, version)

@@ -298,8 +298,8 @@ pub async fn community_plugins() -> Result<Vec<CommunityPlugin>> {
 }
 
 #[tauri::command]
-pub async fn latest_plugin_versions(repos: Vec<String>) -> Result<Vec<Option<String>>> {
-    community::latest_versions(repos).await
+pub async fn latest_plugin_versions(plugins: Vec<CommunityPlugin>) -> Result<Vec<Option<String>>> {
+    community::latest_versions(plugins).await
 }
 
 #[tauri::command]

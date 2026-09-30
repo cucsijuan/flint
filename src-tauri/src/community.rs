@@ -13,6 +13,7 @@ const REQUIRED_FILES: [&str; 2] = ["manifest.json", "main.js"];
 const OPTIONAL_FILES: [&str; 1] = ["styles.css"];
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CommunityPlugin {
     pub id: String,
     pub name: String,
@@ -22,11 +23,19 @@ pub struct CommunityPlugin {
     pub description: String,
     /// `owner/name` on GitHub.
     pub repo: String,
+    /// For repositories holding several plugins: this plugin's release tags start with it,
+    /// like `jira-` in `jira-1.0.0`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tag_prefix: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 struct Release {
     tag_name: String,
+    #[serde(default)]
+    draft: bool,
+    #[serde(default)]
+    prerelease: bool,
     assets: Vec<Asset>,
 }
 
@@ -44,8 +53,9 @@ impl Release {
             .map(|asset| asset.browser_download_url.as_str())
     }
 
-    fn version(&self) -> &str {
-        self.tag_name.trim_start_matches('v')
+    fn version(&self, prefix: &str) -> &str {
+        let tag = self.tag_name.strip_prefix(prefix).unwrap_or(&self.tag_name);
+        tag.trim_start_matches('v')
     }
 }
 
@@ -63,11 +73,10 @@ fn is_valid_repo(repo: &str) -> bool {
     is_part(parts.next()) && is_part(parts.next()) && parts.next().is_none()
 }
 
-async fn latest_release(client: &reqwest::Client, repo: &str) -> Result<Release> {
-    if !is_valid_repo(repo) {
-        return Err(Error::Plugin(format!("invalid repository: {repo}")));
-    }
-    let url = format!("https://api.github.com/repos/{repo}/releases/latest");
+async fn get_json<T: serde::de::DeserializeOwned>(
+    client: &reqwest::Client,
+    url: &str,
+) -> Result<T> {
     Ok(client
         .get(url)
         .send()
@@ -77,18 +86,46 @@ async fn latest_release(client: &reqwest::Client, repo: &str) -> Result<Release>
         .await?)
 }
 
+/// The plugin's newest published release: the repository's latest, or, when it holds several
+/// plugins, the newest one tagged with the plugin's prefix.
+async fn latest_release(client: &reqwest::Client, plugin: &CommunityPlugin) -> Result<Release> {
+    let repo = &plugin.repo;
+    if !is_valid_repo(repo) {
+        return Err(Error::Plugin(format!("invalid repository: {repo}")));
+    }
+    let Some(prefix) = &plugin.tag_prefix else {
+        return get_json(
+            client,
+            &format!("https://api.github.com/repos/{repo}/releases/latest"),
+        )
+        .await;
+    };
+    let releases: Vec<Release> = get_json(
+        client,
+        &format!("https://api.github.com/repos/{repo}/releases?per_page=100"),
+    )
+    .await?;
+    releases
+        .into_iter()
+        .find(|release| {
+            !release.draft && !release.prerelease && release.tag_name.starts_with(prefix.as_str())
+        })
+        .ok_or_else(|| Error::Plugin(format!("{repo} has no release tagged {prefix}…")))
+}
+
 pub async fn list() -> Result<Vec<CommunityPlugin>> {
     let response = net::client()?.get(REGISTRY_URL).send().await?;
     Ok(response.error_for_status()?.json().await?)
 }
 
-/// The version of each repository's latest release, `None` where it couldn't be read.
-pub async fn latest_versions(repos: Vec<String>) -> Result<Vec<Option<String>>> {
+/// The version of each plugin's latest release, `None` where it couldn't be read.
+pub async fn latest_versions(plugins: Vec<CommunityPlugin>) -> Result<Vec<Option<String>>> {
     let client = net::client()?;
-    let mut versions = Vec::with_capacity(repos.len());
-    for repo in repos {
-        let release = latest_release(&client, &repo).await.ok();
-        versions.push(release.map(|release| release.version().to_owned()));
+    let mut versions = Vec::with_capacity(plugins.len());
+    for plugin in plugins {
+        let prefix = plugin.tag_prefix.as_deref().unwrap_or_default();
+        let release = latest_release(&client, &plugin).await.ok();
+        versions.push(release.map(|release| release.version(prefix).to_owned()));
     }
     Ok(versions)
 }
@@ -96,7 +133,7 @@ pub async fn latest_versions(repos: Vec<String>) -> Result<Vec<Option<String>>> 
 /// Downloads the plugin's latest release into `.flint/plugins/<id>`, replacing any older version.
 pub async fn install(vault: &Vault, plugin: &CommunityPlugin) -> Result<PluginManifest> {
     let client = net::client()?;
-    let release = latest_release(&client, &plugin.repo).await?;
+    let release = latest_release(&client, plugin).await?;
     let mut files = Vec::new();
     for name in REQUIRED_FILES.iter().chain(&OPTIONAL_FILES) {
         let Some(url) = release.asset_url(name) else {
@@ -136,8 +173,18 @@ mod tests {
             r#"{"tag_name": "v1.2.0", "assets": [{"name": "main.js", "browser_download_url": "https://x/main.js"}]}"#,
         )
         .unwrap();
-        assert_eq!(release.version(), "1.2.0");
+        assert_eq!(release.version(""), "1.2.0");
         assert_eq!(release.asset_url("main.js"), Some("https://x/main.js"));
+        let tagged: Release = serde_json::from_str(
+            r#"{"tag_name": "jira-0.3.1", "prerelease": false, "assets": []}"#,
+        )
+        .unwrap();
+        assert_eq!(tagged.version("jira-"), "0.3.1");
+        let entry: CommunityPlugin = serde_json::from_str(
+            r#"{"id": "jira", "name": "Jira", "repo": "a/b", "tagPrefix": "jira-"}"#,
+        )
+        .unwrap();
+        assert_eq!(entry.tag_prefix.as_deref(), Some("jira-"));
         assert_eq!(release.asset_url("styles.css"), None);
     }
 

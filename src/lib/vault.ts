@@ -167,11 +167,13 @@ export interface CommunityPlugin {
   description: string
   /** `owner/name` on GitHub. */
   repo: string
+  /** For repositories holding several plugins: this plugin's release tags start with it. */
+  tagPrefix?: string
 }
 
 export const communityPlugins = () => invoke<CommunityPlugin[]>('community_plugins')
-export const latestPluginVersions = (repos: string[]) =>
-  invoke<(string | null)[]>('latest_plugin_versions', { repos })
+export const latestPluginVersions = (plugins: CommunityPlugin[]) =>
+  invoke<(string | null)[]>('latest_plugin_versions', { plugins })
 export const installPlugin = (plugin: CommunityPlugin) =>
   invoke<PluginManifest>('install_plugin', { plugin })
 

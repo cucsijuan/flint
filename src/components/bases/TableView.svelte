@@ -54,14 +54,36 @@
     edit((view) => (view.sort = [{ property: id, direction }]))
   }
 
+  /** A copy of the header that follows the pointer while a column is dragged. */
+  function ghostOf(header: HTMLElement) {
+    const { width, height } = header.getBoundingClientRect()
+    const ghost = document.createElement('div')
+    ghost.className = 'column-ghost'
+    ghost.textContent = header.textContent
+    Object.assign(ghost.style, { width: `${width}px`, height: `${height}px` })
+    document.body.append(ghost)
+    return ghost
+  }
+
   /** Drags a column header to a new place; a press without movement is left alone. */
   function startMove(event: PointerEvent, from: number) {
     if (event.button !== 0) return
+    event.preventDefault()
+    const header = headers[from]
     const startX = event.clientX
+    const offsetX = event.clientX - header.getBoundingClientRect().left
+    const offsetY = event.clientY - header.getBoundingClientRect().top
+    let ghost: HTMLElement | null = null
     const move = (moved: PointerEvent) => {
-      if (!moving && Math.abs(moved.clientX - startX) < DRAG_THRESHOLD) return
-      const over = headers.findIndex((header) => {
-        const { left, right } = header.getBoundingClientRect()
+      if (!ghost && Math.abs(moved.clientX - startX) < DRAG_THRESHOLD) return
+      if (!ghost) {
+        ghost = ghostOf(header)
+        document.body.classList.add('is-dragging-column')
+        window.getSelection()?.removeAllRanges()
+      }
+      ghost.style.transform = `translate(${moved.clientX - offsetX}px, ${moved.clientY - offsetY}px)`
+      const over = headers.findIndex((candidate) => {
+        const { left, right } = candidate.getBoundingClientRect()
         return moved.clientX >= left && moved.clientX < right
       })
       moving = { from, over: over === -1 ? (moving?.over ?? from) : over }
@@ -69,6 +91,8 @@
     const up = () => {
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', up)
+      ghost?.remove()
+      document.body.classList.remove('is-dragging-column')
       const done = moving
       moving = null
       if (!done || done.over === done.from) return
@@ -251,7 +275,32 @@
   }
 
   th.dragging {
-    opacity: 0.5;
+    opacity: 0.35;
+  }
+
+  :global(.column-ghost) {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    box-sizing: border-box;
+    padding: 5px 8px;
+    overflow: hidden;
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    background: var(--background-secondary);
+    box-shadow: 0 6px 18px rgb(0 0 0 / 0.25);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    opacity: 0.9;
+    pointer-events: none;
+  }
+
+  :global(body.is-dragging-column) {
+    cursor: grabbing;
+    user-select: none;
   }
 
   th.drop-before {

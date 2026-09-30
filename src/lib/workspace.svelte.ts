@@ -137,6 +137,9 @@ class Workspace {
   revealed = $state<string | null>(null)
   bookmarks = $state<Bookmark[]>([])
   isSettingsOpen = $state(false)
+  /** The note whose version history is open. */
+  historyNote = $state<string | null>(null)
+  isRecoveryOpen = $state(false)
   isQuickSwitcherOpen = $state(false)
   isCommandPaletteOpen = $state(false)
   searchQuery = $state('')
@@ -506,6 +509,23 @@ class Workspace {
       }
     }
     return found.slice(0, BLOCK_SEARCH_RESULTS)
+  }
+
+  /** Puts an earlier version back as the note's text; it's an ordinary edit, so it can be undone. */
+  restoreVersion(path: string, text: string) {
+    void this.#run(() => documents.update(path, () => text))
+  }
+
+  /** Brings back a deleted note from its last snapshot, and opens it. */
+  async restoreDeleted(path: string, text: string) {
+    await this.#run(async () => {
+      const folder = parentOf(path)
+      if (folder) await vault.createFolder(folder).catch(() => undefined)
+      await vault.createNote(path)
+      await vault.writeNote(path, text)
+      await this.#refresh()
+      this.openNote(path)
+    })
   }
 
   /** Sets a property's type for the whole vault, like Obsidian's `types.json`. */

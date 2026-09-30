@@ -363,6 +363,18 @@ export function registerAppCommands() {
       run: () => workspace.showRightTab('backlinks'),
     },
     {
+      id: 'open-version-history',
+      name: 'Open version history',
+      isAvailable: hasNote,
+      run: () => (workspace.historyNote = workspace.notePath),
+    },
+    {
+      id: 'recover-deleted-notes',
+      name: 'Recover deleted notes',
+      isAvailable: hasVault,
+      run: () => (workspace.isRecoveryOpen = true),
+    },
+    {
       id: 'toggle-readable-line-length',
       name: 'Toggle readable line length',
       isAvailable: hasVault,

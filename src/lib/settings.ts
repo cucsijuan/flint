@@ -20,6 +20,10 @@ export interface VaultSettings {
   /** Hunspell dictionary names like `en_US`; empty checks the system's languages. */
   spellcheckLanguages: string[]
   searchSort: SearchSort
+  /** Minutes between two snapshots of a note, for file recovery. */
+  historyInterval: number
+  /** Days snapshots are kept. */
+  historyRetention: number
 }
 
 export const DEFAULT_VAULT_SETTINGS: VaultSettings = {
@@ -33,6 +37,8 @@ export const DEFAULT_VAULT_SETTINGS: VaultSettings = {
   vimMode: false,
   spellcheckLanguages: [],
   searchSort: 'name-ascending',
+  historyInterval: 5,
+  historyRetention: 7,
 }
 
 /** App-wide settings; the vault settings kept here by older versions seed new vaults. */

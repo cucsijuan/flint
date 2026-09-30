@@ -561,6 +561,15 @@ impl Index {
             .collect()
     }
 
+    /// The notes at `path` or inside it, when it's a folder.
+    pub fn note_paths_within(&self, path: &str) -> Vec<String> {
+        self.notes
+            .keys()
+            .filter(|note| is_within(note, path))
+            .cloned()
+            .collect()
+    }
+
     pub fn incoming_link_count(&self, path: &str) -> usize {
         self.incoming(|target| is_within(target, path)).len()
     }

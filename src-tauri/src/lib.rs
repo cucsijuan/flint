@@ -3,6 +3,7 @@ mod community;
 mod config;
 mod context_menu;
 mod error;
+mod history;
 mod index;
 mod markdown;
 mod mentions;
@@ -46,6 +47,10 @@ pub fn run() {
             commands::rename_entry,
             commands::copy_entry,
             commands::trash_entry,
+            commands::note_history,
+            commands::history_snapshot,
+            commands::deleted_notes,
+            commands::set_history_settings,
             commands::link_targets,
             commands::resolve_links,
             commands::note_headings,

@@ -194,6 +194,11 @@
             Duplicate
           </ContextMenu.Item>
         {/if}
+        {#if target.kind === 'file'}
+          <ContextMenu.Item class="menu-item" onSelect={() => (workspace.historyNote = path)}>
+            Version history
+          </ContextMenu.Item>
+        {/if}
         <ContextMenu.Item class="menu-item" onSelect={() => (workspace.renaming = path)}>
           Rename
         </ContextMenu.Item>

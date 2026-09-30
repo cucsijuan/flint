@@ -8,7 +8,9 @@
   import LayoutView from './components/LayoutView.svelte'
   import QuickSwitcher from './components/QuickSwitcher.svelte'
   import RightPanel from './components/RightPanel.svelte'
+  import RecoverDeleted from './components/RecoverDeleted.svelte'
   import SettingsDialog from './components/SettingsDialog.svelte'
+  import VersionHistory from './components/VersionHistory.svelte'
   import Sidebar from './components/Sidebar.svelte'
   import TemplatePicker from './components/TemplatePicker.svelte'
   import Welcome from './components/Welcome.svelte'
@@ -82,6 +84,11 @@
       void vault.setSpellingLanguages(workspace.settings.value.spellcheckLanguages)
   })
 
+  $effect(() => {
+    const { historyInterval, historyRetention } = workspace.settings.value
+    if (workspace.info) void vault.setHistorySettings(historyInterval, historyRetention)
+  })
+
   /** Paints the native window in the theme's background, which shows before the webview's first frame. */
   function syncWindowBackground() {
     const [red = 0, green = 0, blue = 0] =
@@ -142,6 +149,8 @@
 {/if}
 
 <SettingsDialog />
+<VersionHistory />
+<RecoverDeleted />
 <QuickSwitcher />
 <CommandPalette />
 <TemplatePicker />

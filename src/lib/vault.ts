@@ -93,6 +93,25 @@ export interface BaseFile {
 
 export const baseFiles = () => invoke<BaseFile[]>('base_files')
 
+/** A snapshot of a note kept for file recovery. */
+export interface Snapshot {
+  /** Milliseconds since the epoch. */
+  time: number
+  size: number
+}
+
+export interface DeletedNote {
+  path: string
+  time: number
+}
+
+export const noteHistory = (path: string) => invoke<Snapshot[]>('note_history', { path })
+export const historySnapshot = (path: string, time: number) =>
+  invoke<string | null>('history_snapshot', { path, time })
+export const deletedNotes = () => invoke<DeletedNote[]>('deleted_notes')
+export const setHistorySettings = (intervalMinutes: number, retentionDays: number) =>
+  invoke('set_history_settings', { intervalMinutes, retentionDays })
+
 export interface HttpRequest {
   url: string
   method?: string

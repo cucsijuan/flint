@@ -88,6 +88,44 @@
     onchange={(linkUpdate) => workspace.setSettings({ linkUpdate })}
   />
 </Setting>
+<Setting
+  name="Version history interval"
+  description="Minutes between two saved versions of a note you're editing (Open version history)."
+>
+  <input
+    type="number"
+    min="1"
+    max="120"
+    value={settings.historyInterval}
+    onchange={(event) => {
+      const historyInterval = Math.min(
+        120,
+        Math.max(1, Math.round(Number(event.currentTarget.value)) || 5),
+      )
+      event.currentTarget.value = String(historyInterval)
+      workspace.setSettings({ historyInterval })
+    }}
+  />
+</Setting>
+<Setting
+  name="Version history length"
+  description="Days saved versions are kept. They live outside the vault, on this computer."
+>
+  <input
+    type="number"
+    min="1"
+    max="365"
+    value={settings.historyRetention}
+    onchange={(event) => {
+      const historyRetention = Math.min(
+        365,
+        Math.max(1, Math.round(Number(event.currentTarget.value)) || 7),
+      )
+      event.currentTarget.value = String(historyRetention)
+      workspace.setSettings({ historyRetention })
+    }}
+  />
+</Setting>
 <Setting name="Attachment location" description="Where pasted or dropped images are saved.">
   <Choice
     value={settings.attachmentFolder}

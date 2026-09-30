@@ -14,6 +14,7 @@ use tauri_plugin_opener::OpenerExt;
 use crate::community::{self, CommunityPlugin};
 use crate::config;
 use crate::error::{Error, Result};
+use crate::history::{DeletedNote, History, HistorySettings, SnapshotInfo};
 use crate::index::{Backlink, BaseFile, Graph, Index, LinkTarget, Mention, OutgoingLink, TagCount};
 use crate::markdown::Heading;
 use crate::plugins::{self, PluginListing, PluginManifest};
@@ -28,6 +29,7 @@ pub struct AppState(Mutex<Option<OpenVault>>);
 struct OpenVault {
     vault: Vault,
     index: Arc<RwLock<Index>>,
+    history: Arc<History>,
     _watcher: Arc<VaultWatcher>,
 }
 
@@ -66,10 +68,13 @@ pub fn open_vault(app: AppHandle, state: State<AppState>, path: String) -> Resul
     };
     app.asset_protocol_scope().allow_directory(root, true)?;
     let index = Arc::new(RwLock::new(Index::build(&vault)?));
+    let history = Arc::new(History::new(&app.path().app_data_dir()?, root));
+    let _ = history.prune();
     let watcher = watch(app, vault.clone(), index.clone())?;
     *state.0.lock().unwrap_or_else(|e| e.into_inner()) = Some(OpenVault {
         vault,
         index,
+        history,
         _watcher: Arc::new(watcher),
     });
     Ok(info)
@@ -97,7 +102,12 @@ pub fn read_note(state: State<AppState>, path: String) -> Result<String> {
 
 #[tauri::command(async)]
 pub fn write_note(state: State<AppState>, path: String, contents: String) -> Result<()> {
-    state.vault()?.write(&path, &contents)
+    let open = state.open()?;
+    let previous = open.vault.read(&path).ok();
+    if let Err(error) = open.history.record(&path, previous.as_deref(), &contents) {
+        log::warn!("couldn't keep a snapshot of {path}: {error}");
+    }
+    open.vault.write(&path, &contents)
 }
 
 #[tauri::command(async)]
@@ -119,7 +129,11 @@ pub fn rename_entry(
 ) -> Result<usize> {
     let open = state.open()?;
     let mut index = open.index.write().unwrap_or_else(|e| e.into_inner());
-    index.update_links_for_rename(&open.vault, &from, &to, update_links)
+    let updated = index.update_links_for_rename(&open.vault, &from, &to, update_links)?;
+    if let Err(error) = open.history.rename(&from, &to) {
+        log::warn!("couldn't move the history of {from}: {error}");
+    }
+    Ok(updated)
 }
 
 #[tauri::command(async)]
@@ -129,7 +143,46 @@ pub fn copy_entry(state: State<AppState>, from: String, to: String) -> Result<()
 
 #[tauri::command(async)]
 pub fn trash_entry(state: State<AppState>, path: String) -> Result<()> {
-    state.vault()?.trash(&path)
+    let open = state.open()?;
+    let notes = open
+        .index
+        .read()
+        .unwrap_or_else(|e| e.into_inner())
+        .note_paths_within(&path);
+    for note in notes {
+        if let Ok(text) = open.vault.read(&note) {
+            let _ = open.history.record_last(&note, &text);
+        }
+    }
+    open.vault.trash(&path)
+}
+
+#[tauri::command(async)]
+pub fn note_history(state: State<AppState>, path: String) -> Result<Vec<SnapshotInfo>> {
+    Ok(state.open()?.history.snapshots(&path))
+}
+
+#[tauri::command(async)]
+pub fn history_snapshot(state: State<AppState>, path: String, time: u64) -> Result<Option<String>> {
+    Ok(state.open()?.history.text(&path, time))
+}
+
+#[tauri::command(async)]
+pub fn deleted_notes(state: State<AppState>) -> Result<Vec<DeletedNote>> {
+    let open = state.open()?;
+    Ok(open.history.deleted(&open.vault))
+}
+
+#[tauri::command(async)]
+pub fn set_history_settings(
+    state: State<AppState>,
+    interval_minutes: u64,
+    retention_days: u64,
+) -> Result<()> {
+    let open = state.open()?;
+    open.history
+        .set_settings(HistorySettings::new(interval_minutes, retention_days));
+    open.history.prune()
 }
 
 #[tauri::command(async)]

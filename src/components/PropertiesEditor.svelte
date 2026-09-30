@@ -8,7 +8,9 @@
     removeProperty,
     renameProperty,
     setProperty,
+    VAULT_TYPES,
   } from '../lib/properties'
+  import { workspace } from '../lib/workspace.svelte'
 
   interface Props {
     properties: Property[]
@@ -70,6 +72,7 @@
           onchange={(event) => {
             const type = event.currentTarget.value as PropertyType
             set(property.key, convertValue(property.value, type))
+            if (type !== 'other') workspace.setPropertyType(property.key, VAULT_TYPES[type])
           }}
         >
           {#each PROPERTY_TYPES as type (type)}<option value={type}>{type}</option>{/each}

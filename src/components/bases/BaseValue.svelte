@@ -9,6 +9,7 @@
     Rendered,
     type Value,
   } from '../../lib/bases/expression'
+  import { externalRow } from '../../lib/bases/external'
   import { isExternalUrl } from '../../lib/paths'
   import { workspace } from '../../lib/workspace.svelte'
   import PluginIcon from '../PluginIcon.svelte'
@@ -18,7 +19,9 @@
 
   function open(target: string, event: MouseEvent) {
     event.stopPropagation()
-    if (isExternalUrl(target)) workspace.openUrl(target)
+    const external = externalRow(target)
+    if (external) external.handlers.open?.(external.id)
+    else if (isExternalUrl(target)) workspace.openUrl(target)
     else void workspace.openLink(target, '', { newTab: event.ctrlKey || event.metaKey })
   }
 

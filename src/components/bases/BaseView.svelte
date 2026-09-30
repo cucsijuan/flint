@@ -14,6 +14,7 @@
     type ViewType,
   } from '../../lib/bases/base'
   import { baseData } from '../../lib/bases/data.svelte'
+  import type { Row } from '../../lib/bases/expression'
   import { newNoteDefaults, updateBase } from '../../lib/bases/edit'
   import { fromGroup, toGroup } from '../../lib/bases/filters'
   import { workspace } from '../../lib/workspace.svelte'
@@ -49,11 +50,17 @@
     source,
     onchange,
     currentPath = null,
+    rows: externalRows,
+    onNew,
   }: {
     source: string
     onchange: (source: string) => void
     /** The base file or the note embedding the base, for `this`. */
     currentPath?: string | null
+    /** Rows a plugin shows instead of the vault's notes. */
+    rows?: Row[]
+    /** Replaces creating a note, for plugin rows; without it they get no New button. */
+    onNew?: () => void
   } = $props()
 
   let viewIndex = $state(0)
@@ -76,7 +83,7 @@
   })
 
   const types = $derived(workspace.typesConfig.value.types)
-  const rows = $derived(baseData.rows(types))
+  const rows = $derived(externalRows ?? baseData.rows(types))
   const current = $derived.by(() => {
     const file = currentPath ? baseData.findFile(currentPath) : null
     return file ? rowFor(file, types) : null
@@ -90,7 +97,7 @@
 
   const noteProperties = $derived.by(() => {
     const counts: Record<string, number> = {}
-    for (const file of baseData.files) {
+    for (const file of externalRows?.map((row) => row.file) ?? baseData.files) {
       for (const key of Object.keys(file.properties)) counts[key] = (counts[key] ?? 0) + 1
     }
     return Object.entries(counts)
@@ -135,7 +142,8 @@
   }
 
   function createNote() {
-    void workspace.createNoteFor(newNoteDefaults([config.filters, view.filters]))
+    if (onNew) onNew()
+    else void workspace.createNoteFor(newNoteDefaults([config.filters, view.filters]))
   }
 </script>
 
@@ -438,7 +446,9 @@
       </Popover.Portal>
     </Popover.Root>
 
-    <button class="new" onclick={createNote}><Plus size={14} /> New</button>
+    {#if !externalRows || onNew}
+      <button class="new" onclick={createNote}><Plus size={14} /> New</button>
+    {/if}
   </div>
 
   {#if parsed.error}

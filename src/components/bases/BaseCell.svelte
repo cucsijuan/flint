@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { PropertyType } from '../../lib/bases/base'
   import { ExpressionError, isList, type Row, type Value } from '../../lib/bases/expression'
+  import { externalRow } from '../../lib/bases/external'
   import { workspace } from '../../lib/workspace.svelte'
   import BaseValue from './BaseValue.svelte'
 
@@ -12,7 +13,17 @@
   }: { row: Row; id: string; value: Value | ExpressionError; type: PropertyType | undefined } =
     $props()
 
-  const key = $derived(id.startsWith('note.') ? id.slice('note.'.length) : null)
+  const external = $derived(externalRow(row.file.path))
+  const key = $derived(
+    id.startsWith('note.') && (!external || external.handlers.edit)
+      ? id.slice('note.'.length)
+      : null,
+  )
+
+  function write(property: string, value: unknown) {
+    if (external) external.handlers.edit?.(external.id, property, value)
+    else workspace.setNoteProperty(row.file.path, property, value)
+  }
   const raw = $derived(key ? row.file.properties[key] : undefined)
   const kind = $derived(
     type ??
@@ -52,7 +63,7 @@
               .map((item) => item.trim())
               .filter(Boolean)
           : text
-    workspace.setNoteProperty(row.file.path, key, next)
+    write(key, next)
   }
 
   function onKeydown(event: KeyboardEvent) {
@@ -76,7 +87,7 @@
   <input
     type="checkbox"
     checked={raw === true}
-    onchange={(event) => workspace.setNoteProperty(row.file.path, key, event.currentTarget.checked)}
+    onchange={(event) => write(key, event.currentTarget.checked)}
   />
 {:else if isEditing}
   <input

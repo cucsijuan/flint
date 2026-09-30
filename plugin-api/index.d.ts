@@ -65,6 +65,39 @@ export type CodeBlockProcessor = (
   context: MarkdownContext,
 ) => unknown
 
+/** A row a plugin shows in a data view. */
+export interface DataRow {
+  /** Unique within the view. */
+  id: string
+  /** The row's name; clicking it calls `onOpen`. */
+  title: string
+  /** Property values by name: text, numbers, booleans, lists, links like `[[Note]]`, or dates as `YYYY-MM-DD`. */
+  values: Record<string, unknown>
+}
+
+export interface DataViewOptions {
+  rows: DataRow[]
+  /** Properties shown until the user picks others. */
+  columns?: string[]
+  /** The layout it starts with, unless `config` restores a saved view. */
+  layout?: 'table' | 'cards' | 'list' | 'map'
+  /** A view the user arranged earlier, as `onConfigChange` handed it over (in `.base` format). */
+  config?: string
+  /** The user changed filters, sorting, columns or layout; save `config` to restore the view later. */
+  onConfigChange?: (config: string) => void
+  onOpen?: (id: string) => void
+  /** The user edited a cell; without it, cells are read-only. */
+  onEdit?: (id: string, property: string, value: unknown) => void
+  /** Shows a New button that calls it. */
+  onNew?: () => void
+}
+
+/** A data view rendered by `ui.renderDataView`. */
+export interface DataView {
+  update(options: Partial<DataViewOptions>): void
+  destroy(): void
+}
+
 export interface FlintApi {
   /** The id from the plugin's manifest. */
   readonly pluginId: string
@@ -102,6 +135,9 @@ export interface FlintApi {
     registerSidebarTab(tab: SidebarTab): Disposer
     /** Adds a section named after the plugin to Settings. */
     registerSettingsTab(tab: SettingsTab): Disposer
+    /** Shows rows with the views of Bases: table, cards, list or map, with filters, sorting,
+     * grouping and summaries. It cleans up once `element` leaves the page; `destroy` ends it sooner. */
+    renderDataView(element: HTMLElement, options: DataViewOptions): DataView
   }
 
   markdown: {

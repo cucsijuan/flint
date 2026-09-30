@@ -508,6 +508,11 @@ class Workspace {
     return found.slice(0, BLOCK_SEARCH_RESULTS)
   }
 
+  /** Sets a property's type for the whole vault, like Obsidian's `types.json`. */
+  setPropertyType(name: string, type: PropertyType) {
+    this.typesConfig.set({ types: { ...this.typesConfig.value.types, [name]: type } })
+  }
+
   /** Writes one frontmatter property of a note, as a base's table cell edits it. */
   setNoteProperty(path: string, key: string, value: unknown) {
     void this.#run(() => documents.update(path, (text) => setProperty(text, key, value)))

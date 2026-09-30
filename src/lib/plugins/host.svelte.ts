@@ -1,4 +1,5 @@
 import * as autocomplete from '@codemirror/autocomplete'
+import { renderDataView } from '../bases/data-view.svelte'
 import * as language from '@codemirror/language'
 import * as state from '@codemirror/state'
 import * as view from '@codemirror/view'
@@ -240,6 +241,10 @@ class PluginHost {
             this.sidebarTabs = this.sidebarTabs.filter((known) => known.key !== key)
             if (workspace.rightTab === key) workspace.rightTab = 'backlinks'
           })
+        },
+        renderDataView: (element, options) => {
+          const view = renderDataView(element, options)
+          return { update: view.update, destroy: track(view.destroy) }
         },
         registerSettingsTab: (tab) => {
           const settingsTab = { ...tab, pluginId: manifest.id, name: manifest.name }

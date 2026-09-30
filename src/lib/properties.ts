@@ -1,4 +1,5 @@
 import { Document, isMap, isScalar, isSeq, parseDocument } from 'yaml'
+import type { PropertyType as VaultPropertyType } from './bases/base'
 
 const FRONTMATTER = /^---\r?\n(?:([\s\S]*?)\r?\n)?---[ \t]*(?:\r?\n|$)/
 const DATE = /^\d{4}-\d{2}-\d{2}$/
@@ -12,6 +13,15 @@ export interface Property {
 }
 
 export const PROPERTY_TYPES: PropertyType[] = ['text', 'list', 'number', 'checkbox', 'date']
+
+/** The vault-wide type (Obsidian's `types.json`) each editor type is saved as. */
+export const VAULT_TYPES: Record<Exclude<PropertyType, 'other'>, VaultPropertyType> = {
+  text: 'text',
+  list: 'multitext',
+  number: 'number',
+  checkbox: 'checkbox',
+  date: 'date',
+}
 
 export function propertyType(value: unknown): PropertyType {
   if (Array.isArray(value)) return 'list'

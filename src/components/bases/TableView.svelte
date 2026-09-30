@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Check } from '@lucide/svelte'
   import { ContextMenu } from 'bits-ui'
   import {
     type BaseConfig,
@@ -13,6 +14,7 @@
     type ViewConfig,
   } from '../../lib/bases/base'
   import { display, ExpressionError, FileValue } from '../../lib/bases/expression'
+  import { workspace } from '../../lib/workspace.svelte'
   import BaseCell from './BaseCell.svelte'
 
   const DEFAULT_WIDTH = 180
@@ -37,6 +39,14 @@
   } = $props()
 
   const DRAG_THRESHOLD = 4
+  const PROPERTY_TYPES: { value: PropertyType; label: string }[] = [
+    { value: 'text', label: 'Text' },
+    { value: 'multitext', label: 'List' },
+    { value: 'number', label: 'Number' },
+    { value: 'checkbox', label: 'Checkbox' },
+    { value: 'date', label: 'Date' },
+    { value: 'datetime', label: 'Date & time' },
+  ]
 
   const headers: HTMLTableCellElement[] = $state([])
   let moving = $state<{ from: number; over: number } | null>(null)
@@ -171,6 +181,27 @@
                   >
                     Group by this property
                   </ContextMenu.Item>
+                  {#if propertyId(id).startsWith('note.')}
+                    {@const name = propertyId(id).slice('note.'.length)}
+                    <ContextMenu.Sub>
+                      <ContextMenu.SubTrigger class="menu-item"
+                        >Property type</ContextMenu.SubTrigger
+                      >
+                      <ContextMenu.SubContent class="menu">
+                        {#each PROPERTY_TYPES as type (type.value)}
+                          <ContextMenu.Item
+                            class="menu-item type-item"
+                            onSelect={() => workspace.setPropertyType(name, type.value)}
+                          >
+                            <span class="check">
+                              {#if types[name] === type.value}<Check size={14} />{/if}
+                            </span>
+                            {type.label}
+                          </ContextMenu.Item>
+                        {/each}
+                      </ContextMenu.SubContent>
+                    </ContextMenu.Sub>
+                  {/if}
                   <ContextMenu.Separator class="menu-separator" />
                   <ContextMenu.Item
                     class="menu-item"
@@ -276,6 +307,17 @@
 
   th.dragging {
     opacity: 0.35;
+  }
+
+  :global(.type-item) {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .check {
+    display: inline-flex;
+    width: 14px;
   }
 
   :global(.column-ghost) {

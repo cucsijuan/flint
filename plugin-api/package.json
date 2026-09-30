@@ -1,6 +1,6 @@
 {
   "name": "flint-plugin-api",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "TypeScript types for writing Flint plugins",
   "license": "AGPL-3.0-or-later",
   "repository": {

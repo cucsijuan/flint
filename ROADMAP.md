@@ -132,9 +132,11 @@ Builds, installers and automatic updates for macOS (Intel and Apple Silicon), wi
 - The [Jira plugin](https://github.com/cucsijuan/flint-official-plugins/tree/main/jira): JQL tables, your issues in the sidebar, edits pushed on demand (the server wins on conflicts), creating issues, comments and worklogs.
 - A configurable readable line width and a command to toggle it; base tables fill the available width.
 
-### M17: Export and history
+### M17: Export and history ✅
 
-Exporting notes to PDF and HTML, and file recovery with earlier versions of each note.
+- Export a note to PDF with page size, orientation, margins, scale and title options, printed with each platform's own engine (Windows and Linux; macOS uses its print dialog for now).
+- Export a note to one self-contained HTML file, and a folder or the whole vault as a website with linked pages, an index and their images.
+- Version history: snapshots every few minutes while a note changes, kept for a set number of days outside the vault; compare any version with the note and restore it, follow renames, and recover deleted notes.
 
 ### M18: Canvas
 
@@ -147,6 +149,7 @@ Features that are not scheduled in a milestone yet.
 - **Core workflows:** bookmark groups, code block processors in the editor's source mode, a calendar view for daily notes.
 - **Rich content:** pasting or dropping non-image attachments, dropping images on the reading view.
 - **Search:** replacing a single match rather than a whole result line.
+- **Export:** a native PDF engine on macOS (WKWebView printing) instead of the print dialog.
 - **Editor:** formatting hotkeys (bold, italic…) inside table cells, “+” buttons on a table's edges, choosing spell-check languages on Windows and macOS (their webviews offer no API for it).
 - **Distribution:** Windows code signing.
 - **Testing:** run the end-to-end tests on Windows too (`msedgedriver` can't attach to WebView2 in CI yet).

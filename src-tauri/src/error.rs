@@ -19,6 +19,8 @@ pub enum Error {
     #[error(transparent)]
     Tauri(#[from] tauri::Error),
     #[error(transparent)]
+    Keyring(#[from] keyring::Error),
+    #[error(transparent)]
     Opener(#[from] tauri_plugin_opener::Error),
     #[error(transparent)]
     Io(#[from] std::io::Error),

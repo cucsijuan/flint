@@ -3,12 +3,12 @@
 use serde::{Deserialize, Serialize};
 
 use crate::error::{Error, Result};
+use crate::net;
 use crate::plugins::{self, PluginManifest};
 use crate::vault::Vault;
 
 const REGISTRY_URL: &str =
     "https://raw.githubusercontent.com/cucsijuan/flint-plugins/main/plugins.json";
-const USER_AGENT: &str = concat!("Flint/", env!("CARGO_PKG_VERSION"));
 const REQUIRED_FILES: [&str; 2] = ["manifest.json", "main.js"];
 const OPTIONAL_FILES: [&str; 1] = ["styles.css"];
 
@@ -49,14 +49,6 @@ impl Release {
     }
 }
 
-fn client() -> Result<reqwest::Client> {
-    // The updater installs the same provider; whichever runs first wins.
-    if rustls::crypto::CryptoProvider::get_default().is_none() {
-        let _ = rustls::crypto::ring::default_provider().install_default();
-    }
-    Ok(reqwest::Client::builder().user_agent(USER_AGENT).build()?)
-}
-
 fn is_valid_repo(repo: &str) -> bool {
     let mut parts = repo.split('/');
     let is_part = |part: Option<&str>| {
@@ -86,13 +78,13 @@ async fn latest_release(client: &reqwest::Client, repo: &str) -> Result<Release>
 }
 
 pub async fn list() -> Result<Vec<CommunityPlugin>> {
-    let response = client()?.get(REGISTRY_URL).send().await?;
+    let response = net::client()?.get(REGISTRY_URL).send().await?;
     Ok(response.error_for_status()?.json().await?)
 }
 
 /// The version of each repository's latest release, `None` where it couldn't be read.
 pub async fn latest_versions(repos: Vec<String>) -> Result<Vec<Option<String>>> {
-    let client = client()?;
+    let client = net::client()?;
     let mut versions = Vec::with_capacity(repos.len());
     for repo in repos {
         let release = latest_release(&client, &repo).await.ok();
@@ -103,7 +95,7 @@ pub async fn latest_versions(repos: Vec<String>) -> Result<Vec<Option<String>>> 
 
 /// Downloads the plugin's latest release into `.flint/plugins/<id>`, replacing any older version.
 pub async fn install(vault: &Vault, plugin: &CommunityPlugin) -> Result<PluginManifest> {
-    let client = client()?;
+    let client = net::client()?;
     let release = latest_release(&client, &plugin.repo).await?;
     let mut files = Vec::new();
     for name in REQUIRED_FILES.iter().chain(&OPTIONAL_FILES) {

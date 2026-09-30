@@ -1,3 +1,4 @@
+import { getVersion } from '@tauri-apps/api/app'
 import * as autocomplete from '@codemirror/autocomplete'
 import { renderDataView } from '../bases/data-view.svelte'
 import * as language from '@codemirror/language'
@@ -16,6 +17,7 @@ import { activeView } from '../editor/active'
 import { noteOpened, vaultChanged } from '../events'
 import { processors } from '../render/processors.svelte'
 import * as vault from '../vault'
+import { compareVersions } from '../versions'
 import { workspace } from '../workspace.svelte'
 import { isCompatibleLicense } from './licenses'
 
@@ -136,6 +138,10 @@ class PluginHost {
     const loaded: LoadedPlugin = { disposers: [] }
     this.#loaded.set(manifest.id, loaded)
     try {
+      const required = manifest.minAppVersion
+      if (required && compareVersions(await getVersion(), required) < 0) {
+        throw new Error(`Needs Flint ${required} or later`)
+      }
       const source = await vault.readPluginFile(plugin.folder, 'main.js')
       if (source === null) throw new Error('main.js not found')
       const styles = await vault.readPluginFile(plugin.folder, 'styles.css')
@@ -261,6 +267,21 @@ class PluginHost {
         registerPostProcessor: (processor) => track(processors.addPostProcessor(guard(processor))),
         registerCodeBlockProcessor: (language, processor) =>
           track(processors.addCodeBlockProcessor(language, guard(processor))),
+      },
+      http: {
+        request: async (request) => {
+          const response = await vault.pluginHttpRequest(request)
+          return { ...response, json: <T>() => JSON.parse(response.body) as T }
+        },
+      },
+      secrets: {
+        get: (key) => vault.pluginSecret(manifest.id, key),
+        set: async (key, value) => {
+          await vault.setPluginSecret(manifest.id, key, value)
+        },
+        delete: async (key) => {
+          await vault.deletePluginSecret(manifest.id, key)
+        },
       },
       storage: {
         load: async <T>() => {

@@ -65,6 +65,25 @@ export type CodeBlockProcessor = (
   context: MarkdownContext,
 ) => unknown
 
+export interface HttpRequest {
+  /** An `http://` or `https://` URL. */
+  url: string
+  /** Defaults to `GET`. */
+  method?: string
+  headers?: Record<string, string>
+  body?: string
+  /** Defaults to 30 seconds. */
+  timeoutMs?: number
+}
+
+export interface HttpResponse {
+  status: number
+  headers: Record<string, string>
+  body: string
+  /** The body parsed as JSON. */
+  json<T = unknown>(): T
+}
+
 /** A row a plugin shows in a data view. */
 export interface DataRow {
   /** Unique within the view. */
@@ -145,6 +164,19 @@ export interface FlintApi {
     registerPostProcessor(processor: PostProcessor): Disposer
     /** Renders fenced code blocks of `language` into `element` instead of showing the code. */
     registerCodeBlockProcessor(language: string, processor: CodeBlockProcessor): Disposer
+  }
+
+  /** Requests made from Flint's backend, so servers don't need to allow the app's origin (CORS).
+   * Certificates are checked against the system's store, where companies install their own. */
+  http: {
+    request(request: HttpRequest): Promise<HttpResponse>
+  }
+
+  /** Secrets such as API tokens, kept in the system's keychain rather than in the vault. */
+  secrets: {
+    get(key: string): Promise<string | null>
+    set(key: string, value: string): Promise<void>
+    delete(key: string): Promise<void>
   }
 
   storage: {

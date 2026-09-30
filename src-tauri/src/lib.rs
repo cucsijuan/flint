@@ -6,8 +6,10 @@ mod error;
 mod index;
 mod markdown;
 mod mentions;
+mod net;
 mod plugins;
 mod search;
+mod secrets;
 mod spelling;
 mod vault;
 mod watcher;
@@ -76,6 +78,10 @@ pub fn run() {
             commands::community_plugins,
             commands::latest_plugin_versions,
             commands::install_plugin,
+            net::plugin_http_request,
+            secrets::plugin_secret_get,
+            secrets::plugin_secret_set,
+            secrets::plugin_secret_delete,
             commands::read_plugin_file,
             commands::read_plugin_data,
             commands::write_plugin_data,

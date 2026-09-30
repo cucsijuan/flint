@@ -92,6 +92,29 @@ export interface BaseFile {
 }
 
 export const baseFiles = () => invoke<BaseFile[]>('base_files')
+
+export interface HttpRequest {
+  url: string
+  method?: string
+  headers?: Record<string, string>
+  body?: string
+  timeoutMs?: number
+}
+
+export interface HttpResponse {
+  status: number
+  headers: Record<string, string>
+  body: string
+}
+
+export const pluginHttpRequest = (request: HttpRequest) =>
+  invoke<HttpResponse>('plugin_http_request', { request })
+export const pluginSecret = (plugin: string, key: string) =>
+  invoke<string | null>('plugin_secret_get', { plugin, key })
+export const setPluginSecret = (plugin: string, key: string, value: string) =>
+  invoke('plugin_secret_set', { plugin, key, value })
+export const deletePluginSecret = (plugin: string, key: string) =>
+  invoke('plugin_secret_delete', { plugin, key })
 export const incomingLinkCount = (path: string) => invoke<number>('incoming_link_count', { path })
 
 export type SearchSort =
@@ -133,6 +156,8 @@ export interface PluginManifest {
   author: string
   description: string
   license: string
+  /** The oldest Flint version the plugin works with. */
+  minAppVersion?: string
 }
 
 export interface CommunityPlugin {

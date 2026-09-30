@@ -19,11 +19,16 @@ export async function renderNote(
   const { text, firstLine } = noteContent(await documents.load(path))
   const article = document.createElement('article')
   article.className = 'markdown export'
-  if (includeTitle) {
-    article.append(Object.assign(document.createElement('h1'), { textContent: noteTitle(path) }))
-  }
   const body = document.createElement('div')
   body.innerHTML = renderMarkdown(text, { firstLine })
+  const title = noteTitle(path)
+  const opening = body.firstElementChild
+  // Many notes already open with their name as a heading; don't print it twice.
+  const hasTitle =
+    opening?.tagName === 'H1' && opening.textContent?.trim().toLowerCase() === title.toLowerCase()
+  if (includeTitle && !hasTitle) {
+    article.append(Object.assign(document.createElement('h1'), { textContent: title }))
+  }
   article.append(...body.childNodes)
   await hydrate(article, {
     source: path,

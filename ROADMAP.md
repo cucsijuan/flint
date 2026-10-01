@@ -157,7 +157,7 @@ The backlog that piled up along the way:
 - Canvas: reconnecting edges by dragging their ends, alignment guides while moving cards, and a presentation mode with groups as slides.
 - Tables: formatting hotkeys inside cells and “+” buttons on their edges.
 - Flint's own spell checker, with languages to choose on every platform.
-- End-to-end tests for theme switching, and on Windows if WebView2 allows it.
+- End-to-end tests for theme switching.
 
 ### M20: Core plugins
 
@@ -169,4 +169,5 @@ Features that are not scheduled in a milestone yet.
 
 - **Export:** a native PDF engine on macOS (WKWebView printing) instead of the print dialog, with M10.
 - **Distribution:** Windows code signing.
+- **Testing:** end-to-end tests on Windows: `msedgedriver` still can't attach to the app's WebView2 in CI ("DevToolsActivePort file doesn't exist"), even with a driver matching the WebView2 runtime.
 - **Later:** mobile (iOS and Android), sync between devices.

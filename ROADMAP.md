@@ -147,17 +147,26 @@ Builds, installers and automatic updates for macOS (Intel and Apple Silicon), wi
 - Canvases count for links: backlinks, the graph, and renaming a note updates the canvases that show it.
 - Search inside a canvas (note cards included), export as PNG or SVG, and turning a text card into a note.
 
+### M19: Polish
+
+The backlog that piled up along the way:
+
+- Bookmark groups, and a calendar for daily notes.
+- Pasting and dropping any file as an attachment, and dropping images on the reading view.
+- Replacing a single search match.
+- Canvas: reconnecting edges by dragging their ends, alignment guides while moving cards, and a presentation mode with groups as slides.
+- Tables: formatting hotkeys inside cells and “+” buttons on their edges.
+- Flint's own spell checker, with languages to choose on every platform.
+- End-to-end tests for theme switching, and on Windows if WebView2 allows it.
+
+### M20: Core plugins
+
+Obsidian's everyday core plugins that Flint still lacks, such as page previews on hover, slash commands, the note composer, workspaces, a vault-wide properties view, pinned tabs and pop-out windows. Details to agree before starting.
+
 ## Backlog
 
 Features that are not scheduled in a milestone yet.
 
-- **Core workflows:** bookmark groups, code block processors in the editor's source mode, a calendar view for daily notes.
-- **Rich content:** pasting or dropping non-image attachments, dropping images on the reading view.
-- **Search:** replacing a single match rather than a whole result line.
-- **Canvas:** dragging an edge's end to reconnect it, alignment guides while moving cards, a presentation mode.
-- **Export:** a native PDF engine on macOS (WKWebView printing) instead of the print dialog.
-- **Editor:** formatting hotkeys (bold, italic…) inside table cells, “+” buttons on a table's edges, choosing spell-check languages on Windows and macOS (their webviews offer no API for it).
+- **Export:** a native PDF engine on macOS (WKWebView printing) instead of the print dialog, with M10.
 - **Distribution:** Windows code signing.
-- **Testing:** run the end-to-end tests on Windows too (`msedgedriver` can't attach to WebView2 in CI yet).
 - **Later:** mobile (iOS and Android), sync between devices.
-- **Testing:** verify light/dark theme switching (graph colors in particular).

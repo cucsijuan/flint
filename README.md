@@ -4,6 +4,10 @@ An open-source, local-first Markdown knowledge base. Flint works on a plain fold
 
 > **Status:** early development. Vaults, the live-preview editor, wikilinks, search, tags, the command palette, the graph view and plugins work; see the [roadmap](ROADMAP.md) for what comes next.
 
+## Documentation
+
+The [user manual](docs/manual/README.md) starts with a quick start and covers every feature.
+
 ## Development
 
 ### Requirements

@@ -21,6 +21,11 @@ export interface DataViewOptions {
   onConfigChange?: (config: string) => void
   onOpen?: (id: string) => void
   onEdit?: (id: string, property: string, value: unknown) => void
+  choices?: (
+    id: string,
+    property: string,
+    query: string,
+  ) => string[] | null | undefined | Promise<string[] | null | undefined>
   onNew?: () => void
 }
 
@@ -71,6 +76,8 @@ export function renderDataView(target: HTMLElement, initial: DataViewOptions) {
       edit: options.onEdit
         ? (id, property, value) => options.onEdit?.(id, property, value)
         : undefined,
+      choices: async (id, property, query) =>
+        (await options.choices?.(id, property, query)) ?? null,
     })
   }
   register()

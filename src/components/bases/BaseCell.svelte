@@ -4,6 +4,7 @@
   import { externalRow } from '../../lib/bases/external'
   import { workspace } from '../../lib/workspace.svelte'
   import BaseValue from './BaseValue.svelte'
+  import ChoiceEditor from './ChoiceEditor.svelte'
 
   let {
     row,
@@ -40,11 +41,18 @@
             : 'text'),
   )
   let isEditing = $state(false)
+  let choices = $state<string[] | null>(null)
   let draft = $state('')
   let initialDraft = ''
 
-  function start() {
+  const loadChoices = (query: string) =>
+    external && key
+      ? (external.handlers.choices?.(external.id, key, query) ?? Promise.resolve(null))
+      : Promise.resolve(null)
+
+  async function start() {
     if (!key || kind === 'checkbox') return
+    choices = await loadChoices('').catch(() => null)
     draft = Array.isArray(raw)
       ? raw.join(', ')
       : raw === undefined || raw === null
@@ -95,6 +103,17 @@
     type="checkbox"
     checked={raw === true}
     onchange={(event) => write(key, event.currentTarget.checked)}
+  />
+{:else if isEditing && key && choices}
+  <ChoiceEditor
+    value={raw === undefined || raw === null ? '' : String(raw)}
+    {choices}
+    load={loadChoices}
+    onpick={(picked) => {
+      isEditing = false
+      if (picked !== initialDraft) write(key, picked)
+    }}
+    oncancel={() => (isEditing = false)}
   />
 {:else if isEditing}
   <input

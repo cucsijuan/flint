@@ -107,6 +107,16 @@ export interface DataViewOptions {
   onOpen?: (id: string) => void
   /** The user edited a cell; without it, cells are read-only. */
   onEdit?: (id: string, property: string, value: unknown) => void
+  /**
+   * The values a cell may take, shown as a dropdown instead of a text field; `null` keeps the
+   * text field. `query` is what the user typed, for lists too long to send at once. An empty
+   * string in the list clears the cell.
+   */
+  choices?: (
+    id: string,
+    property: string,
+    query: string,
+  ) => string[] | null | undefined | Promise<string[] | null | undefined>
   /** Shows a New button that calls it. */
   onNew?: () => void
 }

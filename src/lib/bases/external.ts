@@ -3,6 +3,7 @@
 export interface ExternalHandlers {
   open?: (id: string) => void
   edit?: (id: string, property: string, value: unknown) => void
+  choices?: (id: string, property: string, query: string) => Promise<string[] | null>
 }
 
 const PREFIX = 'flint-data:'

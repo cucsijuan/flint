@@ -94,7 +94,7 @@ Every registration is tracked, so turning the plugin off undoes it without extra
 ### TypeScript and the template
 
 - The types are published on npm as [`flint-plugin-api`](https://www.npmjs.com/package/flint-plugin-api). Its README is the full API reference.
-- [`examples/plugin-template`](../../examples/plugin-template) is a ready TypeScript project with a build, a release workflow and examples of a command, a sidebar tab and a settings section.
+- [`examples/plugin-template`](https://github.com/cucsijuan/flint/tree/main/examples/plugin-template) is a ready TypeScript project with a build, a release workflow and examples of a command, a sidebar tab and a settings section.
 - For development, build straight into a vault's plugin folder and turn on **Settings → Plugins → Reload plugins when their files change**. Flint reloads the plugin every time its files change.
 
 ### Publishing

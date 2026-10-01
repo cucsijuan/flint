@@ -3,3 +3,5 @@ pnpm-lock.yaml
 src-tauri/target/
 src-tauri/gen/
 LICENSE
+docs/manual/.vitepress/cache/
+docs/manual/.vitepress/dist/

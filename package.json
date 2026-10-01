@@ -14,7 +14,9 @@
     "format:check": "prettier --check .",
     "test": "vitest run --passWithNoTests",
     "tauri": "tauri",
-    "test:e2e": "tauri build --debug --no-bundle && wdio run e2e/wdio.conf.ts"
+    "test:e2e": "tauri build --debug --no-bundle && wdio run e2e/wdio.conf.ts",
+    "docs:dev": "vitepress dev docs/manual",
+    "docs:build": "vitepress build docs/manual"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -42,6 +44,7 @@
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.70.1",
     "vite": "^8.3.0",
+    "vitepress": "^1.6.4",
     "vitest": "^5.0.1",
     "webdriverio": "^9.32.0"
   },

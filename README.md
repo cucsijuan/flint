@@ -6,7 +6,7 @@ An open-source, local-first Markdown knowledge base. Flint works on a plain fold
 
 ## Documentation
 
-The [user manual](docs/manual/README.md) starts with a quick start and covers every feature.
+The [user manual](https://cucsijuan.github.io/flint/) starts with a quick start and covers every feature. Its source is in [`docs/manual`](docs/manual); preview it with `pnpm docs:dev`.
 
 ## Development
 

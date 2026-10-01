@@ -6,7 +6,14 @@ import ts from 'typescript-eslint'
 import svelteConfig from './svelte.config.js'
 
 export default ts.config(
-  { ignores: ['dist/', 'src-tauri/'] },
+  {
+    ignores: [
+      'dist/',
+      'src-tauri/',
+      'docs/manual/.vitepress/cache/',
+      'docs/manual/.vitepress/dist/',
+    ],
+  },
   js.configs.recommended,
   ...ts.configs.strict,
   ...svelte.configs.recommended,

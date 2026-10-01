@@ -67,6 +67,9 @@
   } = $props()
 
   const GRID = 20
+  const MIN_ZOOM = 0.1
+  const MAX_ZOOM = 4
+  const ZOOM_STEP = 1.2
   const CARD = { width: 260, height: 140 }
   const FILE_CARD = { width: 400, height: 400 }
   /** Changes closer together than this undo as one step, like a drag. */
@@ -176,6 +179,19 @@
     updateNode,
     updateEdge,
   })
+
+  /** Zooms around the middle of the view; Svelte Flow's own zoomIn doesn't move the view here. */
+  function zoomBy(factor: number) {
+    const { x, y, zoom } = flow.getViewport()
+    const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * factor))
+    const { width, height } = container.getBoundingClientRect()
+    const scale = next / zoom
+    void flow.setViewport({
+      zoom: next,
+      x: width / 2 - (width / 2 - x) * scale,
+      y: height / 2 - (height / 2 - y) * scale,
+    })
+  }
 
   const snap = (value: number) => Math.round(value / GRID) * GRID
 
@@ -602,8 +618,8 @@
             {nodeTypes}
             {edgeTypes}
             fitView
-            minZoom={0.1}
-            maxZoom={4}
+            minZoom={MIN_ZOOM}
+            maxZoom={MAX_ZOOM}
             snapGrid={[GRID, GRID]}
             connectionMode={ConnectionMode.Loose}
             zoomOnDoubleClick={false}
@@ -649,10 +665,10 @@
               <button title="Undo" onclick={undo}><Undo2 size={16} /></button>
               <button title="Redo" onclick={redo}><Redo2 size={16} /></button>
               <span class="separator"></span>
-              <button title="Zoom in" onclick={() => flow.zoomIn()}>
+              <button title="Zoom in" onclick={() => zoomBy(ZOOM_STEP)}>
                 <ZoomIn size={16} />
               </button>
-              <button title="Zoom out" onclick={() => flow.zoomOut()}>
+              <button title="Zoom out" onclick={() => zoomBy(1 / ZOOM_STEP)}>
                 <ZoomOut size={16} />
               </button>
               <button title="Zoom to fit" onclick={() => flow.fitView()}>

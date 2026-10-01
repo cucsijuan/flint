@@ -27,7 +27,7 @@ describe('theme', () => {
     await pressShortcut('g')
     await expect($('.graph canvas')).toBeDisplayed()
     await pressShortcut(',')
-    await $('.settings nav button=Appearance').click()
+    await $('.settings nav').$('button=Appearance').click()
     const theme = $('.settings .content select')
 
     await theme.selectByAttribute('value', 'dark')

@@ -80,3 +80,29 @@ export function applyTemplate(
     return date.format(format?.trim() || (variable === 'date' ? dateFormat : timeFormat))
   })
 }
+
+/** The weeks shown for `month`, each a row of seven days starting on `firstDay` (0 is Sunday). */
+export function monthGrid(month: Dayjs, firstDay: number): Dayjs[][] {
+  const first = month.startOf('month')
+  const start = first.subtract((first.day() - firstDay + 7) % 7, 'day')
+  const weeks: Dayjs[][] = []
+  for (let day = start; weeks.length === 0 || day.isSame(month, 'month');) {
+    weeks.push(Array.from({ length: 7 }, (_, offset) => day.add(offset, 'day')))
+    day = day.add(7, 'day')
+  }
+  return weeks
+}
+
+/** The first day of the week where the user lives: 0 for Sunday, 1 for Monday… */
+export function localFirstDay(locale = navigator.language) {
+  try {
+    const info = new Intl.Locale(locale) as Intl.Locale & {
+      getWeekInfo?: () => { firstDay: number }
+      weekInfo?: { firstDay: number }
+    }
+    const firstDay = (info.getWeekInfo?.() ?? info.weekInfo)?.firstDay
+    return firstDay === undefined ? 1 : firstDay % 7
+  } catch {
+    return 1
+  }
+}

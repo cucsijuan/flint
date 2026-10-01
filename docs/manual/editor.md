@@ -83,6 +83,8 @@ Tables are edited as a grid:
   - **Add row above** and **Add row below**, **Move row up** and **Move row down**, **Delete row**.
   - **Add column before** and **Add column after**, **Move column left** and **Move column right**, **Delete column**.
   - **Align left**, **Align center** and **Align right**.
+- Hover the table for **+** buttons on its right and bottom edges, which add a column or a row at the end.
+- Formatting hotkeys work inside a cell: **Ctrl+B**, **Ctrl+I**, strikethrough, inline code and **Ctrl+K** for a link.
 
 ### Folding
 

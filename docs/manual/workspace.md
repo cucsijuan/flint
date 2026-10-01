@@ -77,6 +77,7 @@ Show or hide it with **Toggle right sidebar** or the button at the right of the 
 | **Properties**     | Show properties     | the note's frontmatter as a form ([more](editor.md#properties-frontmatter))                            |
 | **Tags**           | Show tags           | every tag in the vault with its count, nested tags indented under their parent; click one to search it |
 | **Local graph**    | Show local graph    | the notes around this one ([more](links-and-graph.md#the-local-graph))                                 |
+| **Calendar**       | Show calendar       | a month with your daily notes ([more](daily-notes-and-templates.md#the-calendar))                      |
 
 Plugins can add their own panels here or in the left sidebar.
 
@@ -99,14 +100,16 @@ Any command can get a hotkey in **Settings → Hotkeys**. The [reference](refere
 
 Bookmarks keep the things you come back to one click away, in the **Bookmarks** tab of the left sidebar.
 
-- **Notes:** **Bookmark or unbookmark current note** (command palette).
+- **Notes:** **Bookmark or unbookmark current note** (command palette), or right-click it in the file tree → **Bookmark**.
+- **Folders:** right-click a folder in the file tree → **Bookmark**. Opening the bookmark reveals the folder in the tree.
 - **Headings:** hover a heading in the **Outline** panel and click the bookmark icon (**Bookmark this heading**).
 - **Searches:** click the bookmark icon beside the search box (**Bookmark this search**).
 
 In the Bookmarks tab:
 
 - Click a bookmark to open it. A search bookmark runs the search again.
-- Drag bookmarks to reorder them.
-- **Remove bookmark** deletes one.
+- **New group** (the folder button at the top) creates a group. Double-click a group's name to rename it, and click it to fold or unfold it.
+- Drag bookmarks to reorder them. Drop one onto the middle of a group to put it inside, or above or below other bookmarks to move it out. Groups can hold other groups.
+- **Remove bookmark** deletes one. Removing a group keeps its bookmarks, which move to where the group was.
 
 Bookmarks are stored in `.flint/bookmarks.json`, in the same format as Obsidian's `bookmarks.json`.

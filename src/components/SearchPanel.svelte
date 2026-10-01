@@ -129,7 +129,24 @@
                   )}
               >
                 {#each match.segments as segment, index (index)}
-                  <span class:highlight={segment.highlight}>{segment.text}</span>
+                  {#if segment.highlight && isReplacing && targets.has(result.path)}
+                    {@const occurrence = match.segments
+                      .slice(0, index)
+                      .filter((before) => before.highlight).length}
+                    <span
+                      class="highlight replaceable"
+                      role="button"
+                      tabindex="-1"
+                      title="Replace this match"
+                      onclick={(event) => {
+                        event.stopPropagation()
+                        void workspace.replaceLine(result.path, match.line, replacement, occurrence)
+                      }}
+                      onkeydown={() => {}}>{segment.text}</span
+                    >
+                  {:else}
+                    <span class:highlight={segment.highlight}>{segment.text}</span>
+                  {/if}
                 {/each}
               </button>
               {#if isReplacing && targets.has(result.path)}
@@ -155,6 +172,15 @@
     flex-direction: column;
     height: 100%;
     min-height: 0;
+  }
+
+  .replaceable {
+    cursor: pointer;
+    text-decoration: line-through;
+  }
+
+  .replaceable:hover {
+    outline: 1px solid var(--accent);
   }
 
   .bar {

@@ -7,6 +7,7 @@ import {
   dayjs,
   DEFAULT_DAILY_NOTES,
   DEFAULT_TEMPLATES,
+  monthGrid,
 } from './dates'
 
 const nested = { folder: 'Journal', format: 'YYYY/MM/YYYY-MM-DD', template: '' }
@@ -39,5 +40,15 @@ describe('templates', () => {
     expect(applyTemplate(text, { title: 'Plan', date }, DEFAULT_TEMPLATES)).toBe(
       '# Plan\n2026-09-26 14:05 Saturday, 26 September 14 {{other}}',
     )
+  })
+})
+
+describe('monthGrid', () => {
+  it('lays out whole weeks from the chosen first day', () => {
+    const weeks = monthGrid(dayjs('2026-10-15'), 1)
+    expect(weeks).toHaveLength(5)
+    expect(weeks[0][0].format('YYYY-MM-DD')).toBe('2026-09-28')
+    expect(weeks.at(-1)?.at(-1)?.format('YYYY-MM-DD')).toBe('2026-11-01')
+    expect(monthGrid(dayjs('2026-10-15'), 0)[0][0].format('YYYY-MM-DD')).toBe('2026-09-27')
   })
 })

@@ -9,6 +9,10 @@ A daily note is a note named after a date, such as `2026-10-01`, for a journal, 
 - **Open today's daily note**, or the calendar button at the top of the left sidebar, opens today's note and creates it if it doesn't exist yet.
 - **Open previous daily note** (**Ctrl+Alt+←**) and **Open next daily note** (**Ctrl+Alt+→**) move to the nearest earlier or later daily note that exists, starting from the note you're on (or from today). On a daily note, the arrows in the note's header do the same.
 
+### The calendar
+
+**Show calendar**, or the **Calendar** tab of the right sidebar, shows a month with a dot under every day that has a daily note. Click a day to open its note, or to create it when there's none (**Ctrl+click** opens it in a new tab). The arrows change the month and **Today** comes back to the current one. Weeks start on the day that's usual where you live.
+
 ### Settings
 
 **Settings → Daily notes and templates**:

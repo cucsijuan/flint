@@ -25,6 +25,8 @@
     parseTable,
     tableData,
   } from '../lib/editor/table'
+  import { commands, hotkeyOf } from '../lib/commands.svelte'
+  import { toggleWrapText } from '../lib/editor/formatting'
   import { hydrate, type HydrateContext } from '../lib/render/hydrate'
   import { renderInlineMarkdown } from '../lib/render/markdown'
   import TableGrip, { type GripItem } from './TableGrip.svelte'
@@ -55,7 +57,40 @@
     edit(row, column)
   }
 
+  /** Formatting commands, applied to the cell instead of the note around the table. */
+  const CELL_FORMATS: Record<string, [string, string]> = {
+    'toggle-bold': ['**', '**'],
+    'toggle-italic': ['*', '*'],
+    'toggle-strikethrough': ['~~', '~~'],
+    'toggle-inline-code': ['`', '`'],
+    'insert-link': ['[[', ']]'],
+  }
+
+  function format(event: KeyboardEvent, row: number, column: number) {
+    const hotkey = hotkeyOf(event)
+    const command = commands
+      .all()
+      .find((known) => known.id in CELL_FORMATS && known.hotkey === hotkey)
+    if (!command) return false
+    event.preventDefault()
+    const input = event.currentTarget as HTMLTextAreaElement
+    const [open, close] = CELL_FORMATS[command.id]
+    const result =
+      open === close
+        ? toggleWrapText(draft, input.selectionStart, input.selectionEnd, open)
+        : {
+            text: `${draft.slice(0, input.selectionStart)}${open}${draft.slice(input.selectionStart, input.selectionEnd)}${close}${draft.slice(input.selectionEnd)}`,
+            from: input.selectionEnd + open.length,
+            to: input.selectionEnd + open.length,
+          }
+    draft = result.text
+    edits.cell(row, column, cellSource(draft))
+    requestAnimationFrame(() => input.setSelectionRange(result.from, result.to))
+    return true
+  }
+
   function onKeydown(event: KeyboardEvent, row: number, column: number) {
+    if (format(event, row, column)) return
     if (event.key === 'Tab') {
       event.preventDefault()
       const index = row * width + column + (event.shiftKey ? -1 : 1)
@@ -144,59 +179,116 @@
   {/if}
 {/snippet}
 
-<table class="table-editor" data-interactive onmouseleave={() => (hovered = null)}>
-  <thead>
-    <tr>
-      {#each data.rows[0] ?? [] as text, column (column)}
-        <th
-          style:text-align={data.alignments[column]}
-          onmouseenter={() => (hovered = { row: 0, column })}
-        >
-          <TableGrip
-            label="Column"
-            kind="column"
-            isShown={hovered?.column === column}
-            items={columnItems(column)}
-          />
-          {#if column === 0}
-            <TableGrip
-              label="Row"
-              kind="row"
-              isShown={hovered?.row === 0}
-              items={[['Add row below', () => edits.replace(insertRow(data, 1))]]}
-            />
-          {/if}
-          {@render cell(0, column, text)}
-        </th>
-      {/each}
-    </tr>
-  </thead>
-  <tbody>
-    {#each data.rows.slice(1) as cells, index (index)}
-      {@const row = index + 1}
+<div class="table-wrap" data-interactive>
+  <table class="table-editor" onmouseleave={() => (hovered = null)}>
+    <thead>
       <tr>
-        {#each cells as text, column (column)}
-          <td
+        {#each data.rows[0] ?? [] as text, column (column)}
+          <th
             style:text-align={data.alignments[column]}
-            onmouseenter={() => (hovered = { row, column })}
+            onmouseenter={() => (hovered = { row: 0, column })}
           >
+            <TableGrip
+              label="Column"
+              kind="column"
+              isShown={hovered?.column === column}
+              items={columnItems(column)}
+            />
             {#if column === 0}
               <TableGrip
                 label="Row"
                 kind="row"
-                isShown={hovered?.row === row}
-                items={rowItems(row)}
+                isShown={hovered?.row === 0}
+                items={[['Add row below', () => edits.replace(insertRow(data, 1))]]}
               />
             {/if}
-            {@render cell(row, column, text)}
-          </td>
+            {@render cell(0, column, text)}
+          </th>
         {/each}
       </tr>
-    {/each}
-  </tbody>
-</table>
+    </thead>
+    <tbody>
+      {#each data.rows.slice(1) as cells, index (index)}
+        {@const row = index + 1}
+        <tr>
+          {#each cells as text, column (column)}
+            <td
+              style:text-align={data.alignments[column]}
+              onmouseenter={() => (hovered = { row, column })}
+            >
+              {#if column === 0}
+                <TableGrip
+                  label="Row"
+                  kind="row"
+                  isShown={hovered?.row === row}
+                  items={rowItems(row)}
+                />
+              {/if}
+              {@render cell(row, column, text)}
+            </td>
+          {/each}
+        </tr>
+      {/each}
+    </tbody>
+  </table>
+  <button
+    class="add add-column"
+    title="Add column"
+    onclick={() => edits.replace(insertColumn(data, width))}>+</button
+  >
+  <button
+    class="add add-row"
+    title="Add row"
+    onclick={() => edits.replace(insertRow(data, data.rows.length))}>+</button
+  >
+</div>
 
 <style>
+  .table-wrap {
+    display: inline-grid;
+    grid-template-columns: auto 18px;
+    grid-template-rows: auto 18px;
+    max-width: 100%;
+    padding-top: 0.5em;
+  }
+
+  .table-wrap > :global(table) {
+    margin: 0;
+  }
+
+  .add {
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: var(--background-secondary);
+    color: var(--text-muted);
+    font: inherit;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+  }
+
+  .table-wrap:hover .add {
+    opacity: 1;
+  }
+
+  .add:hover {
+    background: var(--hover);
+    color: var(--text);
+  }
+
+  .add-column {
+    grid-row: 1;
+    grid-column: 2;
+    margin-left: 2px;
+  }
+
+  .add-row {
+    grid-row: 2;
+    grid-column: 1;
+    margin-top: 2px;
+  }
+
   .table-editor th,
   .table-editor td {
     position: relative;

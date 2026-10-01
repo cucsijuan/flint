@@ -187,14 +187,10 @@
       {#if target}
         {@const path = target.path}
         {#if target.kind === 'folder'}<ContextMenu.Separator class="menu-separator" />{/if}
-        {#if target.kind === 'file'}
-          <ContextMenu.Item
-            class="menu-item"
-            onSelect={() => workspace.toggleBookmark({ type: 'file', path })}
-          >
-            {workspace.isBookmarked({ type: 'file', path }) ? 'Remove bookmark' : 'Bookmark'}
-          </ContextMenu.Item>
-        {/if}
+        {@const bookmark = { type: target.kind === 'folder' ? 'folder' : 'file', path } as const}
+        <ContextMenu.Item class="menu-item" onSelect={() => workspace.toggleBookmark(bookmark)}>
+          {workspace.isBookmarked(bookmark) ? 'Remove bookmark' : 'Bookmark'}
+        </ContextMenu.Item>
         {#if target.kind !== 'folder'}
           <ContextMenu.Item class="menu-item" onSelect={() => workspace.duplicate(path)}>
             Duplicate

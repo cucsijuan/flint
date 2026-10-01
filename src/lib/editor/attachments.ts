@@ -1,6 +1,6 @@
 import { Facet } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
-import { basename, isImage } from '../paths'
+import { basename } from '../paths'
 import * as vault from '../vault'
 
 export interface AttachmentSource {
@@ -10,7 +10,7 @@ export interface AttachmentSource {
 
 export type SaveAttachment = (source: AttachmentSource) => Promise<string | null>
 
-const fromFile = (file: File): AttachmentSource => ({
+export const fromFile = (file: File): AttachmentSource => ({
   name: file.name || `image.${file.type.split('/')[1] ?? 'png'}`,
   write: async (path) => {
     await vault.saveAttachment(path, new Uint8Array(await file.arrayBuffer()))
@@ -18,7 +18,7 @@ const fromFile = (file: File): AttachmentSource => ({
   },
 })
 
-const fromDisk = (source: string): AttachmentSource => ({
+export const fromDisk = (source: string): AttachmentSource => ({
   name: basename(source),
   write: async (path) => {
     await vault.importAttachment(source, path)
@@ -31,11 +31,8 @@ const fromClipboard: AttachmentSource = {
   write: (path) => vault.saveClipboardImage(path),
 }
 
-function imageSources(data: DataTransfer | null): AttachmentSource[] {
-  return [...(data?.files ?? [])]
-    .filter((file) => file.type.startsWith('image/') || isImage(file.name))
-    .map(fromFile)
-}
+export const fileSources = (data: DataTransfer | null): AttachmentSource[] =>
+  [...(data?.files ?? [])].map(fromFile)
 
 const mayHoldAttachment = (types: readonly string[]) =>
   types.includes('text/uri-list') ||
@@ -63,7 +60,7 @@ async function insertAttachments(
 }
 
 async function pasteFromSystemClipboard(view: EditorView, text: string, save: SaveAttachment) {
-  const paths = (await vault.clipboardFiles()).filter(isImage)
+  const paths = await vault.clipboardFiles()
   const sources = paths.length ? paths.map(fromDisk) : [fromClipboard]
   const position = view.state.selection.main.head
   if (!(await insertAttachments(view, sources, position, save)) && text) {
@@ -75,14 +72,15 @@ const attachmentSaver = Facet.define<SaveAttachment, SaveAttachment | null>({
   combine: (values) => values[0] ?? null,
 })
 
+/** Drops files from the system onto the editor under `(x, y)`; false when there's none. */
 export function dropFiles(paths: string[], x: number, y: number) {
   const editor = document.elementFromPoint(x, y)?.closest<HTMLElement>('.cm-editor')
   const view = editor && EditorView.findFromDOM(editor)
   const save = view?.state.facet(attachmentSaver)
-  const sources = paths.filter(isImage).map(fromDisk)
-  if (!view || !save || !sources.length) return
+  if (!view || !save || !paths.length) return false
   const position = view.posAtCoords({ x, y }) ?? view.state.selection.main.head
-  void insertAttachments(view, sources, position, save)
+  void insertAttachments(view, paths.map(fromDisk), position, save)
+  return true
 }
 
 export const attachmentInput = (save: SaveAttachment) => [
@@ -91,7 +89,7 @@ export const attachmentInput = (save: SaveAttachment) => [
     paste(event, view) {
       const data = event.clipboardData
       if (!data) return false
-      const sources = imageSources(data)
+      const sources = fileSources(data)
       if (sources.length) {
         event.preventDefault()
         void insertAttachments(view, sources, view.state.selection.main.head, save)
@@ -103,7 +101,7 @@ export const attachmentInput = (save: SaveAttachment) => [
       return true
     },
     drop(event, view) {
-      const sources = imageSources(event.dataTransfer)
+      const sources = fileSources(event.dataTransfer)
       if (!sources.length) return false
       event.preventDefault()
       const position = view.posAtCoords(event) ?? view.state.selection.main.head

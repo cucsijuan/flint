@@ -69,7 +69,7 @@ Every command is in the command palette (**Ctrl+P**) and can get a hotkey.
 | Editing         | Toggle bold · Toggle italic · Toggle strikethrough · Toggle inline code · Insert internal link · Move line up · Move line down · Open link under the cursor in a new tab |
 | Folding         | Toggle fold on the current line · Fold all headings and lists · Unfold all headings and lists                                                                            |
 | View            | Toggle reading view · Toggle live preview and source mode · Toggle readable line length · Toggle right sidebar                                                           |
-| Panels          | Show file explorer · Show bookmarks · Show backlinks · Show outgoing links · Show outline · Show properties · Show tags · Show local graph                               |
+| Panels          | Show file explorer · Show bookmarks · Show backlinks · Show outgoing links · Show outline · Show properties · Show tags · Show local graph · Show calendar               |
 | Notes           | Add properties to current note · Bookmark or unbookmark current note                                                                                                     |
 | Export, history | Export to PDF · Export to HTML · Export vault as a website · Open version history · Recover deleted notes                                                                |
 | App             | Open another vault · Open settings · Check for updates                                                                                                                   |

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   blockLines,
+  insertBlockAfter,
   noteBlocks,
   noteContent,
   replaceFencedContent,
@@ -82,5 +83,15 @@ describe('note source', () => {
       'intro\n> ~~~~base\n> old: 1\n> ~~~~\n- item\n  ```base\n  b: 2\n  ```',
     )
     expect(replaceFencedContent(text, 0, 1, 'x')).toBeNull()
+  })
+})
+
+describe('insertBlockAfter', () => {
+  it('puts the block on its own lines after a block or at the end', () => {
+    expect(insertBlockAfter('# A\nText\n\nMore', 2, '![[x.png]]')).toBe(
+      '# A\nText\n\n![[x.png]]\n\nMore',
+    )
+    expect(insertBlockAfter('# A\nText', 1, '![[x.png]]')).toBe('# A\n\n![[x.png]]\n\nText')
+    expect(insertBlockAfter('Text', null, '![[x.png]]')).toBe('Text\n\n![[x.png]]')
   })
 })

@@ -318,15 +318,16 @@ pub struct Replaced {
     count: usize,
 }
 
-/// `text` with the search's matches replaced, everywhere or only on `line`.
+/// `text` with the search's matches replaced: everywhere, on `line`, or its `occurrence`th match.
 #[tauri::command(async)]
 pub fn replace_text(
     query: String,
     replacement: String,
     text: String,
     line: Option<usize>,
+    occurrence: Option<usize>,
 ) -> Result<Replaced> {
-    let (text, count) = Query::parse(&query)?.replace(&text, &replacement, line);
+    let (text, count) = Query::parse(&query)?.replace(&text, &replacement, line, occurrence);
     Ok(Replaced { text, count })
 }
 

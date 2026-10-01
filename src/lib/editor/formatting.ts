@@ -43,3 +43,22 @@ export function insertLink(view: EditorView) {
   )
   view.focus()
 }
+
+/** `toggleWrap` for plain text and a selection, as in a text field. */
+export function toggleWrapText(text: string, from: number, to: number, marker: string) {
+  const before = text.slice(from - marker.length, from)
+  const after = text.slice(to, to + marker.length)
+  if (from >= marker.length && before === marker && after === marker) {
+    return {
+      text:
+        text.slice(0, from - marker.length) + text.slice(from, to) + text.slice(to + marker.length),
+      from: from - marker.length,
+      to: to - marker.length,
+    }
+  }
+  return {
+    text: text.slice(0, from) + marker + text.slice(from, to) + marker + text.slice(to),
+    from: from + marker.length,
+    to: to + marker.length,
+  }
+}

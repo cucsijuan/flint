@@ -164,3 +164,13 @@ export function toggleTask(text: string, line: number) {
   lines[line] = `${prefix}${mark === ' ' ? 'x' : ' '}]${lines[line].slice(whole.length)}`
   return lines.join('\n')
 }
+
+/** `text` with `block` on its own lines after line `line` (0-based), or at the end without one. */
+export function insertBlockAfter(text: string, line: number | null, block: string) {
+  const lines = text.split('\n')
+  const at = line === null ? lines.length : Math.min(line, lines.length)
+  const before = at > 0 && lines[at - 1].trim() !== '' ? [''] : []
+  const after = at < lines.length && lines[at].trim() !== '' ? [''] : []
+  lines.splice(at, 0, ...before, block, ...after)
+  return lines.join('\n')
+}

@@ -7,7 +7,7 @@
 A vault is an ordinary folder on your computer. Flint shows everything inside it in the file tree:
 
 - **Notes:** files ending in `.md`.
-- **Attachments:** images (`png`, `jpg`, `jpeg`, `gif`, `webp`, `svg`, `bmp`, `avif`), PDFs, audio (`mp3`, `wav`, `ogg`, `m4a`), video (`mp4`, `webm`, `mov`), bases (`.base`) and canvases (`.canvas`).
+- **Attachments:** images (`png`, `jpg`, `jpeg`, `gif`, `webp`, `svg`, `bmp`, `avif`), PDFs, audio (`mp3`, `wav`, `ogg`, `m4a`, `flac`), video (`mp4`, `webm`, `mov`, `mkv`), documents (`txt`, `csv`, `json`, `xml`, `yaml`, `doc`, `docx`, `xls`, `xlsx`, `ppt`, `pptx`, `odt`, `ods`, `odp`, `rtf`, `epub`), archives (`zip`, `7z`, `rar`, `gz`), bases (`.base`) and canvases (`.canvas`).
 - **Folders**, nested as deep as you like.
 
 Other files stay in the folder untouched but don't show in Flint. Hidden files and folders, whose names start with a dot (`.obsidian`, `.git`, `.flint`, `.trash`), are skipped everywhere: the tree, search, links and the graph.
@@ -53,18 +53,18 @@ Relative Markdown links inside a moved note (`[text](../other.md)`) are always f
 
 ## Attachments
 
-### Adding images
+### Adding files
 
-- **Paste** an image (a screenshot or a copied image file) into a note with **Ctrl+V**.
-- **Drag** image files from your file manager into a note.
+- **Paste** an image or a copied file into a note with **Ctrl+V**.
+- **Drag** files from your file manager into a note, in the editor or in the reading view. In the reading view, they go after the paragraph, list or other block under the pointer.
 
-Flint copies the file into the vault and inserts a link such as `![[Pasted image 20261001093000.png]]`. **Settings → Editor → Attachment location** decides where it goes:
+Flint copies each file into the vault and inserts an embed such as `![[Pasted image 20261001093000.png]]` or `![[Report.pdf]]`. **Settings → Editor → Attachment location** decides where it goes:
 
 - **Vault root**.
 - **Same folder as the note**.
 - **"attachments" folder**, at the root of the vault.
 
-Copied images keep their file name. Screenshots get a `Pasted image` name with the date and time.
+Copied files keep their name. Screenshots get a `Pasted image` name with the date and time.
 
 ### Opening attachments
 

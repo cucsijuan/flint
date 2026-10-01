@@ -9,9 +9,11 @@ use tempfile::NamedTempFile;
 use crate::error::{Error, Result};
 
 const NOTE_EXTENSION: &str = "md";
-const ATTACHMENT_EXTENSIONS: [&str; 18] = [
+const ATTACHMENT_EXTENSIONS: [&str; 41] = [
     "png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "avif", "pdf", "mp3", "wav", "ogg", "m4a",
-    "mp4", "webm", "mov", "base", "canvas",
+    "flac", "mp4", "webm", "mov", "mkv", "base", "canvas", "txt", "csv", "json", "xml", "yaml",
+    "yml", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "odt", "ods", "odp", "rtf", "epub", "zip",
+    "7z", "rar", "gz",
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -308,7 +310,7 @@ mod tests {
             "folder/nested.md",
             "root.MD",
             "image.PNG",
-            "archive.zip",
+            "archive.xyz",
             ".obsidian/app.md",
         ] {
             fs::write(dir.path().join(file), "").unwrap();

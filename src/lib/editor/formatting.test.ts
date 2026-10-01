@@ -2,7 +2,7 @@
 import { EditorState } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
 import { describe, expect, it } from 'vitest'
-import { insertLink, toggleWrap } from './formatting'
+import { insertLink, toggleWrap, toggleWrapText } from './formatting'
 
 function editor(doc: string, from: number, to = from) {
   return new EditorView({
@@ -24,5 +24,20 @@ describe('formatting', () => {
     insertLink(view)
     expect(view.state.doc.toString()).toBe('see [[Note]]')
     expect(view.state.selection.main.head).toBe(10)
+  })
+})
+
+describe('toggleWrapText', () => {
+  it('wraps a selection and unwraps it again', () => {
+    expect(toggleWrapText('a word here', 2, 6, '**')).toEqual({
+      text: 'a **word** here',
+      from: 4,
+      to: 8,
+    })
+    expect(toggleWrapText('a **word** here', 4, 8, '**')).toEqual({
+      text: 'a word here',
+      from: 2,
+      to: 6,
+    })
   })
 })

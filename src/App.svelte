@@ -17,12 +17,13 @@
   import Welcome from './components/Welcome.svelte'
   import { listen } from '@tauri-apps/api/event'
   import { applyAppearance, applySnippets } from './lib/appearance'
-  import { dropFiles } from './lib/editor/attachments'
+  import { dropFiles, fromDisk } from './lib/editor/attachments'
   import { contextWord, replaceContextWord } from './lib/editor/context-word'
   import { registerAppCommands, rememberContextTarget } from './lib/app-commands'
   import { checkForUpdates } from './lib/updates'
   import { commands, isMac } from './lib/commands.svelte'
   import { pluginHost } from './lib/plugins/host.svelte'
+  import { dropOnReadingView } from './lib/reading-drop'
   import * as vault from './lib/vault'
   import { workspace } from './lib/workspace.svelte'
 
@@ -52,7 +53,11 @@
     )
     // Only Linux enables native file drops; WebKitGTK reports their position in CSS pixels.
     const fileDrops = getCurrentWebview().onDragDropEvent(({ payload }) => {
-      if (payload.type === 'drop') dropFiles(payload.paths, payload.position.x, payload.position.y)
+      if (payload.type !== 'drop') return
+      const { paths, position } = payload
+      if (!dropFiles(paths, position.x, position.y)) {
+        dropOnReadingView(paths.map(fromDisk), document.elementFromPoint(position.x, position.y))
+      }
     })
     return () => {
       void closing.then((unlisten) => unlisten())

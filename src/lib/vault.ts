@@ -173,8 +173,20 @@ export type SearchSort =
 export const search = (query: string, sort: SearchSort) =>
   invoke<SearchResult[]>('search', { query, sort })
 /** `text` with the search's matches replaced, everywhere or only on `line`. */
-export const replaceText = (query: string, replacement: string, text: string, line?: number) =>
-  invoke<{ text: string; count: number }>('replace_text', { query, replacement, text, line })
+export const replaceText = (
+  query: string,
+  replacement: string,
+  text: string,
+  line?: number,
+  occurrence?: number,
+) =>
+  invoke<{ text: string; count: number }>('replace_text', {
+    query,
+    replacement,
+    text,
+    line,
+    occurrence,
+  })
 export const matchingNotes = (queries: string[]) =>
   invoke<string[][]>('matching_notes', { queries })
 export const tags = () => invoke<TagCount[]>('tags')

@@ -177,7 +177,14 @@ impl Query {
 
     /// Replaces the highlighted matches in `text` (only on the 1-based `line`, when given) and
     /// returns the new text with the number of replacements.
-    pub fn replace(&self, text: &str, replacement: &str, line: Option<usize>) -> (String, usize) {
+    /// `text` with the matches replaced: all of them, those on `line`, or only its `occurrence`th.
+    pub fn replace(
+        &self,
+        text: &str,
+        replacement: &str,
+        line: Option<usize>,
+        occurrence: Option<usize>,
+    ) -> (String, usize) {
         let note = Note {
             path: "",
             text,
@@ -195,7 +202,12 @@ impl Query {
                 }
                 let mut result = String::with_capacity(text.len());
                 let mut cursor = 0;
-                for (range, captures, expands) in Self::ranges(&highlights, index, text) {
+                let ranges = Self::ranges(&highlights, index, text)
+                    .into_iter()
+                    .enumerate()
+                    .filter(|(nth, _)| occurrence.is_none_or(|wanted| wanted == *nth))
+                    .map(|(_, range)| range);
+                for (range, captures, expands) in ranges {
                     result.push_str(&text[cursor..range.start]);
                     if expands {
                         captures.expand(replacement, &mut result);
@@ -717,22 +729,26 @@ mod tests {
         let query = Query::parse("cat").unwrap();
         let text = "cat and Cat\nno dogs\ncat";
         assert_eq!(
-            query.replace(text, "dog", None),
+            query.replace(text, "dog", None, None),
             ("dog and dog\nno dogs\ndog".to_owned(), 3)
         );
         assert_eq!(
-            query.replace(text, "dog", Some(3)),
+            query.replace(text, "dog", Some(3), None),
             ("cat and Cat\nno dogs\ndog".to_owned(), 1)
+        );
+        assert_eq!(
+            query.replace(text, "dog", Some(1), Some(1)),
+            ("cat and dog\nno dogs\ncat".to_owned(), 1)
         );
         let regex = Query::parse("/(\\w+)@example/").unwrap();
         assert_eq!(
-            regex.replace("mail ana@example", "$1@test", None).0,
+            regex.replace("mail ana@example", "$1@test", None, None).0,
             "mail ana@test"
         );
         assert_eq!(
             Query::parse("price")
                 .unwrap()
-                .replace("price", "$5", None)
+                .replace("price", "$5", None, None)
                 .0,
             "$5"
         );
@@ -751,7 +767,7 @@ mod tests {
         assert_eq!(lines("plant line:(water tomatoes)"), [1, 2]);
         let (replaced, count) = Query::parse("task-todo:tomatoes")
             .unwrap()
-            .replace(text, "beans", None);
+            .replace(text, "beans", None, None);
         assert_eq!(count, 1);
         assert!(replaced.contains("buy beans") && replaced.contains("eat tomatoes"));
     }

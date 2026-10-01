@@ -14,14 +14,20 @@ import {
   type TemplateSettings,
 } from './dates'
 import {
+  addGroup,
   type Bookmark,
+  type BookmarkItem,
+  type BookmarkPath,
   type BookmarkTarget,
-  isSameBookmark,
+  containsBookmark,
   moveBookmark,
   parseBookmarks,
+  removeBookmarkAt,
   renameBookmarks,
+  renameGroup,
   serializeBookmarks,
   toggleBookmark,
+  ungroup,
 } from './bookmarks'
 import { type AppearanceSettings, DEFAULT_APPEARANCE } from './appearance'
 import { commands } from './commands.svelte'
@@ -85,7 +91,14 @@ const timestamp = () => new Date().toISOString().replace(/\D/g, '').slice(0, 14)
 
 export type LeftTab = 'files' | 'search' | 'bookmarks'
 export type RightTab =
-  'backlinks' | 'outgoing' | 'outline' | 'properties' | 'tags' | 'graph' | (string & {})
+  | 'backlinks'
+  | 'outgoing'
+  | 'outline'
+  | 'properties'
+  | 'tags'
+  | 'graph'
+  | 'calendar'
+  | (string & {})
 
 export interface Jump {
   tabId: string
@@ -139,7 +152,7 @@ class Workspace {
   readonly expandedFolders = new SvelteSet<string>()
   /** The file the tree scrolls to and highlights for a moment. */
   revealed = $state<string | null>(null)
-  bookmarks = $state<Bookmark[]>([])
+  bookmarks = $state<BookmarkItem[]>([])
   isSettingsOpen = $state(false)
   /** The note whose version history is open. */
   historyNote = $state<string | null>(null)
@@ -370,10 +383,10 @@ class Workspace {
     }[this.attachmentFolder]
     const dot = source.name.lastIndexOf('.')
     const stem = dot > 0 ? source.name.slice(0, dot) : source.name
-    const extension = extensionOf(source.name) || 'png'
+    const extension = extensionOf(source.name)
     const isGenericName = !stem || /^image$/i.test(stem)
     const base = isGenericName ? `Pasted image ${timestamp()}` : stem
-    const path = uniqueName(this.#takenPaths(), folder, base, `.${extension}`)
+    const path = uniqueName(this.#takenPaths(), folder, base, extension ? `.${extension}` : '')
     if (!(await source.write(path))) return null
     await this.#refresh()
     return this.linkTargets.find((target) => target.path === path)?.linkText ?? basename(path)
@@ -427,21 +440,25 @@ class Workspace {
   }
 
   /** Opens today's daily note (creating it from the template), or the closest one before or after. */
+  /** Opens the daily note for `date`, creating it from the daily notes template if needed. */
+  async openDailyNoteFor(date: Dayjs, options?: OpenOptions) {
+    await this.#run(async () => {
+      const path = dailyNotePath(date, this.dailyNotes)
+      if (!this.#takenPaths().has(path)) {
+        const { template } = this.dailyNotes
+        const text = template ? await this.#templateText(template, noteTitle(path), date) : ''
+        await vault.createNote(path)
+        if (text) await vault.writeNote(path, text)
+        await this.#refresh()
+      }
+      this.openNote(path, options)
+    })
+  }
+
   async openDailyNote(direction: 0 | 1 | -1 = 0) {
+    if (direction === 0) return this.openDailyNoteFor(dayjs())
     await this.#run(async () => {
       const today = dayjs()
-      if (direction === 0) {
-        const path = dailyNotePath(today, this.dailyNotes)
-        if (!this.#takenPaths().has(path)) {
-          const { template } = this.dailyNotes
-          const text = template ? await this.#templateText(template, noteTitle(path), today) : ''
-          await vault.createNote(path)
-          if (text) await vault.writeNote(path, text)
-          await this.#refresh()
-        }
-        this.openNote(path)
-        return
-      }
       const current = this.notePath ? dailyNoteDate(this.notePath, this.dailyNotes) : null
       const paths = this.entries.map((entry) => entry.path)
       const path = adjacentDailyNote(paths, current ?? today, direction, this.dailyNotes)
@@ -467,25 +484,42 @@ class Workspace {
   }
 
   isBookmarked(target: BookmarkTarget) {
-    return this.bookmarks.some((bookmark) => isSameBookmark(bookmark, target))
+    return containsBookmark(this.bookmarks, target)
   }
 
   toggleBookmark(target: BookmarkTarget) {
     this.#setBookmarks(toggleBookmark(this.bookmarks, target))
   }
 
-  moveBookmark(from: number, to: number) {
-    this.#setBookmarks(moveBookmark(this.bookmarks, from, to))
+  moveBookmark(from: BookmarkPath, parent: BookmarkPath, index: number) {
+    this.#setBookmarks(moveBookmark(this.bookmarks, from, parent, index))
+  }
+
+  addBookmarkGroup(title: string) {
+    this.#setBookmarks(addGroup(this.bookmarks, title))
+  }
+
+  renameBookmarkGroup(path: BookmarkPath, title: string) {
+    this.#setBookmarks(renameGroup(this.bookmarks, path, title))
+  }
+
+  ungroupBookmarks(path: BookmarkPath) {
+    this.#setBookmarks(ungroup(this.bookmarks, path))
+  }
+
+  removeBookmark(path: BookmarkPath) {
+    this.#setBookmarks(removeBookmarkAt(this.bookmarks, path))
   }
 
   openBookmark(bookmark: Bookmark, options?: OpenOptions) {
     if (bookmark.type === 'search') this.openSearch(bookmark.query)
+    else if (bookmark.type === 'folder') this.revealInTree(bookmark.path)
     else if (bookmark.type === 'heading') {
       this.openNoteAt(bookmark.path, { heading: bookmark.subpath.replace(/^#/, '') }, options)
     } else this.openNote(bookmark.path, options)
   }
 
-  #setBookmarks(bookmarks: Bookmark[]) {
+  #setBookmarks(bookmarks: BookmarkItem[]) {
     this.bookmarks = bookmarks
     void this.#run(() => vault.writeConfig(BOOKMARKS_CONFIG, serializeBookmarks(bookmarks)))
   }
@@ -875,10 +909,17 @@ class Workspace {
     )
   }
 
-  /** Replaces the search's matches in `path` (only on `line`, when given); returns the count. */
-  async #replaceIn(path: string, replacement: string, line?: number) {
+  /** Replaces the search's matches in `path` (only on `line`, or only its `occurrence`th match
+   * there, when given); returns the count. */
+  async #replaceIn(path: string, replacement: string, line?: number, occurrence?: number) {
     const contents = await documents.load(path)
-    const replaced = await vault.replaceText(this.searchQuery, replacement, contents, line)
+    const replaced = await vault.replaceText(
+      this.searchQuery,
+      replacement,
+      contents,
+      line,
+      occurrence,
+    )
     if (replaced.count) {
       await documents.update(path, (current) => (current === contents ? replaced.text : null))
     }
@@ -896,9 +937,9 @@ class Workspace {
     })
   }
 
-  async replaceLine(path: string, line: number, replacement: string) {
+  async replaceLine(path: string, line: number, replacement: string, occurrence?: number) {
     await this.#run(async () => {
-      await this.#replaceIn(path, replacement, line)
+      await this.#replaceIn(path, replacement, line, occurrence)
       await documents.flush()
       await this.#runSearch()
     })

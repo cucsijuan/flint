@@ -188,6 +188,12 @@ export function registerAppCommands() {
       run: () => workspace.showRightTab('graph'),
     },
     {
+      id: 'show-calendar',
+      name: 'Show calendar',
+      isAvailable: hasVault,
+      run: () => workspace.showRightTab('calendar'),
+    },
+    {
       id: 'show-files',
       name: 'Show file explorer',
       isAvailable: hasVault,

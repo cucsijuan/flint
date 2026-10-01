@@ -5,9 +5,11 @@
   import { frontmatterOf, type Property, readProperties } from '../lib/properties'
   import { isExternalUrl } from '../lib/paths'
   import type { Tab } from '../lib/layout'
+  import { fileSources } from '../lib/editor/attachments'
   import { flash } from '../lib/flash'
   import { hydrate } from '../lib/render/hydrate'
   import { renderMarkdown } from '../lib/render/markdown'
+  import { dropOnReadingView } from '../lib/reading-drop'
   import { processors } from '../lib/render/processors.svelte'
   import { blockLines, noteContent } from '../lib/render/source'
   import * as vault from '../lib/vault'
@@ -152,7 +154,19 @@
     {:else if workspace.propertiesDisplay === 'visible' && properties}
       <PropertiesEditor {properties} edit={(change) => void documents.update(path, change)} />
     {/if}
-    <article class="markdown" {@attach attachContent}></article>
+    <article
+      class="markdown"
+      data-reading-note={path}
+      ondragover={(event) => {
+        if (event.dataTransfer?.types.includes('Files')) event.preventDefault()
+      }}
+      ondrop={(event) => {
+        if (dropOnReadingView(fileSources(event.dataTransfer), event.target as Element)) {
+          event.preventDefault()
+        }
+      }}
+      {@attach attachContent}
+    ></article>
   </div>
 </section>
 

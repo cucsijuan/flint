@@ -1,9 +1,18 @@
 <script lang="ts">
-  import { ArrowUpRight, Link, ListTree, SlidersHorizontal, Tags, Waypoints } from '@lucide/svelte'
+  import {
+    ArrowUpRight,
+    CalendarDays,
+    Link,
+    ListTree,
+    SlidersHorizontal,
+    Tags,
+    Waypoints,
+  } from '@lucide/svelte'
   import { Tabs } from 'bits-ui'
   import { pluginHost } from '../lib/plugins/host.svelte'
   import { workspace } from '../lib/workspace.svelte'
   import BacklinksPanel from './BacklinksPanel.svelte'
+  import CalendarPanel from './CalendarPanel.svelte'
   import GraphPanel from './GraphPanel.svelte'
   import OutgoingLinksPanel from './OutgoingLinksPanel.svelte'
   import OutlinePanel from './OutlinePanel.svelte'
@@ -30,6 +39,9 @@
       <Tabs.Trigger class="tab" value="tags" title="Tags"><Tags size={16} /></Tabs.Trigger>
       <Tabs.Trigger class="tab" value="graph" title="Local graph">
         <Waypoints size={16} />
+      </Tabs.Trigger>
+      <Tabs.Trigger class="tab" value="calendar" title="Calendar">
+        <CalendarDays size={16} />
       </Tabs.Trigger>
       {#each pluginHost.sidebarTabs as tab (tab.key)}
         <Tabs.Trigger class="tab text" value={tab.key} title={tab.name}>
@@ -66,6 +78,7 @@
       {/if}
     </Tabs.Content>
     <Tabs.Content class="tab-content" value="tags"><TagsPanel /></Tabs.Content>
+    <Tabs.Content class="tab-content" value="calendar"><CalendarPanel /></Tabs.Content>
     {#each pluginHost.sidebarTabs as tab (tab.key)}
       <Tabs.Content class="tab-content" value={tab.key}
         ><PluginView render={tab.render} /></Tabs.Content

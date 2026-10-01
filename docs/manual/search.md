@@ -64,7 +64,7 @@ Open the replace field with the **Replace** button beside the search box.
    - **Current note**.
    - **Current note's folder**.
    - **Whole vault**.
-4. Click **Replace all**, or use the button on a single result line (**Replace in this line**) to change only that line.
+4. Click **Replace all**. To change less, use the button on a result line (**Replace in this line**), or click a single match in a result (**Replace this match**). Matches show struck through while the replace field is open.
 
 With a regular expression, the replacement can use its groups: `$1`, `$2`, and so on. Replacements go through the same saving as typing, so open editors update, and older text stays in each note's [version history](export-and-history.md#version-history).
 

@@ -114,9 +114,9 @@ Press **Ctrl+G** to open the **graph view**. Every note is a dot and every link 
 - Drag a tab to the edge of the editor to split it into panes, so you can see two notes side by side.
 - **Alt+←** and **Alt+→** go back and forward, like in a browser.
 
-### 9. Add pictures
+### 9. Add pictures and files
 
-Paste a screenshot (**Ctrl+V**) or drag an image from your file manager into a note. Flint saves it into the vault and inserts `![[image.png]]`, which shows the picture.
+Paste a screenshot (**Ctrl+V**) or drag an image or any other file from your file manager into a note. Flint saves it into the vault and inserts `![[image.png]]`, which shows the picture.
 
 ### 10. Make it yours
 

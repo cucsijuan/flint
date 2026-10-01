@@ -88,8 +88,13 @@ jobs:
         with:
           workspaces: src-tauri
       - run: cargo install tauri-driver --locked
+      # A driver matching the installed WebView2 runtime, not Edge's.
+      - run: cargo install --git https://github.com/chippers/msedgedriver-tool
+      - run: msedgedriver-tool.exe
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:e2e
+        env:
+          NATIVE_DRIVER: ${{ github.workspace }}\msedgedriver.exe
 
   build:
     needs: quality

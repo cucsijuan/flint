@@ -138,9 +138,14 @@ Builds, installers and automatic updates for macOS (Intel and Apple Silicon), wi
 - Export a note to one self-contained HTML file, and a folder or the whole vault as a website with linked pages, an index and their images.
 - Version history: snapshots every few minutes while a note changes, kept for a set number of days outside the vault; compare any version with the note and restore it, follow renames, and recover deleted notes.
 
-### M18: Canvas
+### M18: Canvas ✅
 
-An infinite canvas of notes, images and links connected by arrows, in the open JSON Canvas format.
+- Obsidian-compatible `.canvas` files (JSON Canvas 1.0): text, note, image, web page and group cards, connected by edges with sides, arrows, colors and labels.
+- Pan and zoom with a grid and a minimap; move, resize and snap cards; box selection; undo and redo; copy and paste, including between canvases.
+- Text cards and note cards edit in place with the live preview editor; web page cards show the page's title, description and image; groups carry the cards inside them.
+- Canvases in the file tree, created from a menu or command, filled by dragging notes and images from the tree, and embedded in notes with `![[name.canvas]]`.
+- Canvases count for links: backlinks, the graph, and renaming a note updates the canvases that show it.
+- Search inside a canvas (note cards included), export as PNG or SVG, and turning a text card into a note.
 
 ## Backlog
 
@@ -149,6 +154,7 @@ Features that are not scheduled in a milestone yet.
 - **Core workflows:** bookmark groups, code block processors in the editor's source mode, a calendar view for daily notes.
 - **Rich content:** pasting or dropping non-image attachments, dropping images on the reading view.
 - **Search:** replacing a single match rather than a whole result line.
+- **Canvas:** dragging an edge's end to reconnect it, alignment guides while moving cards, a presentation mode.
 - **Export:** a native PDF engine on macOS (WKWebView printing) instead of the print dialog.
 - **Editor:** formatting hotkeys (bold, italic…) inside table cells, “+” buttons on a table's edges, choosing spell-check languages on Windows and macOS (their webviews offer no API for it).
 - **Distribution:** Windows code signing.

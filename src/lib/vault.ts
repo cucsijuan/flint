@@ -255,8 +255,8 @@ export const importAttachment = (source: string, path: string) =>
 export const saveClipboardImage = (path: string) =>
   invoke<boolean>('save_clipboard_image', { path })
 export const clipboardFiles = () => invoke<string[]>('clipboard_files')
-export const showContextMenu = (isLink: boolean, isEditable: boolean, word: string | null) =>
-  invoke('show_context_menu', { isLink, isEditable, word })
+export const showContextMenu = (isLink: boolean, isEditable: boolean) =>
+  invoke('show_context_menu', { isLink, isEditable })
 export const copyEntry = (from: string, to: string) => invoke('copy_entry', { from, to })
 export const showInFileManager = (path: string) => invoke('show_in_file_manager', { path })
 export const openExternally = (path: string) => invoke('open_externally', { path })
@@ -268,7 +268,16 @@ export interface FontFamily {
 }
 
 export const systemFonts = () => invoke<FontFamily[]>('system_fonts')
-export const spellingLanguages = () => invoke<string[]>('spelling_languages')
+export interface SpellingLanguage {
+  code: string
+  installed: boolean
+}
+
+export const spellingLanguages = () => invoke<SpellingLanguage[]>('spelling_languages')
+export const checkSpelling = (words: string[]) => invoke<string[]>('check_spelling', { words })
+export const spellingSuggestions = (word: string) =>
+  invoke<string[]>('spelling_suggestions', { word })
+export const addToDictionary = (word: string) => invoke('add_to_dictionary', { word })
 export const setSpellingLanguages = (languages: string[]) =>
   invoke('set_spelling_languages', { languages })
 export const snippets = () => invoke<string[]>('snippets')

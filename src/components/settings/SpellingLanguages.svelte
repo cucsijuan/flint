@@ -1,72 +1,89 @@
 <script lang="ts">
-  import { Check } from '@lucide/svelte'
+  import { Check, Download } from '@lucide/svelte'
   import { DropdownMenu } from 'bits-ui'
   import { onMount } from 'svelte'
+  import { dictionaryFor } from '../../lib/spelling.svelte'
   import * as vault from '../../lib/vault'
   import { workspace } from '../../lib/workspace.svelte'
   import Setting from './Setting.svelte'
 
   const names = new Intl.DisplayNames(['en'], { type: 'language' })
-  const languageName = (dictionary: string) => {
+  const languageName = (code: string) => {
     try {
-      return names.of(dictionary.replace('_', '-')) ?? dictionary
+      return names.of(code) ?? code
     } catch {
-      return dictionary
+      return code
     }
   }
 
-  let dictionaries = $state<string[] | null>(null)
-  const chosen = $derived(workspace.settings.value.spellcheckLanguages)
+  let languages = $state<vault.SpellingLanguage[]>([])
+  const settings = $derived(workspace.settings.value)
+  const codes = $derived(languages.map((language) => language.code))
+  const chosen = $derived(
+    settings.spellcheckLanguages.flatMap((name) => dictionaryFor(name, codes) ?? []),
+  )
+  const systemLanguage = $derived(dictionaryFor(navigator.language, codes))
   const summary = $derived(
-    chosen.length ? chosen.map(languageName).join(', ') : 'Same as the system',
+    chosen.length
+      ? chosen.map(languageName).join(', ')
+      : `Same as the system${systemLanguage ? ` (${languageName(systemLanguage)})` : ''}`,
+  )
+  const sorted = $derived(
+    [...languages].sort((a, b) => languageName(a.code).localeCompare(languageName(b.code))),
   )
 
   onMount(() => {
-    void vault.spellingLanguages().then((installed) => (dictionaries = installed))
+    void vault.spellingLanguages().then((found) => (languages = found))
   })
 
-  function toggle(dictionary: string, isChecked: boolean) {
+  function toggle(code: string, isChecked: boolean) {
     const spellcheckLanguages = isChecked
-      ? [...chosen, dictionary].sort()
-      : chosen.filter((language) => language !== dictionary)
+      ? [...chosen, code]
+      : chosen.filter((language) => language !== code)
     workspace.setSettings({ spellcheckLanguages })
   }
 </script>
 
-{#if dictionaries?.length}
+<Setting
+  name="Spell check"
+  description="Underline misspelled words; right-click one for suggestions."
+>
+  <input
+    type="checkbox"
+    checked={settings.spellcheck}
+    onchange={(event) => workspace.setSettings({ spellcheck: event.currentTarget.checked })}
+  />
+</Setting>
+{#if settings.spellcheck && languages.length}
   <Setting
     name="Spell-check languages"
-    description="Words are checked against every language picked. Install a Hunspell dictionary to add one."
+    description="Words are checked against every language picked. Dictionaries download the first time they're used."
   >
     <DropdownMenu.Root>
       <DropdownMenu.Trigger class="languages">{summary}</DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content class="menu languages-menu" align="end">
-          {#each dictionaries as dictionary (dictionary)}
+          {#each sorted as language (language.code)}
             <DropdownMenu.CheckboxItem
               class="menu-item language"
               closeOnSelect={false}
-              checked={chosen.includes(dictionary)}
-              onCheckedChange={(isChecked) => toggle(dictionary, isChecked)}
+              checked={chosen.includes(language.code)}
+              onCheckedChange={(isChecked) => toggle(language.code, isChecked)}
             >
               {#snippet children({ checked })}
                 <span class="check"
                   >{#if checked}<Check size={14} />{/if}</span
                 >
-                {languageName(dictionary)}
+                <span class="name">{languageName(language.code)}</span>
+                {#if !language.installed}
+                  <span class="download" title="Downloads when picked"><Download size={12} /></span>
+                {/if}
               {/snippet}
             </DropdownMenu.CheckboxItem>
           {/each}
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>
-  </Setting>
-{:else if dictionaries}
-  <Setting
-    name="Spell-check languages"
-    description="Spelling is checked in the languages set in your system's settings."
-  >
-    <span></span>
   </Setting>
 {/if}
 
@@ -99,5 +116,14 @@
   .check {
     display: inline-flex;
     width: 14px;
+  }
+
+  .name {
+    flex: 1;
+  }
+
+  .download {
+    display: inline-flex;
+    color: var(--text-faint);
   }
 </style>

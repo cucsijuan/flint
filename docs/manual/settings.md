@@ -17,7 +17,8 @@ Open **Settings** with **Ctrl+,**, the gear button at the top of the left sideba
 | **Version history interval** | minutes between saved versions of a note ([more](export-and-history.md#version-history))                   |
 | **Version history length**   | days versions are kept                                                                                     |
 | **Attachment location**      | where pasted or dropped images go: **Vault root**, **Same folder as the note** or **"attachments" folder** |
-| **Spell-check languages**    | on Linux, the languages to check                                                                           |
+| **Spell check**              | underline misspelled words and offer suggestions ([more](editor.md#spell-checking))                        |
+| **Spell-check languages**    | the languages to check against; none picked means the system's language                                    |
 
 ## Appearance
 

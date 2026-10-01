@@ -16,6 +16,8 @@ pub enum Error {
     Plugin(String),
     #[error("{0}")]
     Export(String),
+    #[error("{0}")]
+    Spelling(String),
     #[error(transparent)]
     Http(#[from] reqwest::Error),
     #[error(transparent)]

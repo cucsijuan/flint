@@ -8,6 +8,7 @@
     Panel,
     SvelteFlow,
     useSvelteFlow,
+    ViewportPortal,
   } from '@xyflow/svelte'
   import '@xyflow/svelte/dist/base.css'
   import {
@@ -16,6 +17,7 @@
     Group,
     Link,
     Maximize,
+    Presentation,
     Redo2,
     Search,
     StickyNote,
@@ -24,13 +26,16 @@
     X,
     ZoomOut,
   } from '@lucide/svelte'
+  import { getCurrentWindow } from '@tauri-apps/api/window'
   import { ContextMenu } from 'bits-ui'
   import { untrack } from 'svelte'
   import { hotkeyOf } from '../../lib/commands.svelte'
   import { setCanvasContext } from '../../lib/canvas/context'
   import { exportImage } from '../../lib/canvas/export'
+  import { alignmentGuides, type Guide } from '../../lib/canvas/guides'
   import { type FlowEdge, type FlowNode, fromFlow, toFlow, toFlowEdge } from '../../lib/canvas/flow'
   import { CanvasHistory } from '../../lib/canvas/history'
+  import { slideOrder } from '../../lib/canvas/slides'
   import {
     type Canvas,
     type CanvasEdge,
@@ -175,7 +180,9 @@
     get editing() {
       return editing
     },
-    edit: (id) => (editing = id),
+    edit: (id) => {
+      if (!presentation) editing = id
+    },
     updateNode,
     updateEdge,
   })
@@ -320,7 +327,40 @@
     dragOrigin = { ...targetNode.position }
   }
 
-  function onDrag({ targetNode }: { targetNode: FlowNode | null }) {
+  /** Screen pixels within which a moving card lines up with another. */
+  const GUIDE_DISTANCE = 6
+  let guides = $state.raw<Guide[]>([])
+
+  const boxOf = (node: FlowNode) => ({
+    x: node.position.x,
+    y: node.position.y,
+    width: node.width ?? node.measured?.width ?? node.data.node.width,
+    height: node.height ?? node.measured?.height ?? node.data.node.height,
+  })
+
+  function align(dragged: FlowNode) {
+    const others = nodes.filter((node) => node.id !== dragged.id && !node.selected).map(boxOf)
+    const found = alignmentGuides(boxOf(dragged), others, GUIDE_DISTANCE / flow.getViewport().zoom)
+    guides = found.guides
+    if (!found.dx && !found.dy) return
+    nodes = nodes.map((node) =>
+      node.id === dragged.id
+        ? {
+            ...node,
+            position: { x: node.position.x + found.dx, y: node.position.y + found.dy },
+          }
+        : node,
+    )
+  }
+
+  function onDrag({
+    targetNode,
+    nodes: dragged,
+  }: {
+    targetNode: FlowNode | null
+    nodes: FlowNode[]
+  }) {
+    if (targetNode && dragged.length <= 1 && !carried.length) align(targetNode)
     if (!targetNode || !carried.length) return
     const dx = targetNode.position.x - dragOrigin.x
     const dy = targetNode.position.y - dragOrigin.y
@@ -333,6 +373,7 @@
 
   function onDragStop() {
     carried = []
+    guides = []
     refreshEdgeSides()
   }
 
@@ -352,11 +393,81 @@
     return toFlowEdge(edge, byId())
   }
 
+  function onBeforeReconnect(next: FlowEdge, previous: FlowEdge) {
+    const data = previous.data?.edge
+    if (!data) return next
+    const edge: CanvasEdge = {
+      ...data,
+      fromNode: next.source,
+      toNode: next.target,
+      fromSide: (next.sourceHandle ?? data.fromSide) as CanvasEdge['fromSide'],
+      toSide: (next.targetHandle ?? data.toSide) as CanvasEdge['toSide'],
+    }
+    return toFlowEdge(edge, byId())
+  }
+
+  // Presentation: each group is a slide, shown full screen.
+  let presentation = $state<{ slides: string[]; index: number } | null>(null)
+
+  function showSlide(index: number) {
+    if (!presentation) return
+    presentation.index = Math.max(0, Math.min(presentation.slides.length - 1, index))
+    const id = presentation.slides[presentation.index]
+    void flow.fitView({ nodes: [{ id }], padding: 0.05 })
+  }
+
+  async function present() {
+    const all = fromFlow(nodes, edges, canvas)
+    const slides = slideOrder(all.nodes, all.edges).map((group) => group.id)
+    if (!slides.length) {
+      workspace.notify('Add groups to the canvas to present them as slides.')
+      return
+    }
+    editing = null
+    isSearching = false
+    nodes = nodes.map((node) => (node.selected ? { ...node, selected: false } : node))
+    presentation = { slides, index: 0 }
+    await getCurrentWindow()
+      .setFullscreen(true)
+      .catch(() => undefined)
+    container.focus()
+    // Wait for the full-screen layout before fitting the first slide.
+    setTimeout(() => showSlide(0), 200)
+  }
+
+  async function stopPresenting() {
+    presentation = null
+    await getCurrentWindow()
+      .setFullscreen(false)
+      .catch(() => undefined)
+    setTimeout(() => void flow.fitView(), 200)
+  }
+
+  function onPresentationKey(event: KeyboardEvent) {
+    if (!presentation) return false
+    const step: Record<string, number> = {
+      ArrowRight: 1,
+      ArrowDown: 1,
+      PageDown: 1,
+      ' ': 1,
+      ArrowLeft: -1,
+      ArrowUp: -1,
+      PageUp: -1,
+    }
+    if (event.key === 'Escape') void stopPresenting()
+    else if (event.key in step) showSlide(presentation.index + step[event.key])
+    else return false
+    event.preventDefault()
+    event.stopPropagation()
+    return true
+  }
+
   const isTyping = (target: EventTarget | null) =>
     target instanceof HTMLElement &&
     (target.isContentEditable || target.closest('input, textarea, .cm-editor') !== null)
 
   function onKeydown(event: KeyboardEvent) {
+    if (onPresentationKey(event)) return
     if (isTyping(event.target)) {
       if (event.key === 'Escape') {
         editing = null
@@ -595,6 +706,7 @@
           {...props}
           class="canvas"
           class:embedded
+          class:presenting={presentation !== null}
           tabindex="-1"
           role="application"
           bind:this={container}
@@ -631,7 +743,11 @@
             selectionOnDrag
             panOnScroll
             proOptions={{ hideAttribution: true }}
+            nodesDraggable={!presentation}
+            nodesConnectable={!presentation}
+            elementsSelectable={!presentation}
             onbeforeconnect={onBeforeConnect}
+            onbeforereconnect={onBeforeReconnect}
             onnodedragstart={onDragStart}
             onnodedrag={onDrag}
             onnodedragstop={onDragStop}
@@ -649,38 +765,58 @@
             onpanecontextmenu={() => (menuTarget = { kind: 'pane' })}
           >
             <Background variant={BackgroundVariant.Dots} gap={GRID} />
-            {#if !embedded}
+            <ViewportPortal target="front">
+              <svg class="guides">
+                {#each guides as guide, index (index)}
+                  {#if guide.vertical}
+                    <line x1={guide.at} x2={guide.at} y1={guide.from} y2={guide.to} />
+                  {:else}
+                    <line x1={guide.from} x2={guide.to} y1={guide.at} y2={guide.at} />
+                  {/if}
+                {/each}
+              </svg>
+            </ViewportPortal>
+            {#if presentation}
+              <Panel position="bottom-center" class="slide-count">
+                {presentation.index + 1} / {presentation.slides.length}
+              </Panel>
+            {:else if !embedded}
               <MiniMap pannable zoomable position="bottom-right" />
             {/if}
-            <Panel position="top-left" class="toolbar">
-              <button title="Add card" onclick={() => addText()}><StickyNote size={16} /></button>
-              <button title="Add note or file" onclick={() => (isPickingFile = true)}>
-                <FilePlus size={16} />
-              </button>
-              <button title="Add web page" onclick={() => (editing = addLink('https://').id)}>
-                <Link size={16} />
-              </button>
-              <button title="Group" onclick={addGroup}><Group size={16} /></button>
-              <span class="separator"></span>
-              <button title="Undo" onclick={undo}><Undo2 size={16} /></button>
-              <button title="Redo" onclick={redo}><Redo2 size={16} /></button>
-              <span class="separator"></span>
-              <button title="Zoom in" onclick={() => zoomBy(ZOOM_STEP)}>
-                <ZoomIn size={16} />
-              </button>
-              <button title="Zoom out" onclick={() => zoomBy(1 / ZOOM_STEP)}>
-                <ZoomOut size={16} />
-              </button>
-              <button title="Zoom to fit" onclick={() => flow.fitView()}>
-                <Maximize size={16} />
-              </button>
-              <button title="Search" onclick={() => (isSearching ? closeSearch() : openSearch())}>
-                <Search size={16} />
-              </button>
-              <button title="Export as PNG" onclick={() => exportAs('png')}>
-                <Download size={16} />
-              </button>
-            </Panel>
+            {#if !presentation}
+              <Panel position="top-left" class="toolbar">
+                <button title="Add card" onclick={() => addText()}><StickyNote size={16} /></button>
+                <button title="Add note or file" onclick={() => (isPickingFile = true)}>
+                  <FilePlus size={16} />
+                </button>
+                <button title="Add web page" onclick={() => (editing = addLink('https://').id)}>
+                  <Link size={16} />
+                </button>
+                <button title="Group" onclick={addGroup}><Group size={16} /></button>
+                <span class="separator"></span>
+                <button title="Undo" onclick={undo}><Undo2 size={16} /></button>
+                <button title="Redo" onclick={redo}><Redo2 size={16} /></button>
+                <span class="separator"></span>
+                <button title="Zoom in" onclick={() => zoomBy(ZOOM_STEP)}>
+                  <ZoomIn size={16} />
+                </button>
+                <button title="Zoom out" onclick={() => zoomBy(1 / ZOOM_STEP)}>
+                  <ZoomOut size={16} />
+                </button>
+                <button title="Zoom to fit" onclick={() => flow.fitView()}>
+                  <Maximize size={16} />
+                </button>
+                <button title="Search" onclick={() => (isSearching ? closeSearch() : openSearch())}>
+                  <Search size={16} />
+                </button>
+                <button title="Export as PNG" onclick={() => exportAs('png')}>
+                  <Download size={16} />
+                </button>
+                <button title="Present groups as slides" onclick={present}>
+                  <Presentation size={16} />
+                </button>
+              </Panel>
+            {/if}
             {#if isSearching}
               <Panel position="top-right" class="search">
                 <input
@@ -712,6 +848,7 @@
             Add note or file
           </ContextMenu.Item>
           <ContextMenu.Item class="menu-item" onSelect={addGroup}>Add group</ContextMenu.Item>
+          <ContextMenu.Item class="menu-item" onSelect={present}>Present</ContextMenu.Item>
           <ContextMenu.Separator class="menu-separator" />
           <ContextMenu.Item class="menu-item" onSelect={() => exportAs('png')}>
             Export as PNG
@@ -802,6 +939,35 @@
     height: 100%;
     outline: none;
     background: var(--background);
+  }
+
+  .canvas.presenting {
+    position: fixed;
+    z-index: 1000;
+    inset: 0;
+  }
+
+  .canvas :global(.guides) {
+    position: absolute;
+    overflow: visible;
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
+  }
+
+  .canvas :global(.guides line) {
+    stroke: var(--accent);
+    stroke-width: 1;
+    stroke-dasharray: 4 3;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .canvas :global(.slide-count) {
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--background-secondary) 80%, transparent);
+    color: var(--text-muted);
+    font-size: 12px;
   }
 
   .canvas.embedded {

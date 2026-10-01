@@ -31,6 +31,7 @@ reqwest = { version = "0.13", default-features = false, features = ["json", "rus
 rustls = { version = "0.23", default-features = false, features = ["ring"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.151", features = ["preserve_order"] }
+spellbook = "0.4"
 tauri = { version = "2.11.6", features = ["protocol-asset"] }
 tauri-plugin-dialog = "2.7.3"
 tauri-plugin-log = "2"
@@ -49,9 +50,6 @@ yaml-rust2 = "0.13.0"
 gtk = "0.18"
 webkit2gtk = { version = "2", features = ["v2_40"] }
 
-[target.'cfg(target_os = "macos")'.dependencies]
-objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSSpellChecker"] }
-objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSArray", "NSEnumerator", "NSRange", "NSString"] }
 
 [target.'cfg(windows)'.dependencies]
 webview2-com = "0.38"

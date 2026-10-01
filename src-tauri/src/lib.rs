@@ -39,6 +39,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
         .manage(AppState::default())
+        .manage(spelling::Spelling::default())
         .invoke_handler(tauri::generate_handler![
             commands::launch_vault,
             commands::open_vault,
@@ -78,6 +79,9 @@ pub fn run() {
             commands::system_fonts,
             spelling::spelling_languages,
             spelling::set_spelling_languages,
+            spelling::check_spelling,
+            spelling::spelling_suggestions,
+            spelling::add_to_dictionary,
             commands::snippets,
             commands::read_snippet,
             commands::read_config,

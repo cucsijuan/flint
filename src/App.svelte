@@ -6,6 +6,7 @@
   import { onMount, tick } from 'svelte'
   import CommandPalette from './components/CommandPalette.svelte'
   import LayoutView from './components/LayoutView.svelte'
+  import SpellingMenu from './components/SpellingMenu.svelte'
   import QuickSwitcher from './components/QuickSwitcher.svelte'
   import RightPanel from './components/RightPanel.svelte'
   import ExportPdfDialog from './components/ExportPdfDialog.svelte'
@@ -18,12 +19,12 @@
   import { listen } from '@tauri-apps/api/event'
   import { applyAppearance, applySnippets } from './lib/appearance'
   import { dropFiles, fromDisk } from './lib/editor/attachments'
-  import { contextWord, replaceContextWord } from './lib/editor/context-word'
   import { registerAppCommands, rememberContextTarget } from './lib/app-commands'
   import { checkForUpdates } from './lib/updates'
   import { commands, isMac } from './lib/commands.svelte'
   import { pluginHost } from './lib/plugins/host.svelte'
   import { dropOnReadingView } from './lib/reading-drop'
+  import { dictionaryFor, spelling } from './lib/spelling.svelte'
   import * as vault from './lib/vault'
   import { workspace } from './lib/workspace.svelte'
 
@@ -48,9 +49,6 @@
     const menuActions = listen<string>('context-menu-action', ({ payload }) =>
       commands.run(payload),
     )
-    const spelling = listen<string>('context-menu-spelling', ({ payload }) =>
-      replaceContextWord(payload),
-    )
     // Only Linux enables native file drops; WebKitGTK reports their position in CSS pixels.
     const fileDrops = getCurrentWebview().onDragDropEvent(({ payload }) => {
       if (payload.type !== 'drop') return
@@ -64,7 +62,6 @@
       void fileDrops.then((unlisten) => unlisten())
       void menuActions.then((unlisten) => unlisten())
       void pluginChanges.then((unlisten) => unlisten())
-      void spelling.then((unlisten) => unlisten())
     }
   })
 
@@ -86,8 +83,19 @@
   $effect(() => applySnippets(workspace.enabledSnippetCss))
 
   $effect(() => {
-    if (workspace.info)
-      void vault.setSpellingLanguages(workspace.settings.value.spellcheckLanguages)
+    const { spellcheck, spellcheckLanguages } = workspace.settings.value
+    if (!workspace.info || !spellcheck) return
+    void vault
+      .spellingLanguages()
+      .then((languages) => {
+        const codes = languages.map((language) => language.code)
+        const wanted = spellcheckLanguages.length ? spellcheckLanguages : [navigator.language]
+        const chosen = [...new Set(wanted.flatMap((name) => dictionaryFor(name, codes) ?? []))]
+        return spelling.setLanguages(chosen)
+      })
+      .catch((error: unknown) =>
+        workspace.notify(`Couldn't load the spell-check dictionaries: ${String(error)}`),
+      )
   })
 
   $effect(() => {
@@ -105,6 +113,7 @@
   }
 
   function onContextMenu(event: MouseEvent) {
+    if (event.defaultPrevented) return
     rememberContextTarget(event.target)
     const target = event.target as Element
     const allowsNativeMenu = target.closest('.cm-editor, .markdown, input, textarea')
@@ -112,14 +121,14 @@
     if (allowsNativeMenu && isMac) {
       const isLink = target.closest('a, [data-link], [data-url]') !== null
       const isEditable = target.closest('.cm-content, input, textarea') !== null
-      void vault.showContextMenu(isLink, isEditable, contextWord(event))
+      void vault.showContextMenu(isLink, isEditable)
     }
   }
 
   function preventFileDrop(event: DragEvent) {
     const types = event.dataTransfer?.types ?? []
     const isFileDrag = types.includes('Files') || types.includes('text/uri-list')
-    if (!isFileDrag || (event.target as Element).closest('.cm-editor')) return
+    if (!isFileDrag || (event.target as Element).closest('.cm-editor, [data-reading-note]')) return
     event.preventDefault()
     if (event.dataTransfer) event.dataTransfer.dropEffect = 'none'
   }
@@ -159,6 +168,7 @@
 <ExportPdfDialog />
 <RecoverDeleted />
 <QuickSwitcher />
+<SpellingMenu />
 <CommandPalette />
 <TemplatePicker />
 

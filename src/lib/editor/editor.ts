@@ -32,6 +32,7 @@ import { pasteLink } from './paste-link'
 import { pointer } from './pointer'
 import { type PreviewContext, previewContext, propertiesDisplay } from './preview-context'
 import { wikiLinkSyntax } from './wikilink'
+import { spellcheck, spellcheckTheme } from './spellcheck'
 
 const markdownStyle = HighlightStyle.define([
   { tag: tags.heading1, class: 'cm-h cm-h1' },
@@ -58,6 +59,7 @@ const mode = new Compartment()
 const pluginExtensions = new Compartment()
 const properties = new Compartment()
 const vimMode = new Compartment()
+const spelling = new Compartment()
 const remoteChange = Annotation.define<boolean>()
 
 const modeExtension = (editorMode: EditorMode): Extension =>
@@ -67,6 +69,7 @@ export interface EditorOptions {
   doc: string
   mode: EditorMode
   vimMode: boolean
+  spellcheck: boolean
   propertiesDisplay: PropertiesDisplay
   onChange: (changes: ChangeSet, doc: string) => void
   onKeydown: (event: KeyboardEvent) => boolean
@@ -83,6 +86,7 @@ export function createEditorState({
   doc,
   mode: editorMode,
   vimMode: isVimMode,
+  spellcheck: isSpellchecking,
   propertiesDisplay: display,
   onChange,
   onKeydown,
@@ -115,7 +119,9 @@ export function createEditorState({
       syntaxHighlighting(markdownStyle),
       syntaxHighlighting(classHighlighter),
       EditorView.lineWrapping,
-      EditorView.contentAttributes.of({ spellcheck: 'true' }),
+      EditorView.contentAttributes.of({ spellcheck: 'false' }),
+      spellcheckTheme,
+      spelling.of(isSpellchecking ? spellcheck : []),
       mode.of(modeExtension(editorMode)),
       pluginExtensions.of(plugins),
       previewContext.of(preview),
@@ -135,6 +141,9 @@ export const setPluginExtensions = (view: EditorView, plugins: Extension[]) =>
 
 export const setMode = (view: EditorView, editorMode: EditorMode) =>
   view.dispatch({ effects: mode.reconfigure(modeExtension(editorMode)) })
+
+export const setSpellcheck = (view: EditorView, isEnabled: boolean) =>
+  view.dispatch({ effects: spelling.reconfigure(isEnabled ? spellcheck : []) })
 
 export const setVimMode = (view: EditorView, isEnabled: boolean) =>
   view.dispatch({ effects: vimMode.reconfigure(isEnabled ? vim() : []) })

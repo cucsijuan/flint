@@ -16,6 +16,7 @@ export function editorOptions(
     doc,
     mode: workspace.mode,
     vimMode: workspace.settings.value.vimMode,
+    spellcheck: workspace.settings.value.spellcheck,
     propertiesDisplay: workspace.propertiesDisplay,
     onChange,
     onKeydown: (event) => commands.handleKeydown(event),

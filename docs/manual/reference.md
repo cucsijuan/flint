@@ -100,6 +100,7 @@ Outside the vault:
 
 - **Version history** lives in Flint's data folder (see [Version history](export-and-history.md#settings)).
 - **App settings** (last vault, update checks) live in Flint's config folder.
+- **Spell-check dictionaries** and your personal words live in Flint's data folder, under `dictionaries`.
 - **Plugin secrets** live in the system keychain.
 
 If you sync your vault, you can sync `.flint` too, to share settings between computers, or exclude `.flint/workspace.json` so each computer keeps its own layout.

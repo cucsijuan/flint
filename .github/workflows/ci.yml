@@ -72,6 +72,25 @@ jobs:
 
       - run: xvfb-run pnpm test:e2e
 
+  e2e-windows:
+    needs: quality
+    runs-on: windows-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: cargo install tauri-driver --locked
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:e2e
+
   build:
     needs: quality
     strategy:

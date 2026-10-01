@@ -1,5 +1,11 @@
 <script lang="ts">
-  import { BaseEdge, EdgeLabel, type EdgeProps, getBezierPath } from '@xyflow/svelte'
+  import {
+    BaseEdge,
+    EdgeLabel,
+    type EdgeProps,
+    EdgeReconnectAnchor,
+    getBezierPath,
+  } from '@xyflow/svelte'
   import { canvasContext } from '../../lib/canvas/context'
   import type { FlowEdge } from '../../lib/canvas/flow'
   import { colorOf } from '../../lib/canvas/model'
@@ -19,6 +25,7 @@
   }: EdgeProps<FlowEdge> = $props()
 
   const canvas = canvasContext()
+  let isReconnecting = $state(false)
   const [path, labelX, labelY] = $derived(
     getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition }),
   )
@@ -32,13 +39,29 @@
   }
 </script>
 
-<BaseEdge
-  {id}
-  {path}
-  {markerStart}
-  {markerEnd}
-  style="stroke: {color}; stroke-width: {selected ? 3 : 2}px"
-/>
+{#if selected}
+  <EdgeReconnectAnchor
+    bind:reconnecting={isReconnecting}
+    type="source"
+    size={14}
+    position={{ x: sourceX, y: sourceY }}
+  />
+  <EdgeReconnectAnchor
+    bind:reconnecting={isReconnecting}
+    type="target"
+    size={14}
+    position={{ x: targetX, y: targetY }}
+  />
+{/if}
+{#if !isReconnecting}
+  <BaseEdge
+    {id}
+    {path}
+    {markerStart}
+    {markerEnd}
+    style="stroke: {color}; stroke-width: {selected ? 3 : 2}px"
+  />
+{/if}
 {#if label || canvas.editing === id}
   <EdgeLabel x={labelX} y={labelY} class="canvas-edge-label">
     {#if canvas.editing === id}
@@ -60,6 +83,13 @@
 {/if}
 
 <style>
+  :global(.svelte-flow__edgeupdater) {
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: move;
+    opacity: 0.6;
+  }
+
   :global(.canvas-edge-label) {
     padding: 2px 8px;
     border-radius: 4px;

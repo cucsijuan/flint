@@ -32,7 +32,7 @@ There are four kinds of cards:
 | **Web page**  | a page's title, description and preview image    | **Add web page**, or paste a URL                    |
 | **Group**     | a labeled area that holds other cards            | **Group**, or **Group selection**                   |
 
-The toolbar at the top left holds **Add card**, **Add note or file**, **Add web page**, **Group**, **Undo**, **Redo**, **Zoom in**, **Zoom out**, **Zoom to fit**, **Search** and **Export as PNG**. Right-click empty space for the same actions plus **Export as SVG**.
+The toolbar at the top left holds **Add card**, **Add note or file**, **Add web page**, **Group**, **Undo**, **Redo**, **Zoom in**, **Zoom out**, **Zoom to fit**, **Search**, **Export as PNG** and **Present groups as slides**. Right-click empty space for the same actions plus **Export as SVG**.
 
 ### Text cards
 
@@ -63,17 +63,17 @@ The toolbar at the top left holds **Add card**, **Add note or file**, **Add web 
 
 ## Editing the board
 
-| Action                 | How                                                                     |
-| ---------------------- | ----------------------------------------------------------------------- |
-| Select                 | click a card; **Shift**, **Ctrl** or **Ctrl+A** add more                |
-| Select an area         | drag on empty space                                                     |
-| Move                   | drag cards; they snap to the grid                                       |
-| Resize                 | select a card and drag its edges or corners                             |
-| Connect two cards      | hover a card and drag from one of the dots on its sides to another card |
-| Delete                 | **Delete** or **Backspace**, or right-click → **Delete**                |
-| Undo / redo            | **Ctrl+Z** / **Ctrl+Shift+Z** (or **Ctrl+Y**)                           |
-| Copy, cut, paste       | **Ctrl+C**, **Ctrl+X**, **Ctrl+V**                                      |
-| Deselect, stop editing | **Escape**                                                              |
+| Action                 | How                                                                                                               |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Select                 | click a card; **Shift**, **Ctrl** or **Ctrl+A** add more                                                          |
+| Select an area         | drag on empty space                                                                                               |
+| Move                   | drag cards; they snap to the grid, and dashed guides show when a card lines up with another, pulling it into line |
+| Resize                 | select a card and drag its edges or corners                                                                       |
+| Connect two cards      | hover a card and drag from one of the dots on its sides to another card                                           |
+| Delete                 | **Delete** or **Backspace**, or right-click → **Delete**                                                          |
+| Undo / redo            | **Ctrl+Z** / **Ctrl+Shift+Z** (or **Ctrl+Y**)                                                                     |
+| Copy, cut, paste       | **Ctrl+C**, **Ctrl+X**, **Ctrl+V**                                                                                |
+| Deselect, stop editing | **Escape**                                                                                                        |
 
 Pasting:
 
@@ -93,7 +93,19 @@ Right-click a connection to:
 - Choose **One arrow**, **Arrows on both ends** or **No arrows**.
 - Pick a color, or **Delete** it.
 
+To attach a connection to a different card or side, select it and drag one of the dots at its ends.
+
 Connections from other apps that don't say which sides they attach to follow the cards as you move them.
+
+## Presenting
+
+**Present groups as slides** (toolbar) or **Present** (right-click empty space) shows the canvas full screen, one group at a time:
+
+- The slides follow the arrows between groups, starting from the group no arrow points to. Groups without arrows come after, row by row from left to right.
+- **→**, **↓**, **Space** or **Page Down** go to the next slide; **←**, **↑** or **Page Up** to the previous one.
+- **Escape** ends the presentation.
+
+A counter at the bottom shows which slide you're on.
 
 ## Searching a canvas
 

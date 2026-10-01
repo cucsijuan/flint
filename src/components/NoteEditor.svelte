@@ -11,6 +11,7 @@
     setMode,
     setPropertiesDisplay,
     setPluginExtensions,
+    setSpellcheck,
     setVimMode,
   } from '../lib/editor/editor'
   import { restoreFolds } from '../lib/editor/folding'
@@ -73,6 +74,10 @@
 
   $effect(() => {
     if (view) setVimMode(view, workspace.settings.value.vimMode)
+  })
+
+  $effect(() => {
+    if (view) setSpellcheck(view, workspace.settings.value.spellcheck)
   })
 
   $effect(() => {

@@ -1,11 +1,6 @@
 use tauri::{Emitter, Manager, WebviewWindow};
 
 pub const CONTEXT_MENU_ACTION: &str = "context-menu-action";
-#[cfg(target_os = "macos")]
-const CONTEXT_MENU_SPELLING: &str = "context-menu-spelling";
-#[cfg(target_os = "macos")]
-const MAX_SUGGESTIONS: usize = 6;
-const SPELLING_PREFIX: &str = "spelling:";
 
 const LINK_ACTIONS: [(&str, &str); 1] = [("open-link-in-new-tab", "Open link in new tab")];
 const EDIT_ACTIONS: [(&str, &str); 6] = [
@@ -28,7 +23,7 @@ pub fn install(window: &WebviewWindow) -> tauri::Result<()> {
     use webkit2gtk::gio::SimpleAction;
     use webkit2gtk::{
         ContextMenuAction, ContextMenuExt, ContextMenuItem, ContextMenuItemExt, HitTestResultExt,
-        WebContextExt, WebViewExt,
+        WebViewExt,
     };
 
     const HIDDEN: [ContextMenuAction; 16] = [
@@ -53,13 +48,6 @@ pub fn install(window: &WebviewWindow) -> tauri::Result<()> {
     let emitter = window.clone();
     window.with_webview(move |webview| {
         let webview = webview.inner();
-        if let Some(context) = webview.context() {
-            let languages = crate::spelling::system_languages();
-            context.set_spell_checking_languages(
-                &languages.iter().map(String::as_str).collect::<Vec<_>>(),
-            );
-            context.set_spell_checking_enabled(true);
-        }
         webview.connect_context_menu(move |_, menu, _, hit| {
             for item in menu.items() {
                 let action = item.stock_action();
@@ -190,10 +178,6 @@ pub fn install(window: &WebviewWindow) -> tauri::Result<()> {
     let emitter = window.clone();
     window.on_menu_event(move |_, event| {
         let id = event.id().as_ref();
-        if let Some(suggestion) = id.strip_prefix(SPELLING_PREFIX) {
-            let _ = emitter.emit(CONTEXT_MENU_SPELLING, suggestion);
-            return;
-        }
         let known = LINK_ACTIONS.iter().chain(&EDIT_ACTIONS);
         if let Some((id, _)) = known.into_iter().find(|(known, _)| id == *known) {
             let _ = emitter.emit(CONTEXT_MENU_ACTION, *id);
@@ -207,57 +191,17 @@ pub fn install(_window: &WebviewWindow) -> tauri::Result<()> {
     Ok(())
 }
 
-#[cfg(target_os = "macos")]
-fn spelling_suggestions(word: &str) -> Vec<String> {
-    use objc2_app_kit::NSSpellChecker;
-    use objc2_foundation::NSString;
-
-    let checker = NSSpellChecker::sharedSpellChecker();
-    let text = NSString::from_str(word);
-    let misspelled = checker.checkSpellingOfString_startingAt(&text, 0);
-    if misspelled.length == 0 {
-        return Vec::new();
-    }
-    checker
-        .guessesForWordRange_inString_language_inSpellDocumentWithTag(misspelled, &text, None, 0)
-        .map(|guesses| {
-            guesses
-                .iter()
-                .take(MAX_SUGGESTIONS)
-                .map(|guess| guess.to_string())
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
-#[cfg(not(target_os = "macos"))]
-fn spelling_suggestions(_word: &str) -> Vec<String> {
-    Vec::new()
-}
-
 /// Shows the context menu as a native menu, for webviews whose own menu can't be extended.
 #[tauri::command]
 pub fn show_context_menu(
     window: WebviewWindow,
     is_link: bool,
     is_editable: bool,
-    word: Option<String>,
 ) -> tauri::Result<()> {
     use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 
     let app = window.app_handle();
     let menu = Menu::new(app)?;
-    let suggestions = word
-        .as_deref()
-        .map(spelling_suggestions)
-        .unwrap_or_default();
-    for suggestion in &suggestions {
-        let id = format!("{SPELLING_PREFIX}{suggestion}");
-        menu.append(&MenuItem::with_id(app, id, suggestion, true, None::<&str>)?)?;
-    }
-    if !suggestions.is_empty() {
-        menu.append(&PredefinedMenuItem::separator(app)?)?;
-    }
     if is_editable {
         menu.append(&PredefinedMenuItem::cut(app, None)?)?;
     }

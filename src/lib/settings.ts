@@ -18,7 +18,8 @@ export interface VaultSettings {
   readableLineWidth: number
   pluginHotReload: boolean
   vimMode: boolean
-  /** Hunspell dictionary names like `en_US`; empty checks the system's languages. */
+  spellcheck: boolean
+  /** Dictionary codes like `en` or `es-ar`; empty checks the system's language. */
   spellcheckLanguages: string[]
   searchSort: SearchSort
   /** Minutes between two snapshots of a note, for file recovery. */
@@ -38,6 +39,7 @@ export const DEFAULT_VAULT_SETTINGS: VaultSettings = {
   readableLineWidth: 760,
   pluginHotReload: false,
   vimMode: false,
+  spellcheck: true,
   spellcheckLanguages: [],
   searchSort: 'name-ascending',
   historyInterval: 5,

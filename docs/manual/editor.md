@@ -125,9 +125,17 @@ Two properties are special:
 
 ## Spell checking
 
-Misspelled words are underlined. Right-click one for suggestions.
+Flint has its own spell checker, which works the same on every system. Misspelled words get a wavy red underline. Right-click one for suggestions, or **Add “word” to the dictionary** so it's accepted everywhere from then on.
 
-On Linux, **Settings → Editor** lets you choose the languages to check. On Windows and macOS, spell checking follows the system's languages.
+Code, links' targets, tags, math, comments and frontmatter are never checked.
+
+**Settings → Editor**:
+
+- **Spell check** turns it on or off.
+- **Spell-check languages** picks the languages to check against, as many as you like. With none picked, Flint uses your system's language.
+- Each language's dictionary downloads once, the first time it's used, from the [dictionaries project](https://github.com/wooorm/dictionaries) (Hunspell dictionaries, the same family LibreOffice and Firefox use).
+
+Dictionaries and your personal words live in Flint's data folder (see [Files Flint writes](reference.md#files-flint-writes)).
 
 ## Vim key bindings
 

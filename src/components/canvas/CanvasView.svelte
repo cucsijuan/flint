@@ -21,6 +21,7 @@
     StickyNote,
     Undo2,
     ZoomIn,
+    X,
     ZoomOut,
   } from '@lucide/svelte'
   import { ContextMenu } from 'bits-ui'
@@ -70,7 +71,6 @@
   const FILE_CARD = { width: 400, height: 400 }
   /** Changes closer together than this undo as one step, like a drag. */
   const UNDO_GROUPING_MS = 600
-  const PASTE_OFFSET = 40
   const nodeTypes = { text: TextCard, file: FileCard, link: LinkCard, group: GroupCard }
   const edgeTypes = { canvas: CanvasEdgeView }
 
@@ -373,7 +373,7 @@
 
   function copySelection(event: ClipboardEvent, cut = false) {
     if (isTyping(event.target) || !container.contains(document.activeElement)) return
-    const ids = selectedIds()
+    const ids = withGroupContents(selectedIds())
     if (!ids.size || !event.clipboardData) return
     const copied = fromFlow(
       nodes.filter((node) => ids.has(node.id)),
@@ -383,6 +383,15 @@
     event.clipboardData.setData('text/plain', serializeCanvas(copied))
     event.preventDefault()
     if (cut) deleteSelection()
+  }
+
+  /** The ids plus every card inside the groups among them, which travel with their group. */
+  function withGroupContents(ids: Set<string>) {
+    const all = fromFlow(nodes, [], canvas).nodes
+    const inside = all
+      .filter((node) => node.type === 'group' && ids.has(node.id))
+      .flatMap((group) => nodesInside(group, all))
+    return new Set([...ids, ...inside.map((node) => node.id)])
   }
 
   function asCanvas(text: string): Canvas | null {
@@ -408,11 +417,18 @@
       return
     }
     const ids = new Map(pasted.nodes.map((node) => [node.id, newId()]))
+    const left = Math.min(...pasted.nodes.map((node) => node.x))
+    const top = Math.min(...pasted.nodes.map((node) => node.y))
+    const right = Math.max(...pasted.nodes.map((node) => node.x + node.width))
+    const bottom = Math.max(...pasted.nodes.map((node) => node.y + node.height))
+    const target = placement({ width: right - left, height: bottom - top })
+    const dx = snap(target.x - left)
+    const dy = snap(target.y - top)
     const pastedNodes = pasted.nodes.map((node) => ({
       ...node,
       id: ids.get(node.id) as string,
-      x: node.x + PASTE_OFFSET,
-      y: node.y + PASTE_OFFSET,
+      x: node.x + dx,
+      y: node.y + dy,
     }))
     const pastedEdges = pasted.edges
       .filter((edge) => ids.has(edge.fromNode) && ids.has(edge.toNode))
@@ -444,17 +460,47 @@
     editing = node.id
   }
 
+  let noteTexts = $state.raw(new Map<string, string>())
+
+  const searchableText = (node: CanvasNode) =>
+    node.type === 'file' ? `${node.file}\n${noteTexts.get(node.file) ?? ''}` : nodeText(node)
+
   const matches = $derived(
     searchQuery.trim()
       ? nodes.filter((node) =>
-          nodeText(node.data.node).toLowerCase().includes(searchQuery.trim().toLowerCase()),
+          searchableText(node.data.node).toLowerCase().includes(searchQuery.trim().toLowerCase()),
         )
       : [],
   )
 
   function openSearch() {
     isSearching = true
+    void loadNoteTexts()
     requestAnimationFrame(() => container.querySelector<HTMLInputElement>('.search input')?.focus())
+  }
+
+  function closeSearch() {
+    isSearching = false
+    searchQuery = ''
+    container.focus()
+  }
+
+  /** The text of the notes on note cards, so search finds what they show. */
+  async function loadNoteTexts() {
+    const files = nodes
+      .map((node) => node.data.node)
+      .filter((node): node is FileNode => node.type === 'file')
+      .map((node) => node.file)
+      .filter((file) => file.toLowerCase().endsWith(NOTE_EXTENSION))
+    const texts = await Promise.all(
+      files.map((file) =>
+        vault.readNote(file).then(
+          (text) => [file, text] as const,
+          () => null,
+        ),
+      ),
+    )
+    noteTexts = new Map(texts.filter((entry) => entry !== null))
   }
 
   function showMatch(step: number) {
@@ -462,7 +508,7 @@
     matchIndex = (matchIndex + step + matches.length) % matches.length
     const match = matches[matchIndex]
     nodes = nodes.map((node) => ({ ...node, selected: node.id === match.id }))
-    void flow.fitView({ nodes: [{ id: match.id }], duration: 300, maxZoom: 1, padding: 0.3 })
+    void flow.fitView({ nodes: [{ id: match.id }], maxZoom: 1, padding: 0.3 })
   }
 
   async function exportAs(format: 'png' | 'svg') {
@@ -537,6 +583,12 @@
           role="application"
           bind:this={container}
           onkeydown={onKeydown}
+          onkeydowncapture={(event) => {
+            if (event.key === 'Escape' && isSearching) {
+              event.preventDefault()
+              closeSearch()
+            }
+          }}
           ondblclick={onDoubleClick}
           onpointermove={(event) => (pointer = { x: event.clientX, y: event.clientY })}
           onpointerdown={(event) => {
@@ -597,16 +649,18 @@
               <button title="Undo" onclick={undo}><Undo2 size={16} /></button>
               <button title="Redo" onclick={redo}><Redo2 size={16} /></button>
               <span class="separator"></span>
-              <button title="Zoom in" onclick={() => flow.zoomIn({ duration: 200 })}>
+              <button title="Zoom in" onclick={() => flow.zoomIn()}>
                 <ZoomIn size={16} />
               </button>
-              <button title="Zoom out" onclick={() => flow.zoomOut({ duration: 200 })}>
+              <button title="Zoom out" onclick={() => flow.zoomOut()}>
                 <ZoomOut size={16} />
               </button>
-              <button title="Zoom to fit" onclick={() => flow.fitView({ duration: 300 })}>
+              <button title="Zoom to fit" onclick={() => flow.fitView()}>
                 <Maximize size={16} />
               </button>
-              <button title="Search" onclick={openSearch}><Search size={16} /></button>
+              <button title="Search" onclick={() => (isSearching ? closeSearch() : openSearch())}>
+                <Search size={16} />
+              </button>
               <button title="Export as PNG" onclick={() => exportAs('png')}>
                 <Download size={16} />
               </button>
@@ -620,15 +674,14 @@
                   oninput={() => (matchIndex = -1)}
                   onkeydown={(event) => {
                     if (event.key === 'Enter') showMatch(event.shiftKey ? -1 : 1)
-                    else if (event.key === 'Escape') {
-                      isSearching = false
-                      searchQuery = ''
-                      container.focus()
-                    }
+                    else if (event.key === 'Escape') closeSearch()
                     event.stopPropagation()
                   }}
                 />
                 <span class="count">{searchQuery ? `${matches.length} found` : ''}</span>
+                <button class="close" title="Close search" onclick={closeSearch}>
+                  <X size={14} />
+                </button>
               </Panel>
             {/if}
           </SvelteFlow>
@@ -782,7 +835,8 @@
     background: var(--background-secondary);
   }
 
-  .canvas :global(.toolbar button) {
+  .canvas :global(.toolbar button),
+  .canvas :global(.search .close) {
     display: grid;
     width: 28px;
     height: 28px;
@@ -795,7 +849,8 @@
     cursor: pointer;
   }
 
-  .canvas :global(.toolbar button:hover) {
+  .canvas :global(.toolbar button:hover),
+  .canvas :global(.search .close:hover) {
     background: var(--hover);
     color: var(--text);
   }

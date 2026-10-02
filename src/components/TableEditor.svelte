@@ -26,6 +26,7 @@
     tableData,
   } from '../lib/editor/table'
   import { commands, hotkeyOf } from '../lib/commands.svelte'
+  import { setCellFormatter } from '../lib/editor/active'
   import { toggleWrapText } from '../lib/editor/formatting'
   import { hydrate, type HydrateContext } from '../lib/render/hydrate'
   import { renderInlineMarkdown } from '../lib/render/markdown'
@@ -73,8 +74,13 @@
       .find((known) => known.id in CELL_FORMATS && known.hotkey === hotkey)
     if (!command) return false
     event.preventDefault()
-    const input = event.currentTarget as HTMLTextAreaElement
-    const [open, close] = CELL_FORMATS[command.id]
+    applyFormat(command.id, event.currentTarget as HTMLTextAreaElement, row, column)
+    return true
+  }
+
+  function applyFormat(id: string, input: HTMLTextAreaElement, row: number, column: number) {
+    if (!(id in CELL_FORMATS)) return
+    const [open, close] = CELL_FORMATS[id]
     const result =
       open === close
         ? toggleWrapText(draft, input.selectionStart, input.selectionEnd, open)
@@ -85,8 +91,10 @@
           }
     draft = result.text
     edits.cell(row, column, cellSource(draft))
-    requestAnimationFrame(() => input.setSelectionRange(result.from, result.to))
-    return true
+    requestAnimationFrame(() => {
+      input.focus()
+      input.setSelectionRange(result.from, result.to)
+    })
   }
 
   function onKeydown(event: KeyboardEvent, row: number, column: number) {
@@ -166,7 +174,16 @@
       bind:value={draft}
       oninput={() => edits.cell(row, column, cellSource(draft))}
       onkeydown={(event) => onKeydown(event, row, column)}
-      onblur={() => stopEditing(row, column)}
+      onfocus={(event) => {
+        const input = event.currentTarget
+        setCellFormatter((id) => applyFormat(id, input, row, column))
+      }}
+      onblur={() => {
+        // A native context menu takes the window's focus; the cell stays the one being edited.
+        if (!document.hasFocus()) return
+        setCellFormatter(null)
+        stopEditing(row, column)
+      }}
       {@attach focus}></textarea>
   {:else}
     <div

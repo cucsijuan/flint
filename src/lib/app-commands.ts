@@ -2,7 +2,7 @@ import { foldAll, toggleFold, unfoldAll } from '@codemirror/language'
 import type { Command as EditorCommand } from '@codemirror/view'
 import { commands } from './commands.svelte'
 import { documents } from './documents'
-import { activeView } from './editor/active'
+import { activeView, formatInCell } from './editor/active'
 import { insertLink, toggleWrap } from './editor/formatting'
 import { moveLines } from './editor/move-lines'
 import * as layouts from './layout'
@@ -276,26 +276,26 @@ export function registerAppCommands() {
       name: 'Toggle bold',
       hotkey: 'Mod+B',
       isAvailable: isEditing,
-      run: () => wrap('**'),
+      run: () => formatInCell('toggle-bold') || wrap('**'),
     },
     {
       id: 'toggle-italic',
       name: 'Toggle italic',
       hotkey: 'Mod+I',
       isAvailable: isEditing,
-      run: () => wrap('*'),
+      run: () => formatInCell('toggle-italic') || wrap('*'),
     },
     {
       id: 'toggle-strikethrough',
       name: 'Toggle strikethrough',
       isAvailable: isEditing,
-      run: () => wrap('~~'),
+      run: () => formatInCell('toggle-strikethrough') || wrap('~~'),
     },
     {
       id: 'toggle-inline-code',
       name: 'Toggle inline code',
       isAvailable: isEditing,
-      run: () => wrap('`'),
+      run: () => formatInCell('toggle-inline-code') || wrap('`'),
     },
     {
       id: 'move-line-up',
@@ -336,7 +336,7 @@ export function registerAppCommands() {
       isAvailable: isEditing,
       run: () => {
         const view = activeView()
-        if (view) insertLink(view)
+        if (!formatInCell('insert-link') && view) insertLink(view)
       },
     },
     {

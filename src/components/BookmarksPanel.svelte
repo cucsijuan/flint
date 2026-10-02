@@ -105,7 +105,7 @@
       outline, or a search from the search panel.
     </p>
   {:else}
-    <ul>{@render list(workspace.bookmarks, [])}</ul>
+    <ul class="root">{@render list(workspace.bookmarks, [])}</ul>
   {/if}
 </section>
 
@@ -114,87 +114,73 @@
     {@const path = [...parent, index]}
     {@const key = keyOf(path)}
     {@const zone = indicator?.key === key ? indicator.zone : null}
+    {@const isOpen = item.type === 'group' && !collapsed.has(item.ctime)}
     <li>
-      <div
-        class="row"
-        class:drop-before={zone === 'before'}
-        class:drop-after={zone === 'after'}
-        class:drop-into={zone === 'into'}
-        style:padding-left="{parent.length * 14}px"
-        {@attach dragAndDrop(path, item.type === 'group')}
-      >
-        {#if item.type === 'group'}
-          <button
-            class="open"
-            onclick={() =>
-              collapsed.has(item.ctime) ? collapsed.delete(item.ctime) : collapsed.add(item.ctime)}
-            ondblclick={() => (renaming = key)}
-          >
-            <span class="chevron" class:open={!collapsed.has(item.ctime)}>
-              <ChevronRight size={14} />
-            </span>
-            {#if renaming === key}
-              <input
-                value={item.title}
-                onclick={(event) => event.stopPropagation()}
-                onblur={(event) => finishRename(path, event.currentTarget, true)}
-                onkeydown={(event) => {
-                  if (event.key === 'Enter') finishRename(path, event.currentTarget, true)
-                  else if (event.key === 'Escape') finishRename(path, event.currentTarget, false)
-                }}
-                {@attach focus}
-              />
-            {:else}
-              <span class="name">{label(item)}</span>
-            {/if}
-          </button>
-          <button
-            class="icon remove"
-            title="Remove group (keeps its bookmarks)"
-            onclick={() => workspace.ungroupBookmarks(path)}
-          >
-            <X size={14} />
-          </button>
-        {:else}
-          <button
-            class="open"
-            class:missing={'path' in item && !existing.has(item.path)}
-            title={item.type === 'other' ? undefined : 'path' in item ? item.path : item.query}
-            disabled={item.type === 'other'}
-            onclick={(event) =>
-              item.type !== 'other' &&
-              workspace.openBookmark(item, { newTab: event.ctrlKey || event.metaKey })}
-          >
-            {#if item.type === 'search'}
-              <Search size={14} />
-            {:else if item.type === 'heading'}
-              <Heading size={14} />
-            {:else if item.type === 'folder'}
-              <Folder size={14} />
-            {:else if item.type === 'file'}
-              <FileText size={14} />
-            {:else}
-              <BookmarkIcon size={14} />
-            {/if}
-            <span class="name">{label(item)}</span>
-          </button>
-          <button
-            class="icon remove"
-            title="Remove bookmark"
-            onclick={() => workspace.removeBookmark(path)}
-          >
-            <X size={14} />
-          </button>
-        {/if}
-      </div>
-      {#if item.type === 'group' && !collapsed.has(item.ctime)}
-        {#if item.items.length}
-          <ul>{@render list(item.items, path)}</ul>
-        {:else}
-          <p class="hint" style:padding-left="{(parent.length + 1) * 14 + 26}px">
-            Drag bookmarks here
-          </p>
-        {/if}
+      {#if item.type === 'group' && renaming === key}
+        <input
+          class="rename"
+          style:padding-left="{parent.length * 12 + 22}px"
+          value={item.title}
+          onblur={(event) => finishRename(path, event.currentTarget, true)}
+          onkeydown={(event) => {
+            if (event.key === 'Enter') finishRename(path, event.currentTarget, true)
+            else if (event.key === 'Escape') finishRename(path, event.currentTarget, false)
+          }}
+          {@attach focus}
+        />
+      {:else}
+        <button
+          class="row"
+          class:drop-before={zone === 'before'}
+          class:drop-after={zone === 'after'}
+          class:drop-into={zone === 'into'}
+          class:missing={'path' in item && !existing.has(item.path)}
+          style:padding-left="{parent.length * 12 + 6}px"
+          title={item.type === 'group' || item.type === 'other'
+            ? undefined
+            : 'path' in item
+              ? item.path
+              : item.query}
+          disabled={item.type === 'other'}
+          {@attach dragAndDrop(path, item.type === 'group')}
+          onclick={(event) => {
+            if (item.type === 'group') {
+              if (collapsed.has(item.ctime)) collapsed.delete(item.ctime)
+              else collapsed.add(item.ctime)
+            } else if (item.type !== 'other') {
+              workspace.openBookmark(item, { newTab: event.ctrlKey || event.metaKey })
+            }
+          }}
+          ondblclick={() => item.type === 'group' && (renaming = key)}
+        >
+          {#if item.type === 'group'}
+            <span class="chevron" class:open={isOpen}><ChevronRight size={14} /></span>
+          {:else if item.type === 'search'}
+            <Search size={14} />
+          {:else if item.type === 'heading'}
+            <Heading size={14} />
+          {:else if item.type === 'folder'}
+            <Folder size={14} />
+          {:else if item.type === 'file'}
+            <FileText size={14} />
+          {:else}
+            <BookmarkIcon size={14} />
+          {/if}
+          <span class="name">{label(item)}</span>
+        </button>
+        <button
+          class="icon remove"
+          title={item.type === 'group' ? 'Remove group (keeps its bookmarks)' : 'Remove bookmark'}
+          onclick={() =>
+            item.type === 'group'
+              ? workspace.ungroupBookmarks(path)
+              : workspace.removeBookmark(path)}
+        >
+          <X size={14} />
+        </button>
+      {/if}
+      {#if item.type === 'group' && isOpen && item.items.length}
+        <ul>{@render list(item.items, path)}</ul>
       {/if}
     </li>
   {/each}
@@ -204,12 +190,12 @@
   section {
     height: 100%;
     overflow: auto;
+    padding: 4px;
   }
 
   header {
     display: flex;
     justify-content: flex-end;
-    padding: 6px 6px 0;
   }
 
   ul {
@@ -218,18 +204,40 @@
     padding: 0;
   }
 
-  section > ul {
-    padding: 4px 6px 6px;
+  li {
+    position: relative;
   }
 
-  .row {
+  .row,
+  .rename {
     display: flex;
     align-items: center;
+    gap: 6px;
+    width: 100%;
+    height: 26px;
+    padding-right: 26px;
+    border: none;
     border-radius: 4px;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
   }
 
   .row:hover {
     background: var(--hover);
+  }
+
+  .row:disabled {
+    color: var(--text-faint);
+    cursor: default;
+  }
+
+  .row.missing .name {
+    color: var(--text-faint);
+    text-decoration: line-through;
   }
 
   .row.drop-before {
@@ -241,29 +249,22 @@
   }
 
   .row.drop-into {
-    outline: 2px solid var(--accent);
-    outline-offset: -2px;
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
   }
 
-  .open {
+  .rename {
+    outline: 1px solid var(--accent);
+    background: var(--background);
+    cursor: text;
+  }
+
+  .chevron {
     display: flex;
-    flex: 1;
-    min-width: 0;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 6px;
-    border: none;
-    background: none;
-    color: var(--text);
-    font: inherit;
-    font-size: 13px;
-    text-align: left;
-    cursor: pointer;
+    transition: transform 0.1s;
   }
 
-  .open:disabled {
-    color: var(--text-faint);
-    cursor: default;
+  .chevron.open {
+    transform: rotate(90deg);
   }
 
   .name {
@@ -272,49 +273,22 @@
     white-space: nowrap;
   }
 
-  .open input {
-    flex: 1;
-    min-width: 0;
-    font: inherit;
-  }
-
-  .chevron {
-    display: inline-flex;
-    transition: transform 0.1s;
-  }
-
-  .chevron.open {
-    transform: rotate(90deg);
-  }
-
-  .open.missing {
-    color: var(--text-faint);
-    text-decoration: line-through;
-  }
-
   .remove {
+    position: absolute;
+    top: 3px;
+    right: 4px;
     visibility: hidden;
   }
 
-  .row:hover .remove {
+  li:hover > .remove {
     visibility: visible;
   }
 
-  .empty,
-  .hint {
+  .empty {
     margin: 0;
+    padding: 8px;
     color: var(--text-muted);
     font-size: 12px;
     line-height: 1.5;
-  }
-
-  .empty {
-    padding: 12px;
-  }
-
-  .hint {
-    padding-top: 2px;
-    padding-bottom: 4px;
-    color: var(--text-faint);
   }
 </style>

@@ -20,6 +20,7 @@ import { mountCanvas } from '../canvas/mount.svelte'
 import { renderMarkdown } from './markdown'
 import { processors } from './processors.svelte'
 import { noteContent, replaceFencedContent, replaceLines, toggleTask } from './source'
+import { encodeWav } from './wav'
 
 const MAX_EMBED_DEPTH = 3
 const COPIED_MS = 1500
@@ -50,28 +51,40 @@ const AUDIO_TYPES: Record<string, string> = {
   weba: 'audio/webm',
 }
 
-/** Audio loaded whole into a typed blob: WebKitGTK's player can't stream it from the asset
+/** Loads audio whole into a typed blob: WebKitGTK's player can't stream it from the asset
  * protocol, which answers its range requests without the right type. */
-async function playable(url: string, extension: string) {
+async function loadAudio(audio: HTMLAudioElement, url: string, extension: string) {
+  let bytes: ArrayBuffer
   try {
-    const bytes = await (await fetch(url)).arrayBuffer()
-    return URL.createObjectURL(new Blob([bytes], { type: AUDIO_TYPES[extension] }))
+    bytes = await (await fetch(url)).arrayBuffer()
   } catch {
-    return url
+    audio.src = url
+    return
   }
+  audio.addEventListener('loadedmetadata', () => void withKnownLength(audio, bytes.slice(0)), {
+    once: true,
+  })
+  audio.src = URL.createObjectURL(new Blob([bytes], { type: AUDIO_TYPES[extension] }))
 }
 
-/** Recordings from browsers don't store their length, so the player only learns it by reaching
- * the end. Seeking far ahead once makes it work it out before anyone presses play. */
-function findDuration(audio: HTMLAudioElement) {
-  if (Number.isFinite(audio.duration)) return
-  const rewind = () => {
-    if (!Number.isFinite(audio.duration)) return
-    audio.removeEventListener('durationchange', rewind)
-    audio.currentTime = 0
+/** Bigger audio files aren't decoded to check their length; they're rarely recordings. */
+const MAX_DECODED_BYTES = 20_000_000
+
+/** Recordings from browsers don't store their length, so players guess it wrong until they
+ * reach the end. Decoding gives the exact length; when it differs, the player gets the audio
+ * as WAV, made in memory. */
+async function withKnownLength(audio: HTMLAudioElement, bytes: ArrayBuffer) {
+  if (bytes.byteLength > MAX_DECODED_BYTES) return
+  try {
+    const decoded = await new OfflineAudioContext(1, 1, 44_100).decodeAudioData(bytes)
+    const isRight =
+      Number.isFinite(audio.duration) && Math.abs(audio.duration - decoded.duration) < 0.5
+    if (isRight) return
+    const wav = encodeWav(decoded)
+    audio.src = URL.createObjectURL(new Blob([wav], { type: 'audio/wav' }))
+  } catch {
+    // Left as it is: it still plays, only without its length shown at first.
   }
-  audio.addEventListener('durationchange', rewind)
-  audio.currentTime = Number.MAX_SAFE_INTEGER
 }
 
 function mediaElement(path: string, url: string, embed: HTMLElement) {
@@ -84,8 +97,7 @@ function mediaElement(path: string, url: string, embed: HTMLElement) {
   }
   if (AUDIO_EXTENSIONS.has(extension)) {
     const audio = Object.assign(document.createElement('audio'), { controls: true })
-    audio.addEventListener('loadedmetadata', () => findDuration(audio), { once: true })
-    void playable(url, extension).then((src) => (audio.src = src))
+    void loadAudio(audio, url, extension)
     return audio
   }
   if (VIDEO_EXTENSIONS.has(extension)) {

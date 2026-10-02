@@ -85,6 +85,28 @@ The note composer moves text around:
 
 Use the arrow keys and Enter to pick a suggestion, or Escape to close the list.
 
+## Recording audio
+
+**Start or stop recording audio** records from your microphone. While it records, the status bar shows a red dot and the time; click it, or run the command again, to stop. The recording is saved as an attachment and embedded at the cursor, with a player in the note.
+
+The first time, your system may ask whether Flint can use the microphone.
+
+## Presenting a note
+
+**Start presentation** shows the current note full screen as slides. Separate slides with a line holding only `---`:
+
+```markdown
+# First slide
+
+Some points
+
+---
+
+# Second slide
+```
+
+**→**, **↓**, **Space** or **Page Down** go forward; **←**, **↑** or **Page Up** go back; **Escape** ends the presentation.
+
 ## The status bar
 
 The bar at the bottom of the window shows, for the active note:

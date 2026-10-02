@@ -9,6 +9,7 @@ mod export;
 mod history;
 mod index;
 mod markdown;
+mod media;
 mod mentions;
 mod net;
 mod pdf;
@@ -107,6 +108,7 @@ pub fn run() {
         ])
         .setup(|app| {
             if let Some(window) = app.get_webview_window("main") {
+                media::allow_microphone(&window)?;
                 // The frontend shows the window once it has rendered; this covers a frontend that fails to start.
                 let window = window.clone();
                 thread::spawn(move || {

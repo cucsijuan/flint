@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  type Group,
   activeGroup,
   activeTab,
   addTab,
@@ -12,15 +13,17 @@ import {
   goForward,
   groups,
   isLayout,
-  type Layout,
-  type LayoutNode,
   moveTab,
   navigate,
   openPaths,
   renamePaths,
   split,
-  type TabView,
+  togglePin,
   toggleReading,
+  toggleStacked,
+  type Layout,
+  type LayoutNode,
+  type TabView,
 } from './layout'
 
 const note = (path: string): TabView => ({ kind: 'note', path })
@@ -146,5 +149,27 @@ describe('reading mode', () => {
     layout = toggleReading(layout)
     expect(groups(layout.root)[0].tabs.map((tab) => !!tab.isReading)).toEqual([false, true])
     expect(activeTab(toggleReading(layout)).isReading).toBe(false)
+  })
+})
+
+describe('pinned and stacked tabs', () => {
+  it('opens links from a pinned tab in a new tab and keeps it on close others', () => {
+    let layout = navigate(createLayout(), { kind: 'note', path: 'A.md' })
+    const group = layout.root as Group
+    layout = togglePin(layout, group.id, group.activeTabId)
+    layout = navigate(layout, { kind: 'note', path: 'B.md' })
+    const tabs = (layout.root as Group).tabs
+    expect(tabs.map((tab) => tab.view)).toEqual([
+      { kind: 'note', path: 'A.md' },
+      { kind: 'note', path: 'B.md' },
+    ])
+    expect(activeTab(layout).view).toEqual({ kind: 'note', path: 'B.md' })
+    layout = addTab(layout, { kind: 'note', path: 'C.md' })
+    layout = closeOtherTabs(layout, group.id, activeTab(layout).id)
+    expect((layout.root as Group).tabs.map((tab) => tab.view)).toEqual([
+      { kind: 'note', path: 'A.md' },
+      { kind: 'note', path: 'C.md' },
+    ])
+    expect((toggleStacked(layout, group.id).root as Group).isStacked).toBe(true)
   })
 })

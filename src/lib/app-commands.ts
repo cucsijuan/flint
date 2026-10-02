@@ -10,6 +10,7 @@ import { parentOf } from './paths'
 import { readProperties } from './properties'
 import { checkForUpdates } from './updates'
 import { workspace } from './workspace.svelte'
+import { recorder } from './recorder.svelte'
 
 const hasVault = () => workspace.info !== null
 const hasNote = () => workspace.notePath !== null
@@ -79,11 +80,57 @@ export function registerAppCommands() {
       id: 'close-tab',
       name: 'Close current tab',
       hotkey: 'Mod+W',
-      isAvailable: hasVault,
+      isAvailable: () => hasVault() && !workspace.activeTab.isPinned,
       run: () =>
         workspace.updateLayout((layout) =>
           layouts.closeTab(layout, layout.activeGroupId, workspace.activeTab.id),
         ),
+    },
+    {
+      id: 'toggle-audio-recording',
+      name: 'Start or stop recording audio',
+      isAvailable: () => hasNote() || recorder.isRecording,
+      run: () => recorder.toggle(),
+    },
+    {
+      id: 'start-presentation',
+      name: 'Start presentation',
+      isAvailable: hasNote,
+      run: () => (workspace.slidesNote = workspace.notePath),
+    },
+    {
+      id: 'manage-workspaces',
+      name: 'Load or save a workspace',
+      isAvailable: hasVault,
+      run: () => (workspace.workspacePicker = 'load'),
+    },
+    {
+      id: 'save-workspace',
+      name: 'Save the current workspace',
+      isAvailable: () => hasVault() && workspace.workspacesConfig.value.active !== '',
+      run: () => workspace.saveWorkspace(workspace.workspacesConfig.value.active),
+    },
+    {
+      id: 'delete-workspace',
+      name: 'Delete a workspace',
+      isAvailable: () => hasVault() && workspace.workspaceNames.length > 0,
+      run: () => (workspace.workspacePicker = 'delete'),
+    },
+    {
+      id: 'toggle-pin',
+      name: 'Toggle pin',
+      isAvailable: hasVault,
+      run: () =>
+        workspace.updateLayout((layout) =>
+          layouts.togglePin(layout, layout.activeGroupId, workspace.activeTab.id),
+        ),
+    },
+    {
+      id: 'toggle-stacked-tabs',
+      name: 'Toggle stacked tabs',
+      isAvailable: hasVault,
+      run: () =>
+        workspace.updateLayout((layout) => layouts.toggleStacked(layout, layout.activeGroupId)),
     },
     {
       id: 'close-other-tabs',

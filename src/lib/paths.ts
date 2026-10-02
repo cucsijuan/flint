@@ -21,6 +21,13 @@ export const extensionOf = (path: string) => {
 
 export const isImage = (path: string) => IMAGE_EXTENSIONS.has(extensionOf(path))
 
+export const AUDIO_EXTENSIONS = new Set(['mp3', 'wav', 'ogg', 'm4a', 'flac', 'weba'])
+export const VIDEO_EXTENSIONS = new Set(['mp4', 'webm', 'mov', 'mkv'])
+
+/** Audio and video, which embeds play in place. */
+export const isMedia = (path: string) =>
+  AUDIO_EXTENSIONS.has(extensionOf(path)) || VIDEO_EXTENSIONS.has(extensionOf(path))
+
 export const BASE_EXTENSION = 'base'
 
 export const isBase = (path: string) => extensionOf(path) === BASE_EXTENSION

@@ -136,6 +136,14 @@ class Workspace {
   readonly templatesConfig = new VaultConfig('templates', DEFAULT_TEMPLATES)
   /** Obsidian's "Unique note creator" settings, under its file name. */
   readonly uniqueNotesConfig = new VaultConfig('zk-prefixer', DEFAULT_UNIQUE_NOTES)
+  /** Saved layouts, by name. */
+  readonly workspacesConfig = new VaultConfig('workspaces', {
+    workspaces: {} as Record<string, layouts.Layout>,
+    active: '',
+  })
+  workspacePicker = $state<'load' | 'delete' | null>(null)
+  /** The note being presented as slides. */
+  slidesNote = $state<string | null>(null)
   readonly appearance = new VaultConfig('appearance', DEFAULT_APPEARANCE)
   snippets = $state<string[]>([])
   #snippetCss = $state(new Map<string, string>())
@@ -198,6 +206,7 @@ class Workspace {
       this.dailyNotesConfig,
       this.templatesConfig,
       this.uniqueNotesConfig,
+      this.workspacesConfig,
       this.appearance,
       this.graphConfig,
       this.foldsConfig,
@@ -256,6 +265,7 @@ class Workspace {
       await this.dailyNotesConfig.load()
       await this.templatesConfig.load()
       await this.uniqueNotesConfig.load()
+      await this.workspacesConfig.load()
       await this.appearance.load()
       await this.graphConfig.load()
       await this.typesConfig.load()
@@ -273,6 +283,39 @@ class Workspace {
 
   async flush() {
     await Promise.all([documents.flush(), ...this.#configs().map((config) => config.flush())])
+  }
+
+  get workspaceNames() {
+    return Object.keys(this.workspacesConfig.value.workspaces).sort((a, b) => a.localeCompare(b))
+  }
+
+  /** Saves the tabs and splits as they are now under `name`. */
+  saveWorkspace(name: string) {
+    const trimmed = name.trim()
+    if (!trimmed) return
+    const { workspaces } = this.workspacesConfig.value
+    this.workspacesConfig.set({
+      workspaces: { ...workspaces, [trimmed]: $state.snapshot(this.layout) },
+      active: trimmed,
+    })
+    this.notify(`Saved the workspace "${trimmed}".`)
+  }
+
+  loadWorkspace(name: string) {
+    const saved = this.workspacesConfig.value.workspaces[name]
+    if (!layouts.isLayout(saved)) return
+    void documents.flush()
+    this.#setLayout(saved)
+    this.workspacesConfig.set({ active: name })
+  }
+
+  deleteWorkspace(name: string) {
+    const workspaces = Object.fromEntries(
+      Object.entries(this.workspacesConfig.value.workspaces).filter(([known]) => known !== name),
+    )
+    const active =
+      this.workspacesConfig.value.active === name ? '' : this.workspacesConfig.value.active
+    this.workspacesConfig.set({ workspaces, active })
   }
 
   updateLayout(update: (layout: layouts.Layout) => layouts.Layout) {

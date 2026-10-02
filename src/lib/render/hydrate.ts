@@ -1,4 +1,5 @@
 import {
+  AUDIO_EXTENSIONS,
   basename,
   extensionOf,
   isBase,
@@ -8,6 +9,7 @@ import {
   linkTargetOfUrl,
   NOTE_EXTENSION,
   noteTitle,
+  VIDEO_EXTENSIONS,
 } from '../paths'
 import type { MarkdownContext } from '../../../plugin-api'
 import { renderMermaid } from './diagrams'
@@ -20,8 +22,6 @@ import { processors } from './processors.svelte'
 import { noteContent, replaceFencedContent, replaceLines, toggleTask } from './source'
 
 const MAX_EMBED_DEPTH = 3
-const AUDIO = new Set(['mp3', 'wav', 'ogg', 'm4a'])
-const VIDEO = new Set(['mp4', 'webm', 'mov'])
 const COPIED_MS = 1500
 
 export interface HydrateContext {
@@ -49,8 +49,8 @@ function mediaElement(path: string, url: string, embed: HTMLElement) {
     if (/^\d+$/.test(size)) image.width = Number(size)
     return image
   }
-  if (AUDIO.has(extension) || VIDEO.has(extension)) {
-    const media = document.createElement(AUDIO.has(extension) ? 'audio' : 'video')
+  if (AUDIO_EXTENSIONS.has(extension) || VIDEO_EXTENSIONS.has(extension)) {
+    const media = document.createElement(AUDIO_EXTENSIONS.has(extension) ? 'audio' : 'video')
     Object.assign(media, { src: url, controls: true })
     return media
   }

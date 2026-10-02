@@ -16,7 +16,9 @@
   import SettingsDialog from './components/SettingsDialog.svelte'
   import VersionHistory from './components/VersionHistory.svelte'
   import Sidebar from './components/Sidebar.svelte'
+  import SlidesView from './components/SlidesView.svelte'
   import StatusBar from './components/StatusBar.svelte'
+  import WorkspacePicker from './components/WorkspacePicker.svelte'
   import TemplatePicker from './components/TemplatePicker.svelte'
   import Welcome from './components/Welcome.svelte'
   import { applyAppearance, applySnippets } from './lib/appearance'
@@ -169,6 +171,8 @@
 <TemplatePicker />
 <NoteComposer />
 <HoverPreview />
+<WorkspacePicker />
+<SlidesView />
 
 {#if workspace.notice}
   <div class="notice" role="alert">{workspace.notice}</div>

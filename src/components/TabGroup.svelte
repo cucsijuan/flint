@@ -9,7 +9,7 @@
     draggable,
     dropTargetForElements,
   } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
-  import { FileText, Image, LayoutDashboard, Plus, Table, Waypoints, X } from '@lucide/svelte'
+  import { FileText, Image, LayoutDashboard, Pin, Plus, Table, Waypoints, X } from '@lucide/svelte'
   import { ContextMenu } from 'bits-ui'
   import * as layouts from '../lib/layout'
   import { basename, isBase, isCanvas, noteTitle } from '../lib/paths'
@@ -192,16 +192,29 @@
               <FileText size={13} />
             {/if}
             <span class="title">{title(tab.view)}</span>
-            <button
-              class="close"
-              title={commands.label('Close', 'close-tab')}
-              onclick={(event) => {
-                event.stopPropagation()
-                close(tab.id)
-              }}
-            >
-              <X size={12} />
-            </button>
+            {#if tab.isPinned}
+              <button
+                class="close pinned"
+                title="Unpin"
+                onclick={(event) => {
+                  event.stopPropagation()
+                  workspace.updateLayout((layout) => layouts.togglePin(layout, group.id, tab.id))
+                }}
+              >
+                <Pin size={12} />
+              </button>
+            {:else}
+              <button
+                class="close"
+                title={commands.label('Close', 'close-tab')}
+                onclick={(event) => {
+                  event.stopPropagation()
+                  close(tab.id)
+                }}
+              >
+                <X size={12} />
+              </button>
+            {/if}
           </div>
         {/each}
         <button
@@ -217,6 +230,13 @@
     <ContextMenu.Portal>
       <ContextMenu.Content class="menu">
         {#if menuTab}
+          <ContextMenu.Item
+            class="menu-item"
+            onSelect={() =>
+              runOnMenuTab((layout, tab) => layouts.togglePin(layout, group.id, tab.id))}
+          >
+            {menuTab.isPinned ? 'Unpin' : 'Pin'}
+          </ContextMenu.Item>
           <ContextMenu.Item class="menu-item" onSelect={() => menuTab && close(menuTab.id)}>
             Close
           </ContextMenu.Item>
@@ -250,38 +270,59 @@
           >
             Split down
           </ContextMenu.Item>
+          <ContextMenu.Item
+            class="menu-item"
+            onSelect={() =>
+              workspace.updateLayout((layout) => layouts.toggleStacked(layout, group.id))}
+          >
+            {group.isStacked ? 'Unstack tabs' : 'Stack tabs'}
+          </ContextMenu.Item>
         {/if}
       </ContextMenu.Content>
     </ContextMenu.Portal>
   </ContextMenu.Root>
 
-  <div class="content" {@attach contentDropTarget}>
+  <div class="content" class:stacked={group.isStacked} {@attach contentDropTarget}>
     {#each group.tabs as tab (tab.id)}
       {@const isCurrent = tab.id === group.activeTabId}
-      <div class="view" hidden={!isCurrent}>
-        {#if tab.view.kind === 'note'}
-          {#key tab.view.path}
-            {#if tab.isReading}
-              <ReadingView {tab} path={tab.view.path} />
-            {:else}
-              <NoteEditor {tab} path={tab.view.path} isActive={isActiveGroup && isCurrent} />
-            {/if}
-          {/key}
-        {:else if tab.view.kind === 'file'}
-          {#if isBase(tab.view.path)}
-            <BaseFile path={tab.view.path} />
-          {:else if isCanvas(tab.view.path)}
-            {#key tab.view.path}
-              <CanvasFile path={tab.view.path} />
-            {/key}
-          {:else}
-            <FileView path={tab.view.path} />
-          {/if}
-        {:else if tab.view.kind === 'graph'}
-          <GraphPanel />
-        {:else}
-          <EmptyTab />
+      <div
+        class="view"
+        class:current={isCurrent}
+        hidden={!isCurrent && !group.isStacked}
+        {@attach (element) => {
+          if (group.isStacked && isCurrent) element.scrollIntoView({ inline: 'nearest' })
+        }}
+      >
+        {#if group.isStacked}
+          <button class="spine" onclick={() => activate(tab.id)} title={title(tab.view)}>
+            {title(tab.view)}
+          </button>
         {/if}
+        <div class="pane">
+          {#if tab.view.kind === 'note'}
+            {#key tab.view.path}
+              {#if tab.isReading}
+                <ReadingView {tab} path={tab.view.path} />
+              {:else}
+                <NoteEditor {tab} path={tab.view.path} isActive={isActiveGroup && isCurrent} />
+              {/if}
+            {/key}
+          {:else if tab.view.kind === 'file'}
+            {#if isBase(tab.view.path)}
+              <BaseFile path={tab.view.path} />
+            {:else if isCanvas(tab.view.path)}
+              {#key tab.view.path}
+                <CanvasFile path={tab.view.path} />
+              {/key}
+            {:else}
+              <FileView path={tab.view.path} />
+            {/if}
+          {:else if tab.view.kind === 'graph'}
+            <GraphPanel />
+          {:else}
+            <EmptyTab />
+          {/if}
+        </div>
       </div>
     {/each}
     {#if zone}<div class="zone {zone}"></div>{/if}
@@ -376,6 +417,10 @@
     visibility: visible;
   }
 
+  .close.pinned {
+    visibility: visible;
+  }
+
   .close:hover,
   .new:hover {
     background: var(--hover);
@@ -394,7 +439,47 @@
   }
 
   .view {
+    display: flex;
     height: 100%;
+  }
+
+  .pane {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+  }
+
+  /* Stacked tabs: panes side by side, each with its title down a spine. */
+  .content.stacked {
+    display: flex;
+    overflow-x: auto;
+  }
+
+  .stacked .view {
+    flex: 0 0 min(720px, 85%);
+    border-right: 1px solid var(--border);
+  }
+
+  .spine {
+    flex-shrink: 0;
+    width: 28px;
+    padding: 10px 0;
+    overflow: hidden;
+    border: none;
+    border-right: 1px solid var(--border);
+    background: var(--background-secondary);
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 12px;
+    text-align: left;
+    white-space: nowrap;
+    writing-mode: vertical-rl;
+    cursor: pointer;
+  }
+
+  .view.current .spine {
+    color: var(--text);
+    font-weight: 600;
   }
 
   .view[hidden] {

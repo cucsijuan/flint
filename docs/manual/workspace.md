@@ -47,11 +47,20 @@ An empty tab offers shortcuts to create a note, open the quick switcher and more
 
 Right-click a tab for:
 
+- **Pin** or **Unpin**.
 - **Close** and **Close others**.
 - **Reveal in navigation** and **Show in system explorer**.
 - **Split right** and **Split down**.
 
 Each tab has its own history, so back and forward move through the notes you opened in that tab.
+
+### Pinned tabs
+
+A pinned tab keeps its note: links you follow from it open in a new tab instead of replacing it. Pinned tabs show a pin instead of the close button (click it to unpin), **Ctrl+W** leaves them open, and **Close others** keeps them. Pin a tab from its context menu or with **Toggle pin**.
+
+### Stacked tabs
+
+**Stack tabs** (a tab's context menu, or **Toggle stacked tabs**) lays a pane's tabs side by side as sliding panes, each with its title down a narrow spine on its left. Scroll sideways to move through them and click a spine to bring that tab forward. Opening a link from one pane adds the note beside it, so you can follow a trail of notes and still see where you came from.
 
 ## Panes
 
@@ -65,6 +74,16 @@ Split the editor to see several things at once:
 The same note can be open in several panes. Edits in one show up in the others instantly, and each pane can have its own mode (for example, reading view on the left and editing on the right).
 
 The pane you last clicked is the **active** one. The right sidebar, the note commands and plugins follow the active tab.
+
+## Workspaces
+
+A workspace is a saved layout: the tabs, splits and stacked panes as they were, under a name.
+
+- **Load or save a workspace** opens a list of your workspaces. Pick one and press Enter to switch to it. To save the current layout, type a name and press **Shift+Enter**.
+- **Save the current workspace** updates the workspace you loaded last.
+- **Delete a workspace** removes one.
+
+Workspaces are saved in `.flint/workspaces.json`.
 
 ## The right sidebar
 

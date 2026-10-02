@@ -10,6 +10,8 @@ export interface Tab {
   id: string
   view: TabView
   isReading?: boolean
+  /** Pinned tabs keep their note: links followed from them open in a new tab. */
+  isPinned?: boolean
   back: TabView[]
   forward: TabView[]
 }
@@ -19,6 +21,8 @@ export interface Group {
   id: string
   tabs: Tab[]
   activeTabId: string
+  /** Shows the tabs side by side as sliding panes, like Obsidian's stacked tabs. */
+  isStacked?: boolean
 }
 
 export type Direction = 'horizontal' | 'vertical'
@@ -122,6 +126,7 @@ export function navigate(layout: Layout, view: TabView): Layout {
   const group = activeGroup(layout)
   const tab = activeTab(layout)
   if (sameView(tab.view, view)) return layout
+  if (tab.isPinned) return addTab(layout, view, group.id)
   const back = tab.view.kind === 'empty' ? tab.back : [...tab.back, tab.view]
   return updateTab(layout, group.id, tab.id, () => ({ ...tab, view, back, forward: [] }))
 }
@@ -184,10 +189,16 @@ export function closeTab(layout: Layout, groupId: string, tabId: string): Layout
 export function closeOtherTabs(layout: Layout, groupId: string, tabId: string): Layout {
   return updateGroup(layout, groupId, (group) => ({
     ...group,
-    tabs: group.tabs.filter((tab) => tab.id === tabId),
+    tabs: group.tabs.filter((tab) => tab.id === tabId || tab.isPinned),
     activeTabId: tabId,
   }))
 }
+
+export const togglePin = (layout: Layout, groupId: string, tabId: string) =>
+  updateTab(layout, groupId, tabId, (tab) => ({ ...tab, isPinned: !tab.isPinned }))
+
+export const toggleStacked = (layout: Layout, groupId: string) =>
+  updateGroup(layout, groupId, (group) => ({ ...group, isStacked: !group.isStacked }))
 
 export function cycleTab(layout: Layout, step: 1 | -1): Layout {
   const group = activeGroup(layout)

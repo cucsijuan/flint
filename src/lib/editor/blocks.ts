@@ -9,7 +9,15 @@ import {
   keymap,
   WidgetType,
 } from '@codemirror/view'
-import { isBase, isCanvas, isExternalUrl, isImage, linkTargetOfUrl, NOTE_EXTENSION } from '../paths'
+import {
+  isBase,
+  isCanvas,
+  isExternalUrl,
+  isImage,
+  isMedia,
+  linkTargetOfUrl,
+  NOTE_EXTENSION,
+} from '../paths'
 import { hydrate, rendersCodeBlock } from '../render/hydrate'
 import { renderMarkdown } from '../render/markdown'
 import { readProperties } from '../properties'
@@ -297,7 +305,10 @@ function blockDecorations(state: EditorState): DecorationSet {
         image(line, isEditingLine, path, width)
       } else if (
         path &&
-        (path.toLowerCase().endsWith(NOTE_EXTENSION) || isBase(path) || isCanvas(path))
+        (path.toLowerCase().endsWith(NOTE_EXTENSION) ||
+          isBase(path) ||
+          isCanvas(path) ||
+          isMedia(path))
       ) {
         const embed = new MarkdownWidget(
           `![[${destination}]]`,

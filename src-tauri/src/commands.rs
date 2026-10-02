@@ -27,6 +27,7 @@ pub struct AppState(Mutex<Option<OpenVault>>);
 
 #[derive(Clone)]
 struct OpenVault {
+    info: VaultInfo,
     vault: Vault,
     index: Arc<RwLock<Index>>,
     history: Arc<History>,
@@ -50,7 +51,7 @@ impl AppState {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct VaultInfo {
     root: String,
     name: String,
@@ -72,12 +73,19 @@ pub fn open_vault(app: AppHandle, state: State<AppState>, path: String) -> Resul
     let _ = history.prune();
     let watcher = watch(app, vault.clone(), index.clone())?;
     *state.0.lock().unwrap_or_else(|e| e.into_inner()) = Some(OpenVault {
+        info: info.clone(),
         vault,
         index,
         history,
         _watcher: Arc::new(watcher),
     });
     Ok(info)
+}
+
+/// The vault the app has open, for windows that join it rather than open it again.
+#[tauri::command]
+pub fn current_vault(state: State<AppState>) -> Option<VaultInfo> {
+    state.open().ok().map(|open| open.info)
 }
 
 #[tauri::command]

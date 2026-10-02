@@ -272,6 +272,15 @@
           </ContextMenu.Item>
           <ContextMenu.Item
             class="menu-item"
+            onSelect={() => {
+              const tab = menuTab
+              if (tab) void workspace.popOut(group.id, tab)
+            }}
+          >
+            Open in new window
+          </ContextMenu.Item>
+          <ContextMenu.Item
+            class="menu-item"
             onSelect={() =>
               workspace.updateLayout((layout) => layouts.toggleStacked(layout, group.id))}
           >

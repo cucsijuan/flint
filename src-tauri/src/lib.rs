@@ -44,6 +44,7 @@ pub fn run() {
         .manage(spelling::Spelling::default())
         .invoke_handler(tauri::generate_handler![
             commands::launch_vault,
+            commands::current_vault,
             commands::open_vault,
             commands::list_entries,
             commands::read_note,

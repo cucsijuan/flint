@@ -1,6 +1,6 @@
 <script lang="ts">
   import { getCurrentWebview } from '@tauri-apps/api/webview'
-  import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
+  import { getAllWebviewWindows, getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
   import { getCurrentWindow } from '@tauri-apps/api/window'
   import { Pane, PaneGroup, PaneResizer } from 'paneforge'
   import { onMount, tick } from 'svelte'
@@ -28,6 +28,7 @@
   import { commands } from './lib/commands.svelte'
   import { pluginHost } from './lib/plugins/host.svelte'
   import { editMenu } from './lib/edit-menu.svelte'
+  import { isPopout } from './lib/popout'
   import { dropOnReadingView } from './lib/reading-drop'
   import { dictionaryFor, spelling } from './lib/spelling.svelte'
   import * as vault from './lib/vault'
@@ -47,7 +48,15 @@
         void checkForUpdates({ isManual: false })
       }
     })
-    const closing = getCurrentWindow().onCloseRequested(() => workspace.flush())
+    const closing = getCurrentWindow().onCloseRequested(async () => {
+      await workspace.flush()
+      // Pop-out windows go with the main one.
+      if (!isPopout) {
+        for (const window of await getAllWebviewWindows()) {
+          if (window.label !== getCurrentWebviewWindow().label) await window.close()
+        }
+      }
+    })
     const pluginChanges = vault.onPluginsChanged((folders) => {
       if (workspace.settings.value.pluginHotReload) void pluginHost.reload(folders)
     })
@@ -139,21 +148,25 @@
 {#if restored}
   {#if workspace.info}
     <div class="app">
-      <PaneGroup direction="horizontal" autoSaveId="layout">
-        <Pane id="sidebar" order={1} defaultSize={22} minSize={12} maxSize={50}>
-          <Sidebar />
-        </Pane>
-        <PaneResizer class="resizer" />
-        <Pane id="editor" order={2}>
-          <LayoutView node={workspace.layout.root} />
-        </Pane>
-        {#if workspace.showRightPanel}
-          <PaneResizer class="resizer" />
-          <Pane id="right" order={3} defaultSize={22} minSize={12} maxSize={50}>
-            <RightPanel />
+      {#if isPopout}
+        <div class="popout"><LayoutView node={workspace.layout.root} /></div>
+      {:else}
+        <PaneGroup direction="horizontal" autoSaveId="layout">
+          <Pane id="sidebar" order={1} defaultSize={22} minSize={12} maxSize={50}>
+            <Sidebar />
           </Pane>
-        {/if}
-      </PaneGroup>
+          <PaneResizer class="resizer" />
+          <Pane id="editor" order={2}>
+            <LayoutView node={workspace.layout.root} />
+          </Pane>
+          {#if workspace.showRightPanel}
+            <PaneResizer class="resizer" />
+            <Pane id="right" order={3} defaultSize={22} minSize={12} maxSize={50}>
+              <RightPanel />
+            </Pane>
+          {/if}
+        </PaneGroup>
+      {/if}
       <StatusBar />
     </div>
   {:else}
@@ -183,6 +196,11 @@
     display: flex;
     flex-direction: column;
     height: 100%;
+  }
+
+  .popout {
+    flex: 1;
+    min-height: 0;
   }
 
   .app > :global([data-pane-group]) {

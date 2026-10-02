@@ -1,3 +1,4 @@
+import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { ask, open, save } from '@tauri-apps/plugin-dialog'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { SvelteSet } from 'svelte/reactivity'
@@ -72,6 +73,7 @@ import type { FoldedLines } from './editor/folding'
 import type { PropertyType } from './bases/base'
 import type { NewNoteDefaults } from './bases/edit'
 import { buildTree } from './tree'
+import { isPopout, popoutView } from './popout'
 import * as vault from './vault'
 
 export type ReplaceScope = 'note' | 'folder' | 'vault'
@@ -245,8 +247,33 @@ class Workspace {
       const value = await getSetting(key)
       if (value !== undefined) this.#legacySettings = { ...this.#legacySettings, [key]: value }
     }
+    if (popoutView) {
+      const info = await vault.currentVault()
+      const view = popoutView
+      if (info)
+        await this.#run(() => this.#loadVault(info, layouts.navigate(layouts.createLayout(), view)))
+      return
+    }
     const vaultPath = (await vault.launchVault()) ?? (await getSetting('lastVault'))
     if (vaultPath) await this.openVault(vaultPath)
+  }
+
+  /** Moves a tab to a window of its own. */
+  async popOut(groupId: string, tab: layouts.Tab) {
+    const view = encodeURIComponent(JSON.stringify(tab.view))
+    const window = new WebviewWindow(`popout-${Date.now()}`, {
+      url: `index.html?popout=${view}`,
+      title: 'path' in tab.view ? noteTitle(tab.view.path) : 'Flint',
+      width: 900,
+      height: 700,
+    })
+    await new Promise<void>((resolve, reject) => {
+      void window.once('tauri://created', () => resolve())
+      void window.once('tauri://error', (event) => reject(new Error(String(event.payload))))
+    }).then(
+      () => this.updateLayout((layout) => layouts.closeTab(layout, groupId, tab.id)),
+      (error: unknown) => this.notify(`Couldn't open a new window: ${String(error)}`),
+    )
   }
 
   async chooseVault() {
@@ -257,28 +284,33 @@ class Workspace {
   async openVault(path: string) {
     await this.#run(async () => {
       await this.flush()
-      this.info = await vault.openVault(path)
-      await this.#refresh()
-      await this.foldsConfig.load()
-      this.#setLayout(await this.#storedLayout(), { save: false })
-      await this.settings.load(this.#legacySettings)
-      await this.dailyNotesConfig.load()
-      await this.templatesConfig.load()
-      await this.uniqueNotesConfig.load()
-      await this.workspacesConfig.load()
-      await this.appearance.load()
-      await this.graphConfig.load()
-      await this.typesConfig.load()
-      this.#customHotkeys = parseHotkeys(await vault.readConfig(HOTKEYS_CONFIG))
-      commands.setCustomHotkeys(this.#customHotkeys)
-      await this.reloadSnippets()
-      this.bookmarks = parseBookmarks(await vault.readConfig(BOOKMARKS_CONFIG))
+      const info = await vault.openVault(path)
+      await this.#loadVault(info, await this.#storedLayout())
       await setSetting('lastVault', path)
-      if (!this.#isWatching) {
-        this.#isWatching = true
-        await vault.onVaultChanged((paths) => this.#onExternalChange(paths))
-      }
     })
+  }
+
+  async #loadVault(info: vault.VaultInfo, layout: layouts.Layout) {
+    this.info = info
+    await this.#refresh()
+    await this.foldsConfig.load()
+    this.#setLayout(layout, { save: false })
+    await this.settings.load(this.#legacySettings)
+    await this.dailyNotesConfig.load()
+    await this.templatesConfig.load()
+    await this.uniqueNotesConfig.load()
+    await this.workspacesConfig.load()
+    await this.appearance.load()
+    await this.graphConfig.load()
+    await this.typesConfig.load()
+    this.#customHotkeys = parseHotkeys(await vault.readConfig(HOTKEYS_CONFIG))
+    commands.setCustomHotkeys(this.#customHotkeys)
+    await this.reloadSnippets()
+    this.bookmarks = parseBookmarks(await vault.readConfig(BOOKMARKS_CONFIG))
+    if (!this.#isWatching) {
+      this.#isWatching = true
+      await vault.onVaultChanged((paths) => this.#onExternalChange(paths))
+    }
   }
 
   async flush() {
@@ -323,6 +355,8 @@ class Workspace {
   }
 
   saveLayoutSoon() {
+    // Only the main window's layout is the vault's.
+    if (isPopout) return
     clearTimeout(this.#layoutTimer)
     this.#layoutTimer = setTimeout(() => {
       if (this.info) void vault.writeConfig(LAYOUT_CONFIG, JSON.stringify(this.layout))

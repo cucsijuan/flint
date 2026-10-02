@@ -117,6 +117,12 @@ export function registerAppCommands() {
       run: () => (workspace.workspacePicker = 'delete'),
     },
     {
+      id: 'open-in-new-window',
+      name: 'Move current tab to new window',
+      isAvailable: hasVault,
+      run: () => workspace.popOut(workspace.layout.activeGroupId, workspace.activeTab),
+    },
+    {
       id: 'toggle-pin',
       name: 'Toggle pin',
       isAvailable: hasVault,

@@ -147,17 +147,18 @@ Builds, installers and automatic updates for macOS (Intel and Apple Silicon), wi
 - Canvases count for links: backlinks, the graph, and renaming a note updates the canvases that show it.
 - Search inside a canvas (note cards included), export as PNG or SVG, and turning a text card into a note.
 
-### M19: Polish
+### M19: Polish ✅
 
 The backlog that piled up along the way:
 
-- Bookmark groups, and a calendar for daily notes.
-- Pasting and dropping any file as an attachment, and dropping images on the reading view.
+- Bookmark groups that look and work like folders, and a calendar of daily notes in the right sidebar.
+- Pasting and dropping any file as an attachment (documents, archives and data files are now known attachments), and dropping images on the reading view.
 - Replacing a single search match.
 - Canvas: reconnecting edges by dragging their ends, alignment guides while moving cards, and a presentation mode with groups as slides.
-- Tables: formatting hotkeys inside cells and “+” buttons on their edges.
-- Flint's own spell checker, with languages to choose on every platform.
-- End-to-end tests for theme switching.
+- Tables: formatting inside cells (hotkeys and the context menu) and “+” buttons on their edges; formatting marks come off in any order.
+- Flint's own spell checker on every platform, with downloadable dictionaries in about 70 languages, suggestions and a personal dictionary.
+- Flint's own context menu for notes and text fields, the same everywhere, instead of the webviews' native menus.
+- An end-to-end test for theme switching.
 
 ### M20: Core plugins
 

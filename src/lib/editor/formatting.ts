@@ -92,3 +92,26 @@ export function toggleWrapText(text: string, from: number, to: number, marker: s
     )
   return { text: changed, from: edits.from, to: edits.to }
 }
+
+/** Adds `prefix` to the start of each selected line, or removes it where every line has it. */
+export function toggleLinePrefix(view: EditorView, prefix: string) {
+  const { state } = view
+  const lines = new Set<number>()
+  for (const range of state.selection.ranges) {
+    for (let at = range.from; at <= range.to;) {
+      const line = state.doc.lineAt(at)
+      lines.add(line.number)
+      at = line.to + 1
+    }
+  }
+  const all = [...lines].map((number) => state.doc.line(number))
+  const isRemoving = all.every((line) => line.text.startsWith(prefix))
+  view.dispatch({
+    changes: all.map((line) =>
+      isRemoving
+        ? { from: line.from, to: line.from + prefix.length }
+        : { from: line.from, insert: prefix },
+    ),
+  })
+  view.focus()
+}

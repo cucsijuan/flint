@@ -73,7 +73,7 @@ import type { FoldedLines } from './editor/folding'
 import type { PropertyType } from './bases/base'
 import type { NewNoteDefaults } from './bases/edit'
 import { buildTree } from './tree'
-import { isAndroid } from './platform'
+import { isAndroid, isMobile } from './platform'
 import { isPopout, popoutView } from './popout'
 import * as vault from './vault'
 
@@ -86,7 +86,8 @@ const BLOCK_SEARCH_RESULTS = 50
 const SEARCH_DELAY_MS = 200
 const LAYOUT_SAVE_DELAY_MS = 500
 const NOTICE_MS = 5000
-const LAYOUT_CONFIG = 'workspace'
+/** Like Obsidian, phones keep their own layout so a synced vault doesn't swap layouts around. */
+const LAYOUT_CONFIG = isMobile ? 'workspace-mobile' : 'workspace'
 const BOOKMARKS_CONFIG = 'bookmarks'
 const SNIPPETS_FOLDER = '.flint/snippets'
 const HOTKEYS_CONFIG = 'hotkeys'

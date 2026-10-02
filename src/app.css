@@ -819,3 +819,22 @@ summary.callout-title {
     display: none !important;
   }
 }
+
+/* Phones and tablets: bigger touch targets and text, no hover-only controls. */
+:root.mobile {
+  --header-height: 48px;
+}
+
+:root.mobile .row,
+:root.mobile .menu-item {
+  min-height: 40px;
+  font-size: 15px;
+}
+
+:root.mobile .tab-list .tab {
+  min-height: 44px;
+}
+
+:root.mobile .cm-content {
+  font-size: 16px;
+}

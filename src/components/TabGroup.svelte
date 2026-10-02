@@ -345,6 +345,11 @@
     height: 100%;
   }
 
+  /* Phones switch tabs from the top bar's tab sheet. */
+  :global(.mobile) .bar {
+    display: none;
+  }
+
   .bar {
     display: flex;
     align-items: stretch;

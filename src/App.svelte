@@ -8,6 +8,7 @@
   import LayoutView from './components/LayoutView.svelte'
   import EditMenu from './components/EditMenu.svelte'
   import HoverPreview from './components/HoverPreview.svelte'
+  import MobileShell from './components/mobile/MobileShell.svelte'
   import NoteComposer from './components/NoteComposer.svelte'
   import QuickSwitcher from './components/QuickSwitcher.svelte'
   import RightPanel from './components/RightPanel.svelte'
@@ -28,6 +29,7 @@
   import { commands } from './lib/commands.svelte'
   import { pluginHost } from './lib/plugins/host.svelte'
   import { editMenu } from './lib/edit-menu.svelte'
+  import { isMobile } from './lib/platform'
   import { isPopout } from './lib/popout'
   import { dropOnReadingView } from './lib/reading-drop'
   import { dictionaryFor, spelling } from './lib/spelling.svelte'
@@ -148,7 +150,9 @@
 {#if restored}
   {#if workspace.info}
     <div class="app">
-      {#if isPopout}
+      {#if isMobile}
+        <MobileShell />
+      {:else if isPopout}
         <div class="popout"><LayoutView node={workspace.layout.root} /></div>
       {:else}
         <PaneGroup direction="horizontal" autoSaveId="layout">
@@ -167,7 +171,7 @@
           {/if}
         </PaneGroup>
       {/if}
-      <StatusBar />
+      {#if !isMobile}<StatusBar />{/if}
     </div>
   {:else}
     <Welcome />

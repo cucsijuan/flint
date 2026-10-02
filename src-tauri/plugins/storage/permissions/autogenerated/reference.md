@@ -16,6 +16,7 @@ Everything Flint needs to open vault folders on mobile.
 <th>Description</th>
 </tr>
 
+
 <tr>
 <td>
 

@@ -21,7 +21,7 @@ pub struct PickedFolder {
 /// Native calls, on mobile only; desktop never reaches them.
 pub struct Storage<R: Runtime>(
     #[cfg(target_os = "android")] tauri::plugin::PluginHandle<R>,
-    #[cfg(not(target_os = "android"))] std::marker::PhantomData<R>,
+    #[cfg(not(target_os = "android"))] std::marker::PhantomData<fn() -> R>,
 );
 
 impl<R: Runtime> Storage<R> {

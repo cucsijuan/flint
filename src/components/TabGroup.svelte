@@ -295,7 +295,7 @@
       >
         {#if group.isStacked}
           <button class="spine" onclick={() => activate(tab.id)} title={title(tab.view)}>
-            {title(tab.view)}
+            <span>{title(tab.view)}</span>
           </button>
         {/if}
         <div class="pane">
@@ -471,10 +471,14 @@
     color: var(--text-muted);
     font: inherit;
     font-size: 12px;
-    text-align: left;
+    cursor: pointer;
+  }
+
+  /* WebKit ignores writing-mode on buttons themselves. */
+  .spine span {
+    display: block;
     white-space: nowrap;
     writing-mode: vertical-rl;
-    cursor: pointer;
   }
 
   .view.current .spine {

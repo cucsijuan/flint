@@ -41,6 +41,26 @@ const splitDestination = (destination: string) => {
     : { target: destination.slice(0, hash), subpath: destination.slice(hash + 1) }
 }
 
+const AUDIO_TYPES: Record<string, string> = {
+  mp3: 'audio/mpeg',
+  wav: 'audio/wav',
+  ogg: 'audio/ogg',
+  m4a: 'audio/mp4',
+  flac: 'audio/flac',
+  weba: 'audio/webm',
+}
+
+/** Audio loaded whole into a typed blob: WebKitGTK's player can't stream it from the asset
+ * protocol, which answers its range requests without the right type. */
+async function playable(url: string, extension: string) {
+  try {
+    const bytes = await (await fetch(url)).arrayBuffer()
+    return URL.createObjectURL(new Blob([bytes], { type: AUDIO_TYPES[extension] }))
+  } catch {
+    return url
+  }
+}
+
 function mediaElement(path: string, url: string, embed: HTMLElement) {
   const size = embed.title
   const extension = extensionOf(path)
@@ -49,10 +69,13 @@ function mediaElement(path: string, url: string, embed: HTMLElement) {
     if (/^\d+$/.test(size)) image.width = Number(size)
     return image
   }
-  if (AUDIO_EXTENSIONS.has(extension) || VIDEO_EXTENSIONS.has(extension)) {
-    const media = document.createElement(AUDIO_EXTENSIONS.has(extension) ? 'audio' : 'video')
-    Object.assign(media, { src: url, controls: true })
-    return media
+  if (AUDIO_EXTENSIONS.has(extension)) {
+    const audio = Object.assign(document.createElement('audio'), { controls: true })
+    void playable(url, extension).then((src) => (audio.src = src))
+    return audio
+  }
+  if (VIDEO_EXTENSIONS.has(extension)) {
+    return Object.assign(document.createElement('video'), { src: url, controls: true })
   }
   const link = Object.assign(document.createElement('a'), {
     className: 'internal-link',

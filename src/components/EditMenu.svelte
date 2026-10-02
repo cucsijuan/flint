@@ -41,7 +41,8 @@
 <DropdownMenu.Root
   open={menu !== null}
   onOpenChange={(isOpen) => {
-    if (!isOpen) editMenu.state = null
+    if (isOpen) return
+    editMenu.close()
   }}
 >
   <DropdownMenu.Portal>

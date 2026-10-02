@@ -41,3 +41,13 @@ describe('toggleWrapText', () => {
     })
   })
 })
+
+describe('stacked marks', () => {
+  it('come off in any order', () => {
+    expect(toggleWrapText('~~**word**~~', 4, 8, '~~')).toEqual({ text: '**word**', from: 2, to: 6 })
+    expect(toggleWrapText('~~**word**~~', 4, 8, '**')).toEqual({ text: '~~word~~', from: 2, to: 6 })
+    expect(toggleWrapText('***word***', 3, 7, '*')).toEqual({ text: '**word**', from: 2, to: 6 })
+    expect(toggleWrapText('***word***', 3, 7, '**')).toEqual({ text: '*word*', from: 1, to: 5 })
+    expect(toggleWrapText('~~word~~', 2, 6, '**')).toEqual({ text: '~~**word**~~', from: 4, to: 8 })
+  })
+})

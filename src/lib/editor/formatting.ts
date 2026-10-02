@@ -1,28 +1,65 @@
 import { EditorSelection } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
 
+const MARKER = /[*_~=`%]/
+/** How far around a selection to look for formatting marks. */
+const RUN_LIMIT = 16
+
+const runLength = (chars: string[]) => {
+  const end = chars.findIndex((char) => !MARKER.test(char))
+  return end === -1 ? chars.length : end
+}
+
+/** The edits that toggle `marker` around `[from, to)`. It counts as present even with other marks
+ * between it and the text, as in `~~**text**~~`, so marks come off in any order. */
+function markerEdits(
+  slice: (from: number, to: number) => string,
+  length: number,
+  from: number,
+  to: number,
+  marker: string,
+) {
+  const left = slice(Math.max(0, from - RUN_LIMIT), from)
+  const right = slice(to, Math.min(length, to + RUN_LIMIT))
+  const leftRun = left.slice(left.length - runLength([...left].reverse()))
+  const rightRun = right.slice(0, runLength([...right]))
+  for (let at = leftRun.length - marker.length; at >= 0; at--) {
+    if (leftRun.slice(at, at + marker.length) !== marker) continue
+    const mirrored = [...leftRun.slice(at + marker.length)].reverse().join('')
+    if (!rightRun.startsWith(mirrored + marker)) continue
+    const leftStart = from - leftRun.length + at
+    const rightStart = to + mirrored.length
+    return {
+      changes: [
+        { from: leftStart, to: leftStart + marker.length, insert: '' },
+        { from: rightStart, to: rightStart + marker.length, insert: '' },
+      ],
+      from: from - marker.length,
+      to: to - marker.length,
+    }
+  }
+  return {
+    changes: [
+      { from, to: from, insert: marker },
+      { from: to, to, insert: marker },
+    ],
+    from: from + marker.length,
+    to: to + marker.length,
+  }
+}
+
 export function toggleWrap(view: EditorView, marker: string) {
   const { state } = view
   view.dispatch(
     state.changeByRange((range) => {
-      const before = state.sliceDoc(range.from - marker.length, range.from)
-      const after = state.sliceDoc(range.to, range.to + marker.length)
-      if (before === marker && after === marker) {
-        return {
-          changes: [
-            { from: range.from - marker.length, to: range.from },
-            { from: range.to, to: range.to + marker.length },
-          ],
-          range: EditorSelection.range(range.from - marker.length, range.to - marker.length),
-        }
-      }
-      return {
-        changes: [
-          { from: range.from, insert: marker },
-          { from: range.to, insert: marker },
-        ],
-        range: EditorSelection.range(range.from + marker.length, range.to + marker.length),
-      }
+      const edits = markerEdits(
+        (from, to) => state.sliceDoc(from, to),
+        state.doc.length,
+        range.from,
+        range.to,
+        marker,
+      )
+      return { changes: edits.changes, range: EditorSelection.range(edits.from, edits.to) }
     }),
   )
   view.focus()
@@ -46,19 +83,12 @@ export function insertLink(view: EditorView) {
 
 /** `toggleWrap` for plain text and a selection, as in a text field. */
 export function toggleWrapText(text: string, from: number, to: number, marker: string) {
-  const before = text.slice(from - marker.length, from)
-  const after = text.slice(to, to + marker.length)
-  if (from >= marker.length && before === marker && after === marker) {
-    return {
-      text:
-        text.slice(0, from - marker.length) + text.slice(from, to) + text.slice(to + marker.length),
-      from: from - marker.length,
-      to: to - marker.length,
-    }
-  }
-  return {
-    text: text.slice(0, from) + marker + text.slice(from, to) + marker + text.slice(to),
-    from: from + marker.length,
-    to: to + marker.length,
-  }
+  const edits = markerEdits((start, end) => text.slice(start, end), text.length, from, to, marker)
+  const changed = [...edits.changes]
+    .sort((a, b) => b.from - a.from)
+    .reduce(
+      (result, change) => result.slice(0, change.from) + change.insert + result.slice(change.to),
+      text,
+    )
+  return { text: changed, from: edits.from, to: edits.to }
 }

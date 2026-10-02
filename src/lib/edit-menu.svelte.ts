@@ -65,6 +65,14 @@ class EditMenu {
     return true
   }
 
+  /** Closes the menu, giving the focus back to what it acted on. */
+  close() {
+    const state = this.state
+    this.state = null
+    if (state?.field?.isConnected) state.field.focus()
+    else state?.editor?.focus()
+  }
+
   async copy() {
     if (this.state?.selection) await vault.setClipboardText(this.state.selection)
   }

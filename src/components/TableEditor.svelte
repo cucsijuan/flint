@@ -26,6 +26,7 @@
     tableData,
   } from '../lib/editor/table'
   import { commands, hotkeyOf } from '../lib/commands.svelte'
+  import { editMenu } from '../lib/edit-menu.svelte'
   import { setCellFormatter } from '../lib/editor/active'
   import { toggleWrapText } from '../lib/editor/formatting'
   import { hydrate, type HydrateContext } from '../lib/render/hydrate'
@@ -187,8 +188,8 @@
       oninput={() => edits.cell(row, column, cellSource(draft))}
       onkeydown={(event) => onKeydown(event, row, column)}
       onblur={() => {
-        // A native context menu takes the window's focus; the cell stays the one being edited.
-        if (document.hasFocus()) stopEditing(row, column)
+        // A context menu takes the focus for a moment; the cell stays the one being edited.
+        if (document.hasFocus() && !editMenu.state) stopEditing(row, column)
       }}
       bind:this={cellInput}
       {@attach focus}></textarea>

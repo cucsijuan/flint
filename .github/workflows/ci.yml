@@ -111,3 +111,70 @@ jobs:
         with:
           args: ${{ matrix.args }}
           uploadWorkflowArtifacts: true
+
+  android:
+    needs: quality
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager "ndk;27.2.12479018"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm tauri android build --debug --apk
+        env:
+          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.2.12479018
+      - uses: actions/upload-artifact@v7
+        with:
+          name: android-apk
+          path: src-tauri/gen/android/app/build/outputs/apk/universal/debug/*.apk
+
+  ios:
+    needs: quality
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm tauri ios init --ci
+      - run: pnpm build
+      # Unsigned, for sideloading: Sideloadly or AltStore sign it with the user's Apple ID.
+      - name: Build an unsigned IPA
+        working-directory: src-tauri/gen/apple
+        run: |
+          xcodebuild -list
+          scheme=$(xcodebuild -list -json | python3 -c "import json,sys; print([s for s in json.load(sys.stdin)['project']['schemes'] if s.endswith('_iOS')][0])")
+          xcodebuild -scheme "$scheme" -configuration release -sdk iphoneos \
+            -destination 'generic/platform=iOS' -archivePath build/flint.xcarchive archive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+          mkdir -p Payload
+          cp -R build/flint.xcarchive/Products/Applications/*.app Payload/
+          zip -qr Flint.ipa Payload
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ios-ipa
+          path: src-tauri/gen/apple/Flint.ipa

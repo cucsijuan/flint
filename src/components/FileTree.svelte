@@ -9,6 +9,7 @@
   import { isEntryDrag } from '../lib/entry-drag'
   import { isBase, isCanvas, isImage, isWithin, noteTitle, parentOf } from '../lib/paths'
   import type { TreeNode } from '../lib/tree'
+  import { isMobile } from '../lib/platform'
   import { workspace } from '../lib/workspace.svelte'
 
   const REVEAL_MS = 1200
@@ -201,24 +202,32 @@
           <ContextMenu.Item class="menu-item" onSelect={() => (workspace.historyNote = path)}>
             Version history
           </ContextMenu.Item>
-          <ContextMenu.Item class="menu-item" onSelect={() => (workspace.pdfNote = path)}>
-            Export to PDF
-          </ContextMenu.Item>
-          <ContextMenu.Item class="menu-item" onSelect={() => void workspace.exportHtml(path)}>
-            Export to HTML
-          </ContextMenu.Item>
+          {#if !isMobile}
+            <ContextMenu.Item class="menu-item" onSelect={() => (workspace.pdfNote = path)}>
+              Export to PDF
+            </ContextMenu.Item>
+          {/if}
+          {#if !isMobile}
+            <ContextMenu.Item class="menu-item" onSelect={() => void workspace.exportHtml(path)}>
+              Export to HTML
+            </ContextMenu.Item>
+          {/if}
         {/if}
         {#if target.kind === 'folder'}
-          <ContextMenu.Item class="menu-item" onSelect={() => void workspace.exportSite(path)}>
-            Export as a website
-          </ContextMenu.Item>
+          {#if !isMobile}
+            <ContextMenu.Item class="menu-item" onSelect={() => void workspace.exportSite(path)}>
+              Export as a website
+            </ContextMenu.Item>
+          {/if}
         {/if}
         <ContextMenu.Item class="menu-item" onSelect={() => (workspace.renaming = path)}>
           Rename
         </ContextMenu.Item>
-        <ContextMenu.Item class="menu-item" onSelect={() => workspace.showInFileManager(path)}>
-          Show in system explorer
-        </ContextMenu.Item>
+        {#if !isMobile}
+          <ContextMenu.Item class="menu-item" onSelect={() => workspace.showInFileManager(path)}>
+            Show in system explorer
+          </ContextMenu.Item>
+        {/if}
         <ContextMenu.Item class="menu-item danger" onSelect={() => workspace.trash(path)}>
           Delete
         </ContextMenu.Item>

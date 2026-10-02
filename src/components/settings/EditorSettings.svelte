@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { isMobile } from '../../lib/platform'
   import { workspace } from '../../lib/workspace.svelte'
   import Choice from './Choice.svelte'
   import Setting from './Setting.svelte'
@@ -98,13 +99,18 @@
     onchange={(event) => workspace.setSettings({ pagePreview: event.currentTarget.checked })}
   />
 </Setting>
-<Setting name="Web viewer" description="Open web links in a Flint window instead of your browser.">
-  <input
-    type="checkbox"
-    checked={settings.webViewer}
-    onchange={(event) => workspace.setSettings({ webViewer: event.currentTarget.checked })}
-  />
-</Setting>
+{#if !isMobile}
+  <Setting
+    name="Web viewer"
+    description="Open web links in a Flint window instead of your browser."
+  >
+    <input
+      type="checkbox"
+      checked={settings.webViewer}
+      onchange={(event) => workspace.setSettings({ webViewer: event.currentTarget.checked })}
+    />
+  </Setting>
+{/if}
 <Setting
   name="Text after extracting"
   description="What replaces a selection moved to another note with “Extract current selection”."

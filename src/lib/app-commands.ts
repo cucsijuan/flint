@@ -11,6 +11,7 @@ import { readProperties } from './properties'
 import { checkForUpdates } from './updates'
 import { workspace } from './workspace.svelte'
 import { recorder } from './recorder.svelte'
+import { isMobile } from './platform'
 
 const hasVault = () => workspace.info !== null
 const hasNote = () => workspace.notePath !== null
@@ -119,7 +120,7 @@ export function registerAppCommands() {
     {
       id: 'open-in-new-window',
       name: 'Move current tab to new window',
-      isAvailable: hasVault,
+      isAvailable: () => !isMobile && hasVault(),
       run: () => workspace.popOut(workspace.layout.activeGroupId, workspace.activeTab),
     },
     {
@@ -460,19 +461,19 @@ export function registerAppCommands() {
     {
       id: 'export-pdf',
       name: 'Export to PDF',
-      isAvailable: hasNote,
+      isAvailable: () => !isMobile && hasNote(),
       run: () => (workspace.pdfNote = workspace.notePath),
     },
     {
       id: 'export-html',
       name: 'Export to HTML',
-      isAvailable: hasNote,
+      isAvailable: () => !isMobile && hasNote(),
       run: () => workspace.notePath && void workspace.exportHtml(workspace.notePath),
     },
     {
       id: 'export-site',
       name: 'Export vault as a website',
-      isAvailable: hasVault,
+      isAvailable: () => !isMobile && hasVault(),
       run: () => void workspace.exportSite(),
     },
     {
@@ -514,6 +515,7 @@ export function registerAppCommands() {
     {
       id: 'check-for-updates',
       name: 'Check for updates',
+      isAvailable: () => !isMobile,
       run: () => checkForUpdates({ isManual: true }),
     },
     {

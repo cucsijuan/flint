@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { isMobile } from '../lib/platform'
   import { Dialog } from 'bits-ui'
   import type { Component } from 'svelte'
   import { pluginHost } from '../lib/plugins/host.svelte'
@@ -23,7 +24,8 @@
     { name: 'Hotkeys', content: HotkeySettings, needsVault: true },
     { name: 'Daily notes and templates', content: DailyNotesSettings, needsVault: true },
     { name: 'Plugins', content: PluginSettings, needsVault: true },
-    { name: 'General', content: GeneralSettings, needsVault: false },
+    // Its only setting is checking for updates, which phones leave to their app store.
+    ...(isMobile ? [] : [{ name: 'General', content: GeneralSettings, needsVault: false }]),
   ]
 
   let current = $state('Editor')

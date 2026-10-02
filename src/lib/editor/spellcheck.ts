@@ -7,6 +7,7 @@ import {
   ViewPlugin,
   type ViewUpdate,
 } from '@codemirror/view'
+import { editMenu } from '../edit-menu.svelte'
 import { spelling } from '../spelling.svelte'
 
 const CHECK_DELAY_MS = 300
@@ -132,12 +133,8 @@ export const spellcheck = ViewPlugin.fromClass(
         const position = view.posAtCoords(event)
         const range = position === null ? null : view.state.wordAt(position)
         if (!range) return false
-        event.preventDefault()
-        const word = view.state.sliceDoc(range.from, range.to)
-        spelling.menu = {
-          x: event.clientX,
-          y: event.clientY,
-          word,
+        editMenu.misspelling = {
+          word: view.state.sliceDoc(range.from, range.to),
           replace: (text) => {
             view.dispatch({
               changes: { from: range.from, to: range.to, insert: text },
@@ -146,7 +143,7 @@ export const spellcheck = ViewPlugin.fromClass(
             view.focus()
           },
         }
-        return true
+        return false
       },
     },
   },

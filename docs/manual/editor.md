@@ -50,11 +50,14 @@ Formatting shortcuts wrap the selection, or remove the formatting when the selec
 
 ### The context menu
 
-Right-click in a note for:
+Right-click in a note for Flint's menu, the same on every system:
 
-- **Bold**, **Italic**, **Strikethrough**, **Code**, **Insert link** and **Insert template**.
+- Spelling suggestions and **Add to the dictionary**, when you right-click a misspelled word.
 - **Open link in new tab**, when you right-click a link.
-- Spelling suggestions for a misspelled word, plus the usual Cut, Copy and Paste.
+- **Cut**, **Copy** and **Paste**. Paste works like Ctrl+V, files and images included.
+- **Bold**, **Italic**, **Strikethrough**, **Code**, **Insert link** and **Insert template**. Inside a table cell they format the cell.
+
+Text fields elsewhere in Flint (search, properties, settings) get Cut, Copy and Paste.
 
 ### Autocomplete
 

@@ -477,6 +477,20 @@ pub fn save_clipboard_image(state: State<AppState>, path: String) -> Result<bool
 }
 
 #[tauri::command(async)]
+pub fn clipboard_text() -> String {
+    arboard::Clipboard::new()
+        .and_then(|mut clipboard| clipboard.get_text())
+        .unwrap_or_default()
+}
+
+#[tauri::command(async)]
+pub fn set_clipboard_text(text: String) -> Result<()> {
+    arboard::Clipboard::new()
+        .and_then(|mut clipboard| clipboard.set_text(text))
+        .map_err(|error| Error::Plugin(error.to_string()))
+}
+
+#[tauri::command(async)]
 pub fn clipboard_files() -> Vec<String> {
     arboard::Clipboard::new()
         .and_then(|mut clipboard| clipboard.get().file_list())

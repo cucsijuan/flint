@@ -10,17 +10,9 @@ export function dictionaryFor(name: string, available: string[]) {
   return available.includes(language) ? language : null
 }
 
-export interface SpellingMenu {
-  x: number
-  y: number
-  word: string
-  replace: (text: string) => void
-}
-
 class Spelling {
   /** Changes whenever words may be judged differently: new languages or personal words. */
   readonly changed = new Emitter<void>()
-  menu = $state<SpellingMenu | null>(null)
   #known = new Map<string, boolean>()
 
   async setLanguages(languages: string[]) {

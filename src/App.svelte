@@ -6,7 +6,7 @@
   import { onMount, tick } from 'svelte'
   import CommandPalette from './components/CommandPalette.svelte'
   import LayoutView from './components/LayoutView.svelte'
-  import SpellingMenu from './components/SpellingMenu.svelte'
+  import EditMenu from './components/EditMenu.svelte'
   import QuickSwitcher from './components/QuickSwitcher.svelte'
   import RightPanel from './components/RightPanel.svelte'
   import ExportPdfDialog from './components/ExportPdfDialog.svelte'
@@ -16,13 +16,13 @@
   import Sidebar from './components/Sidebar.svelte'
   import TemplatePicker from './components/TemplatePicker.svelte'
   import Welcome from './components/Welcome.svelte'
-  import { listen } from '@tauri-apps/api/event'
   import { applyAppearance, applySnippets } from './lib/appearance'
   import { dropFiles, fromDisk } from './lib/editor/attachments'
   import { registerAppCommands, rememberContextTarget } from './lib/app-commands'
   import { checkForUpdates } from './lib/updates'
-  import { commands, isMac } from './lib/commands.svelte'
+  import { commands } from './lib/commands.svelte'
   import { pluginHost } from './lib/plugins/host.svelte'
+  import { editMenu } from './lib/edit-menu.svelte'
   import { dropOnReadingView } from './lib/reading-drop'
   import { dictionaryFor, spelling } from './lib/spelling.svelte'
   import * as vault from './lib/vault'
@@ -46,9 +46,6 @@
     const pluginChanges = vault.onPluginsChanged((folders) => {
       if (workspace.settings.value.pluginHotReload) void pluginHost.reload(folders)
     })
-    const menuActions = listen<string>('context-menu-action', ({ payload }) =>
-      commands.run(payload),
-    )
     // Only Linux enables native file drops; WebKitGTK reports their position in CSS pixels.
     const fileDrops = getCurrentWebview().onDragDropEvent(({ payload }) => {
       if (payload.type !== 'drop') return
@@ -60,7 +57,6 @@
     return () => {
       void closing.then((unlisten) => unlisten())
       void fileDrops.then((unlisten) => unlisten())
-      void menuActions.then((unlisten) => unlisten())
       void pluginChanges.then((unlisten) => unlisten())
     }
   })
@@ -115,14 +111,8 @@
   function onContextMenu(event: MouseEvent) {
     if (event.defaultPrevented) return
     rememberContextTarget(event.target)
-    const target = event.target as Element
-    const allowsNativeMenu = target.closest('.cm-editor, .markdown, input, textarea')
-    if (!allowsNativeMenu || isMac) event.preventDefault()
-    if (allowsNativeMenu && isMac) {
-      const isLink = target.closest('a, [data-link], [data-url]') !== null
-      const isEditable = target.closest('.cm-content, input, textarea') !== null
-      void vault.showContextMenu(isLink, isEditable)
-    }
+    event.preventDefault()
+    editMenu.open(event)
   }
 
   function preventFileDrop(event: DragEvent) {
@@ -168,7 +158,7 @@
 <ExportPdfDialog />
 <RecoverDeleted />
 <QuickSwitcher />
-<SpellingMenu />
+<EditMenu />
 <CommandPalette />
 <TemplatePicker />
 

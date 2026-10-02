@@ -1,8 +1,9 @@
+#[cfg(target_os = "macos")]
+mod app_menu;
 mod canvas;
 mod commands;
 mod community;
 mod config;
-mod context_menu;
 mod error;
 mod export;
 mod history;
@@ -75,7 +76,8 @@ pub fn run() {
             commands::clipboard_files,
             commands::open_externally,
             commands::show_in_file_manager,
-            context_menu::show_context_menu,
+            commands::clipboard_text,
+            commands::set_clipboard_text,
             commands::system_fonts,
             spelling::spelling_languages,
             spelling::set_spelling_languages,
@@ -104,7 +106,6 @@ pub fn run() {
         ])
         .setup(|app| {
             if let Some(window) = app.get_webview_window("main") {
-                context_menu::install(&window)?;
                 // The frontend shows the window once it has rendered; this covers a frontend that fails to start.
                 let window = window.clone();
                 thread::spawn(move || {
@@ -113,7 +114,7 @@ pub fn run() {
                 });
             }
             #[cfg(target_os = "macos")]
-            app.set_menu(context_menu::app_menu(app.handle())?)?;
+            app.set_menu(app_menu::app_menu(app.handle())?)?;
             if cfg!(debug_assertions) {
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()

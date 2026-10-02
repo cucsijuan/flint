@@ -72,6 +72,15 @@ const attachmentSaver = Facet.define<SaveAttachment, SaveAttachment | null>({
   combine: (values) => values[0] ?? null,
 })
 
+/** Pastes what the system clipboard holds, files and images included, as the editor's own
+ * paste would; for menus, which can't trigger a real paste. */
+export async function pasteFromClipboard(view: EditorView) {
+  const text = await vault.clipboardText()
+  const save = view.state.facet(attachmentSaver)
+  if (save) await pasteFromSystemClipboard(view, text, save)
+  else if (text) view.dispatch(view.state.replaceSelection(text))
+}
+
 /** Drops files from the system onto the editor under `(x, y)`; false when there's none. */
 export function dropFiles(paths: string[], x: number, y: number) {
   const editor = document.elementFromPoint(x, y)?.closest<HTMLElement>('.cm-editor')

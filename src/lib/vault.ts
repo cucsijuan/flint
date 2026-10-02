@@ -255,8 +255,8 @@ export const importAttachment = (source: string, path: string) =>
 export const saveClipboardImage = (path: string) =>
   invoke<boolean>('save_clipboard_image', { path })
 export const clipboardFiles = () => invoke<string[]>('clipboard_files')
-export const showContextMenu = (isLink: boolean, isEditable: boolean) =>
-  invoke('show_context_menu', { isLink, isEditable })
+export const clipboardText = () => invoke<string>('clipboard_text')
+export const setClipboardText = (text: string) => invoke('set_clipboard_text', { text })
 export const copyEntry = (from: string, to: string) => invoke('copy_entry', { from, to })
 export const showInFileManager = (path: string) => invoke('show_in_file_manager', { path })
 export const openExternally = (path: string) => invoke('open_externally', { path })

@@ -23,6 +23,16 @@ A daily note is a note named after a date, such as `2026-10-01`, for a journal, 
 
 These settings live in `.flint/daily-notes.json`, with the same keys as Obsidian's `daily-notes.json`.
 
+## Unique notes
+
+**Create new unique note** makes a note named after the current date and time, such as `202610021430`, for Zettelkasten-style notes. **Settings → Daily notes and templates → Unique notes** sets:
+
+- **Folder:** where they go.
+- **Name format:** a Day.js format, `YYYYMMDDHHmm` by default.
+- **Template:** a note whose text starts each new one.
+
+**Open random note** opens any note in the vault at random.
+
 ## Templates
 
 Templates are ordinary notes kept in one folder. Insert one to paste its text at the cursor with its variables filled in.

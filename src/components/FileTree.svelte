@@ -114,6 +114,7 @@
         <button
           class="row"
           data-path={node.path}
+          data-preview={node.kind === 'file' ? node.path : undefined}
           class:active={workspace.notePath === node.path}
           class:revealed={workspace.revealed === node.path}
           class:drop-target={dropFolder !== null &&

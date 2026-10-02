@@ -7,6 +7,8 @@
   import CommandPalette from './components/CommandPalette.svelte'
   import LayoutView from './components/LayoutView.svelte'
   import EditMenu from './components/EditMenu.svelte'
+  import HoverPreview from './components/HoverPreview.svelte'
+  import NoteComposer from './components/NoteComposer.svelte'
   import QuickSwitcher from './components/QuickSwitcher.svelte'
   import RightPanel from './components/RightPanel.svelte'
   import ExportPdfDialog from './components/ExportPdfDialog.svelte'
@@ -14,6 +16,7 @@
   import SettingsDialog from './components/SettingsDialog.svelte'
   import VersionHistory from './components/VersionHistory.svelte'
   import Sidebar from './components/Sidebar.svelte'
+  import StatusBar from './components/StatusBar.svelte'
   import TemplatePicker from './components/TemplatePicker.svelte'
   import Welcome from './components/Welcome.svelte'
   import { applyAppearance, applySnippets } from './lib/appearance'
@@ -133,21 +136,24 @@
 
 {#if restored}
   {#if workspace.info}
-    <PaneGroup direction="horizontal" autoSaveId="layout">
-      <Pane id="sidebar" order={1} defaultSize={22} minSize={12} maxSize={50}>
-        <Sidebar />
-      </Pane>
-      <PaneResizer class="resizer" />
-      <Pane id="editor" order={2}>
-        <LayoutView node={workspace.layout.root} />
-      </Pane>
-      {#if workspace.showRightPanel}
-        <PaneResizer class="resizer" />
-        <Pane id="right" order={3} defaultSize={22} minSize={12} maxSize={50}>
-          <RightPanel />
+    <div class="app">
+      <PaneGroup direction="horizontal" autoSaveId="layout">
+        <Pane id="sidebar" order={1} defaultSize={22} minSize={12} maxSize={50}>
+          <Sidebar />
         </Pane>
-      {/if}
-    </PaneGroup>
+        <PaneResizer class="resizer" />
+        <Pane id="editor" order={2}>
+          <LayoutView node={workspace.layout.root} />
+        </Pane>
+        {#if workspace.showRightPanel}
+          <PaneResizer class="resizer" />
+          <Pane id="right" order={3} defaultSize={22} minSize={12} maxSize={50}>
+            <RightPanel />
+          </Pane>
+        {/if}
+      </PaneGroup>
+      <StatusBar />
+    </div>
   {:else}
     <Welcome />
   {/if}
@@ -161,12 +167,25 @@
 <EditMenu />
 <CommandPalette />
 <TemplatePicker />
+<NoteComposer />
+<HoverPreview />
 
 {#if workspace.notice}
   <div class="notice" role="alert">{workspace.notice}</div>
 {/if}
 
 <style>
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .app > :global([data-pane-group]) {
+    flex: 1;
+    min-height: 0;
+  }
+
   :global(.resizer) {
     position: relative;
     z-index: 5;

@@ -27,6 +27,7 @@ Its tabs are:
 - **Files:** the [file tree](vaults-and-files.md#the-file-tree).
 - **Search:** [full-text search](search.md).
 - **Bookmarks:** your [bookmarks](#bookmarks).
+- **All properties:** every property used in the vault, with how many notes use it. Click one to search for the notes that have it, double-click to rename it everywhere, or right-click to rename it or change its **Property type** for the whole vault.
 
 ## Tabs
 

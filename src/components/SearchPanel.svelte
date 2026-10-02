@@ -111,6 +111,7 @@
         <li>
           <button
             class="note"
+            data-preview={result.path}
             onclick={(event) =>
               workspace.openNote(result.path, { newTab: event.ctrlKey || event.metaKey })}
           >

@@ -1,6 +1,7 @@
 import { ChangeSet } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
 import { applyChanges, replaceDoc } from './editor/editor'
+import { Emitter } from './events'
 import { isWithin, replacePrefix } from './paths'
 import * as vault from './vault'
 
@@ -30,6 +31,20 @@ class Documents {
   onError: (error: unknown) => void = console.error
   #documents = new Map<string, Document>()
   #listeners = new Map<string, Set<(contents: string) => void>>()
+  /** Notes with edits not written to disk yet. */
+  #unsaved = new Set<string>()
+  readonly saveStateChanged = new Emitter<void>()
+
+  isUnsaved(path: string) {
+    return this.#unsaved.has(path)
+  }
+
+  #setUnsaved(path: string, isUnsaved: boolean) {
+    if (this.#unsaved.has(path) === isUnsaved) return
+    if (isUnsaved) this.#unsaved.add(path)
+    else this.#unsaved.delete(path)
+    this.saveStateChanged.emit()
+  }
 
   subscribe(path: string, listener: (contents: string) => void) {
     const listeners = this.#listeners.get(path) ?? new Set()
@@ -71,6 +86,7 @@ class Documents {
     this.#notify(path, contents)
     clearTimeout(document.saveTimer)
     document.saveTimer = setTimeout(() => void this.#save(path), SAVE_DELAY_MS)
+    this.#setUnsaved(path, true)
   }
 
   /** Edits a note that may not be open, as if it were typed into every editor showing it. */
@@ -124,6 +140,7 @@ class Documents {
     document.saveTimer = undefined
     try {
       await vault.writeNote(path, document.contents)
+      if (!document.saveTimer) this.#setUnsaved(path, false)
     } catch (error) {
       this.onError(error)
     }

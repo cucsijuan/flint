@@ -59,6 +59,23 @@ Right-click in a note for Flint's menu, the same on every system:
 
 Text fields elsewhere in Flint (search, properties, settings) get Cut, Copy and Paste.
 
+### Slash commands
+
+Type `/` at the start of a line or after a space for a list of things to insert or do:
+
+- Markdown blocks: headings, bullet and numbered lists, tasks, quotes, callouts, code and math blocks, tables and dividers.
+- Your templates.
+- Any Flint command, like in the command palette.
+
+Keep typing to filter the list, then press Enter.
+
+### Moving text between notes
+
+The note composer moves text around:
+
+- **Extract current selection** sends the selected text to another note. Pick a note to append it to, or type a name and press **Shift+Enter** for a new note beside the current one. A link to that note takes the selection's place; **Settings → Editor → Text after extracting** can make it an embed or nothing.
+- **Merge current file with another file** appends the whole note (without its frontmatter) to the note you pick, points every link to it at that note, and moves it to the trash.
+
 ### Autocomplete
 
 - `[[` suggests notes, aliases and attachments. It inserts the shortest link that still points to the right note.
@@ -67,6 +84,14 @@ Text fields elsewhere in Flint (search, properties, settings) get Cut, Copy and 
 - `#` suggests tags you've already used.
 
 Use the arrow keys and Enter to pick a suggestion, or Escape to close the list.
+
+## The status bar
+
+The bar at the bottom of the window shows, for the active note:
+
+- How many notes link to it. Click it to open the Backlinks panel.
+- Its words and characters, or the selection's when text is selected.
+- A dot that lights up while there are changes still being saved.
 
 ## Live preview
 

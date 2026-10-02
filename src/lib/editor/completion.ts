@@ -8,6 +8,7 @@ import type { EditorView } from '@codemirror/view'
 import { noteTitle, parentOf } from '../paths'
 import type { NoteBlock } from '../render/source'
 import type { Heading, LinkTarget, TagCount } from '../vault'
+import { completeSlash, type SlashSources } from './slash'
 
 export interface CompletionSources {
   targets: () => LinkTarget[]
@@ -18,6 +19,7 @@ export interface CompletionSources {
   /** Gives a block an id in its note and returns it. */
   addBlockId: (path: string, block: NoteBlock) => string
   tags: () => TagCount[]
+  slash: SlashSources
 }
 
 const OPEN_LINK = /\[\[([^[\]|\n]*)$/
@@ -142,6 +144,7 @@ export const completion = (sources: CompletionSources) =>
     override: [
       (context) => completeLink(context, sources),
       (context) => completeTag(context, sources),
+      (context) => completeSlash(context, sources.slash),
     ],
     icons: false,
   })

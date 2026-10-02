@@ -89,6 +89,30 @@
   />
 </Setting>
 <Setting
+  name="Page previews"
+  description="Show a note when you hover a link to it; hold Ctrl (⌘) in the editor and the file tree."
+>
+  <input
+    type="checkbox"
+    checked={settings.pagePreview}
+    onchange={(event) => workspace.setSettings({ pagePreview: event.currentTarget.checked })}
+  />
+</Setting>
+<Setting
+  name="Text after extracting"
+  description="What replaces a selection moved to another note with “Extract current selection”."
+>
+  <Choice
+    value={settings.extractedText}
+    options={[
+      { value: 'link', label: 'Link' },
+      { value: 'embed', label: 'Embed' },
+      { value: 'none', label: 'Nothing' },
+    ]}
+    onchange={(extractedText) => workspace.setSettings({ extractedText })}
+  />
+</Setting>
+<Setting
   name="Version history interval"
   description="Minutes between two saved versions of a note you're editing (Open version history)."
 >

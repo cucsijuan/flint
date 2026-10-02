@@ -42,6 +42,32 @@
     onchange={(event) => workspace.setTemplates({ folder: event.currentTarget.value.trim() })}
   />
 </Setting>
+<h3>Unique notes</h3>
+<Setting name="Folder" description="Where new unique notes go. Empty means the vault root.">
+  <input
+    value={workspace.uniqueNotes.folder}
+    placeholder="Vault root"
+    onchange={(event) => workspace.setUniqueNotes({ folder: event.currentTarget.value.trim() })}
+  />
+</Setting>
+<Setting
+  name="Name format"
+  description="Now: {dayjs().format(workspace.uniqueNotes.format || 'YYYYMMDDHHmm')}"
+>
+  <input
+    value={workspace.uniqueNotes.format}
+    placeholder="YYYYMMDDHHmm"
+    oninput={(event) => workspace.setUniqueNotes({ format: event.currentTarget.value.trim() })}
+  />
+</Setting>
+<Setting name="Template" description="A note whose contents start every new unique note.">
+  <input
+    value={workspace.uniqueNotes.template}
+    placeholder="Templates/Zettel"
+    list="template-notes"
+    onchange={(event) => workspace.setUniqueNotes({ template: event.currentTarget.value.trim() })}
+  />
+</Setting>
 <datalist id="template-notes">
   {#each workspace.templateNotes as entry (entry.path)}
     <option value={entry.path.slice(0, -NOTE_EXTENSION.length)}></option>

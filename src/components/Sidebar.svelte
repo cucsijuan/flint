@@ -6,12 +6,14 @@
     Files,
     FolderOpen,
     FolderPlus,
+    ListTree,
     Search,
     Settings,
   } from '@lucide/svelte'
   import { Tabs } from 'bits-ui'
   import { commands } from '../lib/commands.svelte'
   import { workspace } from '../lib/workspace.svelte'
+  import AllPropertiesPanel from './AllPropertiesPanel.svelte'
   import BookmarksPanel from './BookmarksPanel.svelte'
   import FileTree from './FileTree.svelte'
   import SearchPanel from './SearchPanel.svelte'
@@ -53,10 +55,14 @@
       <Tabs.Trigger class="tab" value="bookmarks" title="Bookmarks">
         <Bookmark size={16} />
       </Tabs.Trigger>
+      <Tabs.Trigger class="tab" value="properties" title="All properties">
+        <ListTree size={16} />
+      </Tabs.Trigger>
     </Tabs.List>
     <Tabs.Content class="tab-content" value="files"><FileTree /></Tabs.Content>
     <Tabs.Content class="tab-content" value="search"><SearchPanel /></Tabs.Content>
     <Tabs.Content class="tab-content" value="bookmarks"><BookmarksPanel /></Tabs.Content>
+    <Tabs.Content class="tab-content" value="properties"><AllPropertiesPanel /></Tabs.Content>
   </Tabs.Root>
 </aside>
 

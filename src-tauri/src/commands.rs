@@ -136,6 +136,14 @@ pub fn rename_entry(
     Ok(updated)
 }
 
+/// Points every link to `from` at `to`, for merging one note into another.
+#[tauri::command(async)]
+pub fn redirect_links(state: State<AppState>, from: String, to: String) -> Result<usize> {
+    let open = state.open()?;
+    let mut index = open.index.write().unwrap_or_else(|e| e.into_inner());
+    index.redirect_links(&open.vault, &from, &to)
+}
+
 #[tauri::command(async)]
 pub fn copy_entry(state: State<AppState>, from: String, to: String) -> Result<()> {
     state.vault()?.copy_file(&from, &to)

@@ -4,7 +4,11 @@ import { documents } from '../documents'
 import { pluginHost } from '../plugins/host.svelte'
 import * as vault from '../vault'
 import { workspace } from '../workspace.svelte'
+import { NOTE_EXTENSION } from '../paths'
 import type { EditorOptions } from './editor'
+
+/** Commands that make no sense typed in a note. */
+const SLASH_HIDDEN = new Set(['insert-template', 'open-link-in-new-tab'])
 
 /** The editor setup for Markdown written in `path`: a note, or a canvas card resolving links from its canvas. */
 export function editorOptions(
@@ -33,6 +37,13 @@ export function editorOptions(
       searchBlocks: (query) => workspace.searchBlocks(query),
       addBlockId: (note, block) => workspace.addBlockId(note, block),
       tags: () => workspace.tags,
+      slash: {
+        commands: () => commands.available().filter((command) => !SLASH_HIDDEN.has(command.id)),
+        runCommand: (id) => commands.run(id),
+        templates: () =>
+          workspace.templateNotes.map((entry) => entry.path.slice(0, -NOTE_EXTENSION.length)),
+        insertTemplate: (template) => void workspace.insertTemplate(template),
+      },
     },
     plugins: pluginHost.editorExtensions,
     preview: {

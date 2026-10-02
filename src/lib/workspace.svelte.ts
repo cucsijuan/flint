@@ -11,7 +11,9 @@ import {
   dayjs,
   DEFAULT_DAILY_NOTES,
   DEFAULT_TEMPLATES,
+  DEFAULT_UNIQUE_NOTES,
   type TemplateSettings,
+  type UniqueNoteSettings,
 } from './dates'
 import {
   addGroup,
@@ -33,13 +35,13 @@ import { type AppearanceSettings, DEFAULT_APPEARANCE } from './appearance'
 import { commands } from './commands.svelte'
 import { VaultConfig } from './config.svelte'
 import { parseHotkeys, serializeHotkeys } from './hotkeys'
-import { newBlockId, type NoteBlock, noteBlocks, withBlockId } from './render/source'
+import { newBlockId, type NoteBlock, noteBlocks, noteContent, withBlockId } from './render/source'
 import { documents } from './documents'
 import { activeView } from './editor/active'
 import { noteOpened, vaultChanged } from './events'
 import { exportNoteHtml, exportSite } from './export/html'
 import { linkMention } from './mentions'
-import { setProperty } from './properties'
+import { renameProperty, setProperty } from './properties'
 import { DEFAULT_GRAPH, type GraphSettings } from './graph'
 import * as layouts from './layout'
 import {
@@ -89,7 +91,7 @@ const ATTACHMENTS_FOLDER = 'attachments'
 
 const timestamp = () => new Date().toISOString().replace(/\D/g, '').slice(0, 14)
 
-export type LeftTab = 'files' | 'search' | 'bookmarks'
+export type LeftTab = 'files' | 'search' | 'bookmarks' | 'properties'
 export type RightTab =
   | 'backlinks'
   | 'outgoing'
@@ -132,6 +134,8 @@ class Workspace {
   readonly settings = new VaultConfig('app', DEFAULT_VAULT_SETTINGS)
   readonly dailyNotesConfig = new VaultConfig('daily-notes', DEFAULT_DAILY_NOTES)
   readonly templatesConfig = new VaultConfig('templates', DEFAULT_TEMPLATES)
+  /** Obsidian's "Unique note creator" settings, under its file name. */
+  readonly uniqueNotesConfig = new VaultConfig('zk-prefixer', DEFAULT_UNIQUE_NOTES)
   readonly appearance = new VaultConfig('appearance', DEFAULT_APPEARANCE)
   snippets = $state<string[]>([])
   #snippetCss = $state(new Map<string, string>())
@@ -148,6 +152,8 @@ class Workspace {
     ),
   )
   isTemplatePickerOpen = $state(false)
+  /** The note composer's picker, open for extracting a selection or merging the note. */
+  composer = $state<'extract' | 'merge' | null>(null)
   /** Folders open in the file tree; kept here so they stay open when renamed or moved. */
   readonly expandedFolders = new SvelteSet<string>()
   /** The file the tree scrolls to and highlights for a moment. */
@@ -191,6 +197,7 @@ class Workspace {
       this.settings,
       this.dailyNotesConfig,
       this.templatesConfig,
+      this.uniqueNotesConfig,
       this.appearance,
       this.graphConfig,
       this.foldsConfig,
@@ -248,6 +255,7 @@ class Workspace {
       await this.settings.load(this.#legacySettings)
       await this.dailyNotesConfig.load()
       await this.templatesConfig.load()
+      await this.uniqueNotesConfig.load()
       await this.appearance.load()
       await this.graphConfig.load()
       await this.typesConfig.load()
@@ -431,6 +439,37 @@ class Workspace {
     })
   }
 
+  get uniqueNotes() {
+    return this.uniqueNotesConfig.value
+  }
+
+  setUniqueNotes(changes: Partial<UniqueNoteSettings>) {
+    this.uniqueNotesConfig.set(changes)
+  }
+
+  /** Creates a note named after the current date and time, from the unique note template. */
+  async createUniqueNote() {
+    await this.#run(async () => {
+      const now = dayjs()
+      const { folder, format, template } = this.uniqueNotes
+      const name = now.format(format || DEFAULT_UNIQUE_NOTES.format)
+      const path = uniqueName(this.#takenPaths(), folder, name, NOTE_EXTENSION)
+      const text = template ? await this.#templateText(template, noteTitle(path), now) : ''
+      await vault.createNote(path)
+      if (text) await vault.writeNote(path, text)
+      await this.#refresh()
+      this.openNote(path)
+    })
+  }
+
+  openRandomNote() {
+    const notes = this.entries.filter(
+      (entry) => entry.kind === 'file' && entry.path !== this.notePath,
+    )
+    const note = notes[Math.floor(Math.random() * notes.length)]
+    if (note) this.openNote(note.path)
+  }
+
   setDailyNotes(changes: Partial<DailyNoteSettings>) {
     this.dailyNotesConfig.set(changes)
   }
@@ -603,6 +642,21 @@ class Workspace {
     this.typesConfig.set({ types: { ...this.typesConfig.value.types, [name]: type } })
   }
 
+  /** Renames a property in every note that has it, keeping its vault-wide type. */
+  async renamePropertyEverywhere(from: string, to: string) {
+    const name = to.trim()
+    if (!name || name === from) return
+    await this.#run(async () => {
+      const files = await vault.baseFiles()
+      for (const file of files.filter((known) => from in known.properties)) {
+        await documents.update(file.path, (text) => renameProperty(text, from, name))
+      }
+      const { [from]: type, ...types } = this.typesConfig.value.types
+      if (type) this.typesConfig.set({ types: { ...types, [name]: type } })
+      await documents.flush()
+    })
+  }
+
   /** Writes one frontmatter property of a note, as a base's table cell edits it. */
   setNoteProperty(path: string, key: string, value: unknown) {
     void this.#run(() => documents.update(path, (text) => setProperty(text, key, value)))
@@ -627,6 +681,48 @@ class Workspace {
       await documents.flush()
       await this.#refresh()
       this.openNote(path)
+    })
+  }
+
+  /** Moves the editor's selection into `target` (a note's path, or a name for a new note beside
+   * the current one), leaving a link or an embed in its place. */
+  async extractSelection(target: string, isNew: boolean) {
+    const view = activeView()
+    const source = this.notePath
+    if (!view || !source) return
+    const { from, to } = view.state.selection.main
+    const text = view.state.sliceDoc(from, to)
+    if (!text.trim()) {
+      this.notify('Select some text to extract first.')
+      return
+    }
+    await this.#run(async () => {
+      const path = isNew ? await this.createNoteWith(parentOf(source), target, text) : target
+      if (!isNew) await documents.update(path, (current) => `${current.trimEnd()}\n\n${text}\n`)
+      const linkText = this.linkTargets.find((known) => known.path === path)?.linkText
+      const link = linkText ?? noteTitle(path)
+      const replacement = {
+        link: `[[${link}]]`,
+        embed: `![[${link}]]`,
+        none: '',
+      }[this.settings.value.extractedText]
+      view.dispatch({ changes: { from, to, insert: replacement } })
+    })
+  }
+
+  /** Appends the current note to `target`, points its links there and deletes it. */
+  async mergeInto(target: string) {
+    const source = this.notePath
+    if (!source || source === target) return
+    await this.#run(async () => {
+      const { text } = noteContent(await documents.load(source))
+      await documents.update(target, (current) => `${current.trimEnd()}\n\n${text.trim()}\n`)
+      await documents.flush()
+      await vault.redirectLinks(source, target)
+      documents.forget(source)
+      await vault.trashEntry(source)
+      await this.#refresh()
+      this.openNote(target)
     })
   }
 

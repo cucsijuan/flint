@@ -39,6 +39,7 @@
         <li>
           <button
             class="source"
+            data-preview={source}
             onclick={(event) =>
               workspace.openNote(source, { newTab: event.ctrlKey || event.metaKey })}
           >

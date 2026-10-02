@@ -19,6 +19,9 @@ export interface VaultSettings {
   pluginHotReload: boolean
   vimMode: boolean
   spellcheck: boolean
+  pagePreview: boolean
+  /** What replaces a selection extracted into a new note. */
+  extractedText: 'link' | 'embed' | 'none'
   /** Dictionary codes like `en` or `es-ar`; empty checks the system's language. */
   spellcheckLanguages: string[]
   searchSort: SearchSort
@@ -40,6 +43,8 @@ export const DEFAULT_VAULT_SETTINGS: VaultSettings = {
   pluginHotReload: false,
   vimMode: false,
   spellcheck: true,
+  pagePreview: true,
+  extractedText: 'link',
   spellcheckLanguages: [],
   searchSort: 'name-ascending',
   historyInterval: 5,

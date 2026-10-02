@@ -188,6 +188,12 @@ export function registerAppCommands() {
       run: () => workspace.showRightTab('graph'),
     },
     {
+      id: 'show-all-properties',
+      name: 'Show all properties',
+      isAvailable: hasVault,
+      run: () => (workspace.leftTab = 'properties'),
+    },
+    {
       id: 'show-calendar',
       name: 'Show calendar',
       isAvailable: hasVault,
@@ -217,6 +223,30 @@ export function registerAppCommands() {
       name: 'Create new canvas',
       isAvailable: hasVault,
       run: () => workspace.createCanvas(workspace.notePath ? parentOf(workspace.notePath) : ''),
+    },
+    {
+      id: 'extract-selection',
+      name: 'Extract current selection',
+      isAvailable: isEditing,
+      run: () => (workspace.composer = 'extract'),
+    },
+    {
+      id: 'merge-note',
+      name: 'Merge current file with another file',
+      isAvailable: hasNote,
+      run: () => (workspace.composer = 'merge'),
+    },
+    {
+      id: 'new-unique-note',
+      name: 'Create new unique note',
+      isAvailable: hasVault,
+      run: () => workspace.createUniqueNote(),
+    },
+    {
+      id: 'open-random-note',
+      name: 'Open random note',
+      isAvailable: hasVault,
+      run: () => workspace.openRandomNote(),
     },
     {
       id: 'open-daily-note',

@@ -32,6 +32,18 @@ export const DEFAULT_DAILY_NOTES: DailyNoteSettings = {
   template: '',
 }
 
+export interface UniqueNoteSettings {
+  folder: string
+  format: string
+  template: string
+}
+
+export const DEFAULT_UNIQUE_NOTES: UniqueNoteSettings = {
+  folder: '',
+  format: 'YYYYMMDDHHmm',
+  template: '',
+}
+
 export const DEFAULT_TEMPLATES: TemplateSettings = {
   folder: 'Templates',
   dateFormat: 'YYYY-MM-DD',

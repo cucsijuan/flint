@@ -51,6 +51,7 @@ pub fn run() {
             commands::create_folder,
             commands::rename_entry,
             commands::copy_entry,
+            commands::redirect_links,
             commands::trash_entry,
             commands::note_history,
             commands::history_snapshot,

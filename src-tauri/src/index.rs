@@ -113,6 +113,13 @@ pub struct TagCount {
     pub count: usize,
 }
 
+/// Links to rewrite, by the file they're in, and canvases whose file cards move.
+struct RewritePlan {
+    notes: BTreeMap<String, Vec<(WikiLink, String)>>,
+    canvases: Vec<String>,
+    moves: HashMap<String, String>,
+}
+
 #[derive(Debug, Default)]
 pub struct Index {
     notes: BTreeMap<String, IndexedNote>,
@@ -640,47 +647,7 @@ impl Index {
             .filter(|path| is_within(path, from))
             .map(|path| (path.clone(), format!("{to}{}", &path[from.len()..])))
             .collect();
-
-        let mut rewrites: BTreeMap<String, Vec<(WikiLink, String)>> = BTreeMap::new();
-        let mut rewritten = HashSet::new();
-        let incoming = if update_incoming {
-            self.incoming(|target| moves.contains_key(target))
-        } else {
-            Vec::new()
-        };
-        for (source, link) in incoming {
-            let target = self.resolve(source, &link.link.target).unwrap_or_default();
-            rewritten.insert((source, link.link.range.start));
-            rewrites
-                .entry(source.to_owned())
-                .or_default()
-                .push((link.link.clone(), moves[&target].clone()));
-        }
-        // Relative links in a moved note point somewhere else from its new folder.
-        for (source, note) in self
-            .notes
-            .iter()
-            .filter(|(path, _)| moves.contains_key(*path))
-        {
-            for link in &note.links {
-                let is_new = !rewritten.contains(&(source.as_str(), link.link.range.start));
-                let target = self.resolve(source, &link.link.target);
-                if let Some(target) = target.filter(|_| is_new && is_relative(&link.link.target)) {
-                    rewrites
-                        .entry(source.clone())
-                        .or_default()
-                        .push((link.link.clone(), target));
-                }
-            }
-        }
-
-        let canvas_sources: Vec<String> = if update_incoming {
-            self.canvases_using(|file| moves.contains_key(file))
-                .map(str::to_owned)
-                .collect()
-        } else {
-            Vec::new()
-        };
+        let plan = self.plan_rewrites(&moves, update_incoming, true);
 
         vault.rename(from, to)?;
         for (old, new) in &moves {
@@ -694,10 +661,86 @@ impl Index {
                 self.attachments.insert(new.clone());
             }
         }
+        self.apply_rewrites(vault, &moves, plan)
+    }
 
+    /// Points every link to `from` at `to` instead, as when one note is merged into another.
+    pub fn redirect_links(&mut self, vault: &Vault, from: &str, to: &str) -> Result<usize> {
+        let moves = HashMap::from([(from.to_owned(), to.to_owned())]);
+        let mut plan = self.plan_rewrites(&moves, true, false);
+        plan.notes.remove(from);
+        plan.canvases.retain(|canvas| canvas != from);
+        self.apply_rewrites(vault, &HashMap::new(), plan)
+    }
+
+    /// The links to rewrite for `moves`: incoming ones when `update_incoming` is set, and
+    /// relative links inside moved notes when `fix_moved` is.
+    fn plan_rewrites(
+        &self,
+        moves: &HashMap<String, String>,
+        update_incoming: bool,
+        fix_moved: bool,
+    ) -> RewritePlan {
+        let mut notes: BTreeMap<String, Vec<(WikiLink, String)>> = BTreeMap::new();
+        let mut rewritten = HashSet::new();
+        let incoming = if update_incoming {
+            self.incoming(|target| moves.contains_key(target))
+        } else {
+            Vec::new()
+        };
+        for (source, link) in incoming {
+            let target = self.resolve(source, &link.link.target).unwrap_or_default();
+            rewritten.insert((source, link.link.range.start));
+            notes
+                .entry(source.to_owned())
+                .or_default()
+                .push((link.link.clone(), moves[&target].clone()));
+        }
+        if fix_moved {
+            // Relative links in a moved note point somewhere else from its new folder.
+            for (source, note) in self
+                .notes
+                .iter()
+                .filter(|(path, _)| moves.contains_key(*path))
+            {
+                for link in &note.links {
+                    let is_new = !rewritten.contains(&(source.as_str(), link.link.range.start));
+                    let target = self.resolve(source, &link.link.target);
+                    if let Some(target) =
+                        target.filter(|_| is_new && is_relative(&link.link.target))
+                    {
+                        notes
+                            .entry(source.clone())
+                            .or_default()
+                            .push((link.link.clone(), target));
+                    }
+                }
+            }
+        }
+        let canvases = if update_incoming {
+            self.canvases_using(|file| moves.contains_key(file))
+                .map(str::to_owned)
+                .collect()
+        } else {
+            Vec::new()
+        };
+        RewritePlan {
+            notes,
+            canvases,
+            moves: moves.clone(),
+        }
+    }
+
+    /// Writes the planned rewrites, reading each file at its path after `renamed`.
+    fn apply_rewrites(
+        &mut self,
+        vault: &Vault,
+        renamed: &HashMap<String, String>,
+        plan: RewritePlan,
+    ) -> Result<usize> {
         let mut updated = 0;
-        for (source, links) in rewrites {
-            let source = moves.get(&source).cloned().unwrap_or(source);
+        for (source, links) in plan.notes {
+            let source = renamed.get(&source).cloned().unwrap_or(source);
             let mut text = vault.read(&source)?;
             let mut links = links;
             links.sort_by_key(|(link, _)| Reverse(link.target_range.start));
@@ -712,10 +755,10 @@ impl Index {
             vault.write(&source, &text)?;
             self.insert(source, &text);
         }
-        for source in canvas_sources {
-            let source = moves.get(&source).cloned().unwrap_or(source);
+        for source in plan.canvases {
+            let source = renamed.get(&source).cloned().unwrap_or(source);
             let text = vault.read(&source)?;
-            if let Some((text, changed)) = canvas::rewrite_files(&text, &moves) {
+            if let Some((text, changed)) = canvas::rewrite_files(&text, &plan.moves) {
                 vault.write(&source, &text)?;
                 self.canvases.insert(source, canvas::file_references(&text));
                 updated += changed;
@@ -1163,5 +1206,24 @@ mod tests {
                 .contains("\"file\": \"Renamed.md\"")
         );
         assert_eq!(index.backlinks("Renamed.md")[0].source, "Board.canvas");
+    }
+
+    #[test]
+    fn redirects_links_to_a_merged_note() {
+        let dir = TempDir::new().unwrap();
+        let vault = Vault::open(dir.path()).unwrap();
+        vault.write("Old.md", "[[Other]]").unwrap();
+        vault.write("New.md", "").unwrap();
+        vault
+            .write("Source.md", "[[Old#Part|alias]] and [[Other]]")
+            .unwrap();
+        let mut index = Index::build(&vault).unwrap();
+
+        assert_eq!(index.redirect_links(&vault, "Old.md", "New.md").unwrap(), 1);
+        assert_eq!(
+            vault.read("Source.md").unwrap(),
+            "[[New#Part|alias]] and [[Other]]"
+        );
+        assert_eq!(vault.read("Old.md").unwrap(), "[[Other]]");
     }
 }

@@ -32,6 +32,14 @@ When you pick a note from autocomplete, Flint writes the shortest link that stil
 
 Links to headings scroll to the heading and links to blocks scroll to the block, highlighting it for a moment. Web links open in your browser.
 
+## Page previews
+
+Hover a link to see the note it points to in a small popup, without leaving the one you're on. The popup scrolls, its links work, and clicking its title opens the note (**Ctrl+click** for a new tab).
+
+- In the editor and the file tree, hold **Ctrl** (⌘ on macOS) while hovering, so previews don't pop up while you work. Pressing Ctrl over a link opens its preview too.
+- In the reading view, embeds and the Backlinks and Search panels, hovering is enough.
+- **Settings → Editor → Page previews** turns them off.
+
 ## Backlinks
 
 **Show backlinks**, or the **Backlinks** tab of the right sidebar, lists every note that links to the active note, with the line each link sits on. Click a note's name to open it. Canvases that include the note are listed too.

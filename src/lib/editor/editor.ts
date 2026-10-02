@@ -33,6 +33,7 @@ import { pointer } from './pointer'
 import { type PreviewContext, previewContext, propertiesDisplay } from './preview-context'
 import { wikiLinkSyntax } from './wikilink'
 import { spellcheck, spellcheckTheme } from './spellcheck'
+import { statsReporter } from './stats.svelte'
 
 const markdownStyle = HighlightStyle.define([
   { tag: tags.heading1, class: 'cm-h cm-h1' },
@@ -121,6 +122,7 @@ export function createEditorState({
       EditorView.lineWrapping,
       EditorView.contentAttributes.of({ spellcheck: 'false' }),
       spellcheckTheme,
+      statsReporter,
       spelling.of(isSpellchecking ? spellcheck : []),
       mode.of(modeExtension(editorMode)),
       pluginExtensions.of(plugins),

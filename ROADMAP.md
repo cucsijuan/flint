@@ -169,6 +169,15 @@ Obsidian's everyday core plugins that Flint still lacked:
 - Workspaces (saved layouts), pinned tabs, stacked tabs, slides from notes split by `---`, and an audio recorder whose recordings play in place.
 - Pop-out windows that share the vault, and a web viewer window for web links.
 
+### M21: Mobile
+
+Flint on Android and iOS, from the same Rust core and Svelte interface:
+
+- A touch interface: sidebars as drawers, one pane with a tab switcher, a formatting toolbar above the keyboard, long-press menus.
+- Vaults anywhere: on Android any folder (with the all-files permission, so Syncthing or Drive folders work); on iOS Flint's own folder in the Files app or a folder from iCloud Drive and other providers.
+- Mobile stand-ins for desktop parts: a `.trash` folder in the vault, the system keystore for plugin secrets, the system clipboard; pop-out windows and the web viewer stay desktop-only.
+- Android APKs on every release and an F-Droid listing; unsigned iOS builds for sideloading.
+
 ## Backlog
 
 Features that are not scheduled in a milestone yet.
@@ -177,4 +186,4 @@ Features that are not scheduled in a milestone yet.
 - **Distribution:** Windows code signing.
 - **Testing:** end-to-end tests on Windows: `msedgedriver` still can't attach to the app's WebView2 in CI ("DevToolsActivePort file doesn't exist"), even with a driver matching the WebView2 runtime.
 - **Web viewer:** show pages inside a tab once Tauri places child webviews reliably on Linux (today they open in a window of their own).
-- **Later:** mobile (iOS and Android), sync between devices.
+- **Later:** sync between devices, PDF export on mobile (through the share sheet), the App Store and Google Play.

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Copy, Menu, PanelRight, Plus, Search, SquareTerminal, X } from '@lucide/svelte'
+  import { Menu, PanelRight, Plus, Search, SquareTerminal, X } from '@lucide/svelte'
   import * as layouts from '../../lib/layout'
   import { noteTitle } from '../../lib/paths'
   import { workspace } from '../../lib/workspace.svelte'
@@ -7,6 +7,7 @@
   import Sidebar from '../Sidebar.svelte'
   import TabGroup from '../TabGroup.svelte'
   import FormatBar from './FormatBar.svelte'
+  import NamePrompt from './NamePrompt.svelte'
 
   let drawer = $state<'left' | 'right' | null>(null)
   let isSwitchingTabs = $state(false)
@@ -31,28 +32,30 @@
     isSwitchingTabs = false
   }
 
-  /** Swiping in from a screen edge opens that side's drawer. */
+  /** A sideways swipe anywhere opens the drawer on the side it comes from, like Obsidian on
+   * phones: the screen edges belong to Android's back gesture. */
   let swipeStart: { x: number; y: number } | null = null
-  const EDGE = 24
-  const SWIPE = 60
+  const SWIPE = 80
 
   function onTouchStart(event: TouchEvent) {
     const touch = event.touches[0]
-    const isAtEdge = touch.clientX < EDGE || touch.clientX > window.innerWidth - EDGE
-    swipeStart = drawer === null && isAtEdge ? { x: touch.clientX, y: touch.clientY } : null
+    const isOverSheet = (event.target as Element).closest('.sheet, [role="dialog"]')
+    swipeStart = isOverSheet ? null : { x: touch.clientX, y: touch.clientY }
   }
 
   function onTouchMove(event: TouchEvent) {
     if (!swipeStart) return
     const touch = event.touches[0]
     const dx = touch.clientX - swipeStart.x
-    if (Math.abs(touch.clientY - swipeStart.y) > Math.abs(dx)) {
+    const dy = touch.clientY - swipeStart.y
+    if (Math.abs(dy) > Math.abs(dx) || window.getSelection()?.toString()) {
       swipeStart = null
       return
     }
-    if (dx > SWIPE && swipeStart.x < EDGE) drawer = 'left'
-    else if (dx < -SWIPE && swipeStart.x > window.innerWidth - EDGE) drawer = 'right'
-    else return
+    if (Math.abs(dx) < SWIPE) return
+    // Swiping back toward an open drawer's side closes it.
+    if (drawer === null) drawer = dx > 0 ? 'left' : 'right'
+    else if ((drawer === 'left') === dx < 0) drawer = null
     swipeStart = null
   }
 </script>
@@ -60,13 +63,13 @@
 <svelte:document ontouchstart={onTouchStart} ontouchmove={onTouchMove} />
 
 <div class="shell">
+  <NamePrompt />
   <header>
     <button title="Files and search" onclick={() => (drawer = 'left')}><Menu size={22} /></button>
     <span class="spacer"></span>
     <button title="Search" onclick={search}><Search size={20} /></button>
-    <button title="Tabs" class="tabs" onclick={() => (isSwitchingTabs = true)}>
-      <Copy size={20} />
-      <span>{group.tabs.length}</span>
+    <button title="Tabs" onclick={() => (isSwitchingTabs = true)}>
+      <span class="tab-count">{group.tabs.length}</span>
     </button>
     <button title="Commands" onclick={() => (workspace.isCommandPaletteOpen = true)}>
       <SquareTerminal size={20} />
@@ -153,18 +156,17 @@
     background: var(--hover);
   }
 
-  .tabs {
-    position: relative;
-  }
-
-  .tabs span {
-    position: absolute;
-    top: 13px;
-    left: 0;
-    width: 100%;
-    font-size: 10px;
+  .tab-count {
+    display: grid;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 3px;
+    place-items: center;
+    border: 2px solid currentColor;
+    border-radius: 5px;
+    font-size: 11px;
     font-weight: 700;
-    text-align: center;
+    line-height: 1;
   }
 
   .spacer {

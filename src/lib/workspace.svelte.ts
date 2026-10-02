@@ -178,6 +178,8 @@ class Workspace {
   /** The note the PDF export dialog is open for. */
   pdfNote = $state<string | null>(null)
   isQuickSwitcherOpen = $state(false)
+  /** A name being asked for, on phones, before creating a file. */
+  namePrompt = $state<{ title: string; resolve: (name: string | null) => void } | null>(null)
   isCommandPaletteOpen = $state(false)
   searchQuery = $state('')
   searchResults = $state<vault.SearchResult[]>([])
@@ -874,14 +876,28 @@ class Workspace {
     })
   }
 
+  /** The name a new file starts with: Untitled, or on phones (where the file tree is out of
+   * sight for renaming it) what the user types; `null` when they cancel. */
+  async #newName(kind: string) {
+    if (!isMobile) return 'Untitled'
+    const name = await new Promise<string | null>((resolve) => {
+      this.namePrompt = { title: `New ${kind}`, resolve }
+    })
+    this.namePrompt = null
+    if (name === null) return null
+    return name.replace(/[\\/:*?"<>|#^[\]]/g, '').trim() || 'Untitled'
+  }
+
   async createNote(folder = '') {
-    const path = uniqueName(this.#takenPaths(), folder, 'Untitled', NOTE_EXTENSION)
+    const name = await this.#newName('note')
+    if (name === null) return
+    const path = uniqueName(this.#takenPaths(), folder, name, NOTE_EXTENSION)
     await this.#run(async () => {
       await vault.createNote(path)
       await this.#refresh()
       this.openNote(path)
       this.leftTab = 'files'
-      this.renaming = path
+      if (!isMobile) this.renaming = path
     })
   }
 
@@ -895,23 +911,27 @@ class Workspace {
   }
 
   async #createFile(folder: string, extension: string, contents: string) {
-    const path = uniqueName(this.#takenPaths(), folder, 'Untitled', `.${extension}`)
+    const name = await this.#newName(extension)
+    if (name === null) return
+    const path = uniqueName(this.#takenPaths(), folder, name, `.${extension}`)
     await this.#run(async () => {
       await vault.createNote(path)
       await vault.writeNote(path, contents)
       await this.#refresh()
       await this.openFile(path)
       this.leftTab = 'files'
-      this.renaming = path
+      if (!isMobile) this.renaming = path
     })
   }
 
   async createFolder(parent = '') {
-    const path = uniqueName(this.#takenPaths(), parent, 'Untitled')
+    const name = await this.#newName('folder')
+    if (name === null) return
+    const path = uniqueName(this.#takenPaths(), parent, name)
     await this.#run(async () => {
       await vault.createFolder(path)
       await this.#refresh()
-      this.renaming = path
+      if (!isMobile) this.renaming = path
     })
   }
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { isMobile } from '../lib/platform'
   import { commands, displayHotkey } from '../lib/commands.svelte'
 
   const actions = [
@@ -19,7 +20,7 @@
     {#if found}
       <button onclick={() => found.run()}>
         {action.label}
-        {#if found.hotkey}<small>({displayHotkey(found.hotkey)})</small>{/if}
+        {#if found.hotkey && !isMobile}<small>({displayHotkey(found.hotkey)})</small>{/if}
       </button>
     {/if}
   {/each}

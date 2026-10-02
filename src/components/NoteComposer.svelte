@@ -19,7 +19,11 @@
         !target.alias && target.path.endsWith('.md') && target.path !== workspace.notePath,
     ),
   )
-  const mode = $derived(workspace.composer)
+  // The picker closes before it calls back, which clears `workspace.composer`; keep the mode.
+  let mode = $state<'extract' | 'merge'>('extract')
+  $effect.pre(() => {
+    if (workspace.composer) mode = workspace.composer
+  })
 </script>
 
 <FuzzyPicker

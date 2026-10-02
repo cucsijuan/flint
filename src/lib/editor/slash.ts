@@ -28,18 +28,23 @@ const BLOCKS: [string, string][] = [
   ['Divider', '---\n¦'],
 ]
 
+// Completions start after the slash, so the list filters by what follows it; applying one
+// also removes the slash.
 function insertBlock(text: string) {
   return (view: EditorView, _completion: Completion, from: number, to: number) => {
     const cursor = text.indexOf('¦')
     const insert = text.replace('¦', '')
-    view.dispatch({ changes: { from, to, insert }, selection: { anchor: from + cursor } })
+    view.dispatch({
+      changes: { from: from - 1, to, insert },
+      selection: { anchor: from - 1 + cursor },
+    })
   }
 }
 
 /** Removes the `/…` typed, then runs `action`. */
 const replacing =
   (action: () => void) => (view: EditorView, _completion: Completion, from: number, to: number) => {
-    view.dispatch({ changes: { from, to } })
+    view.dispatch({ changes: { from: from - 1, to } })
     action()
   }
 
@@ -49,7 +54,7 @@ export function completeSlash(
 ): CompletionResult | null {
   const match = context.matchBefore(SLASH)
   if (!match) return null
-  const from = match.text.startsWith('/') ? match.from : match.from + 1
+  const from = match.to - match.text.length + match.text.indexOf('/') + 1
   const blocks: Completion[] = BLOCKS.map(([label, text]) => ({
     label,
     type: 'block',
@@ -71,6 +76,6 @@ export function completeSlash(
     from,
     options: [...blocks, ...templates, ...commands],
     filter: true,
-    validFor: /^\/[^\s/]*$/,
+    validFor: /^[^\s/]*$/,
   }
 }

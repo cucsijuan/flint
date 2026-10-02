@@ -16,12 +16,12 @@ const complete = (doc: string) =>
 describe('slash commands', () => {
   it('opens after a slash at the start of a line or a word', () => {
     const result = complete('Some text /ta')
-    expect(result?.from).toBe(10)
+    expect(result?.from).toBe(11)
     const labels = result?.options.map((option) => option.label)
     expect(labels).toContain('Table')
     expect(labels).toContain('Templates/Meeting')
     expect(labels).toContain('Open graph view')
-    expect(complete('/')?.from).toBe(0)
+    expect(complete('/')?.from).toBe(1)
   })
 
   it('stays closed inside words and paths', () => {

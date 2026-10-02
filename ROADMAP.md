@@ -162,7 +162,12 @@ The backlog that piled up along the way:
 
 ### M20: Core plugins
 
-Obsidian's everyday core plugins that Flint still lacks, such as page previews on hover, slash commands, the note composer, workspaces, a vault-wide properties view, pinned tabs and pop-out windows. Details to agree before starting.
+Obsidian's everyday core plugins that Flint still lacks:
+
+- Page previews on hover (Ctrl+hover in the editor), slash commands, and the note composer (extract a selection to a new note, merge notes).
+- Unique notes named after the date and time, a random note, a status bar with word counts and backlinks, and a vault-wide properties view.
+- Workspaces (saved layouts), pinned and stacked tabs, slides from notes split by `---`, and an audio recorder.
+- Pop-out windows and a web viewer.
 
 ## Backlog
 

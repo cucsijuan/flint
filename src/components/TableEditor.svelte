@@ -78,6 +78,18 @@
     return true
   }
 
+  let cellInput = $state<HTMLTextAreaElement>()
+
+  $effect(() => {
+    const cell = editing
+    if (!cell) return
+    return setCellFormatter((id) => {
+      if (!(id in CELL_FORMATS)) return false
+      if (cellInput?.isConnected) applyFormat(id, cellInput, cell.row, cell.column)
+      return true
+    })
+  })
+
   function applyFormat(id: string, input: HTMLTextAreaElement, row: number, column: number) {
     if (!(id in CELL_FORMATS)) return
     const [open, close] = CELL_FORMATS[id]
@@ -174,16 +186,11 @@
       bind:value={draft}
       oninput={() => edits.cell(row, column, cellSource(draft))}
       onkeydown={(event) => onKeydown(event, row, column)}
-      onfocus={(event) => {
-        const input = event.currentTarget
-        setCellFormatter((id) => applyFormat(id, input, row, column))
-      }}
       onblur={() => {
         // A native context menu takes the window's focus; the cell stays the one being edited.
-        if (!document.hasFocus()) return
-        setCellFormatter(null)
-        stopEditing(row, column)
+        if (document.hasFocus()) stopEditing(row, column)
       }}
+      bind:this={cellInput}
       {@attach focus}></textarea>
   {:else}
     <div

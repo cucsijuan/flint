@@ -22,6 +22,7 @@ pub enum Error {
     Http(#[from] reqwest::Error),
     #[error(transparent)]
     Tauri(#[from] tauri::Error),
+    #[cfg(desktop)]
     #[error(transparent)]
     Keyring(#[from] keyring::Error),
     #[error(transparent)]
@@ -30,6 +31,7 @@ pub enum Error {
     Io(#[from] std::io::Error),
     #[error(transparent)]
     Walk(#[from] ignore::Error),
+    #[cfg(desktop)]
     #[error(transparent)]
     Trash(#[from] trash::Error),
     #[error(transparent)]

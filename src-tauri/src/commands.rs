@@ -472,6 +472,7 @@ pub fn import_attachment(state: State<AppState>, source: String, path: String) -
     state.vault()?.import_file(Path::new(&source), &path)
 }
 
+#[cfg(desktop)]
 #[tauri::command(async)]
 pub fn save_clipboard_image(state: State<AppState>, path: String) -> Result<bool> {
     let Ok(image) = arboard::Clipboard::new().and_then(|mut clipboard| clipboard.get_image())
@@ -492,6 +493,7 @@ pub fn save_clipboard_image(state: State<AppState>, path: String) -> Result<bool
     Ok(true)
 }
 
+#[cfg(desktop)]
 #[tauri::command(async)]
 pub fn clipboard_text() -> String {
     arboard::Clipboard::new()
@@ -499,6 +501,7 @@ pub fn clipboard_text() -> String {
         .unwrap_or_default()
 }
 
+#[cfg(desktop)]
 #[tauri::command(async)]
 pub fn set_clipboard_text(text: String) -> Result<()> {
     arboard::Clipboard::new()
@@ -506,6 +509,7 @@ pub fn set_clipboard_text(text: String) -> Result<()> {
         .map_err(|error| Error::Plugin(error.to_string()))
 }
 
+#[cfg(desktop)]
 #[tauri::command(async)]
 pub fn clipboard_files() -> Vec<String> {
     arboard::Clipboard::new()
@@ -530,3 +534,35 @@ pub fn open_externally(app: AppHandle, state: State<AppState>, path: String) -> 
         .opener()
         .open_path(absolute.to_string_lossy(), None::<&str>)?)
 }
+
+/// Mobile clipboards hold text only, and the page reaches them itself.
+#[cfg(mobile)]
+mod mobile_clipboard {
+    use tauri::State;
+
+    use super::AppState;
+    use crate::error::{Error, Result};
+
+    #[tauri::command]
+    pub fn save_clipboard_image(_state: State<AppState>, _path: String) -> Result<bool> {
+        Ok(false)
+    }
+
+    #[tauri::command]
+    pub fn clipboard_text() -> String {
+        String::new()
+    }
+
+    #[tauri::command]
+    pub fn set_clipboard_text(_text: String) -> Result<()> {
+        Err(Error::Plugin("unsupported".to_owned()))
+    }
+
+    #[tauri::command]
+    pub fn clipboard_files() -> Vec<String> {
+        Vec::new()
+    }
+}
+
+#[cfg(mobile)]
+pub use mobile_clipboard::*;

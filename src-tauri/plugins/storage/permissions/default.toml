@@ -1,0 +1,3 @@
+[default]
+description = "Everything Flint needs to open vault folders on mobile."
+permissions = ["allow-has-all-files-access", "allow-request-all-files-access", "allow-pick-folder"]

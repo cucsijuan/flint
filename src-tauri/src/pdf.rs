@@ -155,7 +155,7 @@ fn print_to_pdf(
     Ok(())
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(not(any(target_os = "linux", windows)))]
 fn print_to_pdf(_: &WebviewWindow, _: String, _: PdfOptions, _: Done) -> Result<()> {
     Err(Error::Export("unsupported".to_owned()))
 }

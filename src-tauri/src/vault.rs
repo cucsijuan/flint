@@ -166,8 +166,29 @@ impl Vault {
         Ok(names)
     }
 
+    #[cfg(desktop)]
     pub fn trash(&self, path: &str) -> Result<()> {
         Ok(trash::delete(self.resolve(path)?)?)
+    }
+
+    /// Mobile has no system trash: deleted files go to the vault's `.trash` folder, like
+    /// Obsidian's option of the same name.
+    #[cfg(mobile)]
+    pub fn trash(&self, path: &str) -> Result<()> {
+        let source = self.resolve(path)?;
+        let folder = self.root.join(".trash");
+        fs::create_dir_all(&folder)?;
+        let name = source
+            .file_name()
+            .map(|name| name.to_string_lossy().into_owned());
+        let name = name.unwrap_or_default();
+        let mut target = folder.join(&name);
+        let mut copy = 1;
+        while target.exists() {
+            target = folder.join(format!("{copy} {name}"));
+            copy += 1;
+        }
+        Ok(fs::rename(source, target)?)
     }
 
     pub fn absolute(&self, path: &str) -> Result<PathBuf> {

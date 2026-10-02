@@ -15,6 +15,11 @@ export interface VaultInfo {
 
 export const launchVault = () => invoke<string | null>('launch_vault')
 export const currentVault = () => invoke<VaultInfo | null>('current_vault')
+export const hasAllFilesAccess = () =>
+  invoke<{ granted: boolean }>('plugin:storage|has_all_files_access')
+export const requestAllFilesAccess = () =>
+  invoke<{ granted: boolean }>('plugin:storage|request_all_files_access')
+export const pickFolder = () => invoke<{ path: string | null }>('plugin:storage|pick_folder')
 export const openWebViewer = (url: string) => invoke('open_web_viewer', { url })
 export const openVault = (path: string) => invoke<VaultInfo>('open_vault', { path })
 export const listEntries = () => invoke<Entry[]>('list_entries')

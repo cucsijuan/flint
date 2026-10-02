@@ -73,6 +73,7 @@ import type { FoldedLines } from './editor/folding'
 import type { PropertyType } from './bases/base'
 import type { NewNoteDefaults } from './bases/edit'
 import { buildTree } from './tree'
+import { isAndroid } from './platform'
 import { isPopout, popoutView } from './popout'
 import * as vault from './vault'
 
@@ -277,8 +278,26 @@ class Workspace {
   }
 
   async chooseVault() {
-    const path = await open({ directory: true, title: 'Open folder as vault' })
+    const path = isAndroid
+      ? await this.#pickAndroidFolder()
+      : await open({ directory: true, title: 'Open folder as vault' })
     if (path) await this.openVault(path)
+  }
+
+  /** Android shows shared folders only to apps with the all-files permission, so it asks first. */
+  async #pickAndroidFolder() {
+    try {
+      let { granted } = await vault.hasAllFilesAccess()
+      if (!granted) ({ granted } = await vault.requestAllFilesAccess())
+      if (!granted) {
+        this.notify('Flint needs access to your files to open a folder as a vault.')
+        return null
+      }
+      return (await vault.pickFolder()).path
+    } catch (error) {
+      this.notify(String(error))
+      return null
+    }
   }
 
   async openVault(path: string) {

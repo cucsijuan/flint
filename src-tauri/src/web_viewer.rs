@@ -1,18 +1,26 @@
 //! The web viewer: web pages in a window of Flint's own, with a small toolbar over the page.
 //! A second webview for the toolbar can't be placed reliably on Linux, so it lives in the page.
 
+use tauri::AppHandle;
+#[cfg(desktop)]
 use tauri::webview::PageLoadEvent;
-use tauri::{AppHandle, Url, WebviewUrl, WebviewWindowBuilder};
+#[cfg(desktop)]
+use tauri::{Url, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_opener::OpenerExt;
 
-use crate::error::{Error, Result};
+#[cfg(desktop)]
+use crate::error::Error;
+use crate::error::Result;
 
 /// Pages ask for the system browser by navigating here; the navigation never happens.
+#[cfg(desktop)]
 const OPEN_IN_BROWSER: &str = "flint-open-in-browser";
 
+#[cfg(desktop)]
 const TOOLBAR: &str = include_str!("web_viewer_toolbar.js");
 
 /// Opens `url` in a new web viewer window.
+#[cfg(desktop)]
 #[tauri::command]
 pub fn open_web_viewer(app: AppHandle, url: String) -> Result<()> {
     let url = Url::parse(&url).map_err(|error| Error::Plugin(error.to_string()))?;
@@ -47,4 +55,11 @@ pub fn open_web_viewer(app: AppHandle, url: String) -> Result<()> {
         })
         .build()?;
     Ok(())
+}
+
+/// Mobile has one window, so web pages go to the browser.
+#[cfg(mobile)]
+#[tauri::command]
+pub fn open_web_viewer(app: AppHandle, url: String) -> Result<()> {
+    Ok(app.opener().open_url(url, None::<&str>)?)
 }

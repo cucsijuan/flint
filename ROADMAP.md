@@ -160,14 +160,14 @@ The backlog that piled up along the way:
 - Flint's own context menu for notes and text fields, the same everywhere, instead of the webviews' native menus.
 - An end-to-end test for theme switching.
 
-### M20: Core plugins
+### M20: Core plugins ✅
 
-Obsidian's everyday core plugins that Flint still lacks:
+Obsidian's everyday core plugins that Flint still lacked:
 
-- Page previews on hover (Ctrl+hover in the editor), slash commands, and the note composer (extract a selection to a new note, merge notes).
-- Unique notes named after the date and time, a random note, a status bar with word counts and backlinks, and a vault-wide properties view.
-- Workspaces (saved layouts), pinned and stacked tabs, slides from notes split by `---`, and an audio recorder.
-- Pop-out windows and a web viewer.
+- Page previews on hover (Ctrl+hover in the editor and the file tree), slash commands, and the note composer (extract a selection to another note leaving a link or an embed, merge a note into another).
+- Unique notes named after the date and time, a random note, a status bar with word and character counts, backlinks and save state, and an All properties view to rename and retype properties across the vault.
+- Workspaces (saved layouts), pinned tabs, stacked tabs, slides from notes split by `---`, and an audio recorder whose recordings play in place.
+- Pop-out windows that share the vault, and a web viewer window for web links.
 
 ## Backlog
 
@@ -176,4 +176,5 @@ Features that are not scheduled in a milestone yet.
 - **Export:** a native PDF engine on macOS (WKWebView printing) instead of the print dialog, with M10.
 - **Distribution:** Windows code signing.
 - **Testing:** end-to-end tests on Windows: `msedgedriver` still can't attach to the app's WebView2 in CI ("DevToolsActivePort file doesn't exist"), even with a driver matching the WebView2 runtime.
+- **Web viewer:** show pages inside a tab once Tauri places child webviews reliably on Linux (today they open in a window of their own).
 - **Later:** mobile (iOS and Android), sync between devices.

@@ -53,6 +53,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::launch_vault,
             commands::current_vault,
+            commands::app_folder_vaults,
+            commands::create_app_folder_vault,
             web_viewer::open_web_viewer,
             commands::open_vault,
             commands::list_entries,

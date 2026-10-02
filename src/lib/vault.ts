@@ -15,6 +15,9 @@ export interface VaultInfo {
 
 export const launchVault = () => invoke<string | null>('launch_vault')
 export const currentVault = () => invoke<VaultInfo | null>('current_vault')
+export const createAppFolderVault = (name: string) =>
+  invoke<string>('create_app_folder_vault', { name })
+export const appFolderVaults = () => invoke<{ root: string; vaults: string[] }>('app_folder_vaults')
 export const hasAllFilesAccess = () =>
   invoke<{ granted: boolean }>('plugin:storage|has_all_files_access')
 export const requestAllFilesAccess = () =>

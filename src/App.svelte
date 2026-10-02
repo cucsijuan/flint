@@ -8,6 +8,7 @@
   import LayoutView from './components/LayoutView.svelte'
   import EditMenu from './components/EditMenu.svelte'
   import HoverPreview from './components/HoverPreview.svelte'
+  import IosVaultPicker from './components/mobile/IosVaultPicker.svelte'
   import MobileShell from './components/mobile/MobileShell.svelte'
   import NoteComposer from './components/NoteComposer.svelte'
   import QuickSwitcher from './components/QuickSwitcher.svelte'
@@ -29,7 +30,7 @@
   import { commands } from './lib/commands.svelte'
   import { pluginHost } from './lib/plugins/host.svelte'
   import { editMenu } from './lib/edit-menu.svelte'
-  import { isMobile } from './lib/platform'
+  import { isIos, isMobile } from './lib/platform'
   import { isPopout } from './lib/popout'
   import { dropOnReadingView } from './lib/reading-drop'
   import { dictionaryFor, spelling } from './lib/spelling.svelte'
@@ -187,6 +188,7 @@
 <CommandPalette />
 <TemplatePicker />
 <NoteComposer />
+{#if isIos}<IosVaultPicker />{/if}
 <HoverPreview />
 <WorkspacePicker />
 <SlidesView />

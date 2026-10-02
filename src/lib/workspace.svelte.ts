@@ -73,7 +73,7 @@ import type { FoldedLines } from './editor/folding'
 import type { PropertyType } from './bases/base'
 import type { NewNoteDefaults } from './bases/edit'
 import { buildTree } from './tree'
-import { isAndroid, isMobile } from './platform'
+import { isAndroid, isIos, isMobile } from './platform'
 import { isPopout, popoutView } from './popout'
 import * as vault from './vault'
 
@@ -178,6 +178,8 @@ class Workspace {
   /** The note the PDF export dialog is open for. */
   pdfNote = $state<string | null>(null)
   isQuickSwitcherOpen = $state(false)
+  /** The vault folders to choose from on iOS, while choosing. */
+  iosVaults = $state<{ root: string; vaults: string[] } | null>(null)
   /** A name being asked for, on phones, before creating a file. */
   namePrompt = $state<{ title: string; resolve: (name: string | null) => void } | null>(null)
   isCommandPaletteOpen = $state(false)
@@ -281,10 +283,27 @@ class Workspace {
   }
 
   async chooseVault() {
+    if (isIos) {
+      await this.#run(async () => (this.iosVaults = await vault.appFolderVaults()))
+      return
+    }
     const path = isAndroid
       ? await this.#pickAndroidFolder()
       : await open({ directory: true, title: 'Open folder as vault' })
     if (path) await this.openVault(path)
+  }
+
+  /** On iOS, vaults are folders in Flint's own folder of the Files app. */
+  async openIosVault(name: string) {
+    const folders = this.iosVaults
+    this.iosVaults = null
+    if (!folders || !name.trim()) return
+    await this.#run(async () => {
+      const path = folders.vaults.includes(name)
+        ? `${folders.root}/${name}`
+        : await vault.createAppFolderVault(name)
+      await this.openVault(path)
+    })
   }
 
   /** Android shows shared folders only to apps with the all-files permission, so it asks first. */

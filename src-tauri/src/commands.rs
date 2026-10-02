@@ -566,3 +566,39 @@ mod mobile_clipboard {
 
 #[cfg(mobile)]
 pub use mobile_clipboard::*;
+
+/// Vault folders inside the app's own folder, which iOS shows in the Files app under Flint.
+#[tauri::command]
+pub fn app_folder_vaults(app: AppHandle) -> Result<AppFolderVaults> {
+    let root = app.path().document_dir()?;
+    std::fs::create_dir_all(&root)?;
+    let mut vaults: Vec<String> = std::fs::read_dir(&root)?
+        .filter_map(|entry| entry.ok())
+        .filter(|entry| entry.file_type().is_ok_and(|kind| kind.is_dir()))
+        .filter_map(|entry| entry.file_name().to_str().map(str::to_owned))
+        .filter(|name| !name.starts_with('.'))
+        .collect();
+    vaults.sort();
+    Ok(AppFolderVaults {
+        root: root.to_string_lossy().into_owned(),
+        vaults,
+    })
+}
+
+#[derive(Serialize)]
+pub struct AppFolderVaults {
+    root: String,
+    vaults: Vec<String>,
+}
+
+/// Creates a vault folder named `name` in the app's own folder and returns its path.
+#[tauri::command]
+pub fn create_app_folder_vault(app: AppHandle, name: String) -> Result<String> {
+    let name = name.trim();
+    if name.is_empty() || name.starts_with('.') || name.contains(['/', '\\']) {
+        return Err(Error::Plugin(format!("invalid vault name: {name}")));
+    }
+    let path = app.path().document_dir()?.join(name);
+    std::fs::create_dir_all(&path)?;
+    Ok(path.to_string_lossy().into_owned())
+}

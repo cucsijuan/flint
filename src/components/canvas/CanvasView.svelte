@@ -889,7 +889,10 @@
               Open in new tab
             </ContextMenu.Item>
           {:else if menuNode?.type === 'link'}
-            <ContextMenu.Item class="menu-item" onSelect={() => workspace.openUrl(menuNode.url)}>
+            <ContextMenu.Item
+              class="menu-item"
+              onSelect={() => workspace.openUrl(menuNode.url, { inBrowser: true })}
+            >
               Open in browser
             </ContextMenu.Item>
           {/if}

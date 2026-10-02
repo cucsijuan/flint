@@ -90,6 +90,24 @@
           </DropdownMenu.Item>
           <DropdownMenu.Separator class="menu-separator" />
         {/if}
+        {#if menu.url}
+          {@const url = menu.url}
+          {#if workspace.settings.value.webViewer}
+            <DropdownMenu.Item class="menu-item" onSelect={() => workspace.openUrl(url)}>
+              Open in web viewer
+            </DropdownMenu.Item>
+          {/if}
+          <DropdownMenu.Item
+            class="menu-item"
+            onSelect={() => workspace.openUrl(url, { inBrowser: true })}
+          >
+            Open in browser
+          </DropdownMenu.Item>
+          <DropdownMenu.Item class="menu-item" onSelect={run(() => vault.setClipboardText(url))}>
+            Copy link
+          </DropdownMenu.Item>
+          <DropdownMenu.Separator class="menu-separator" />
+        {/if}
         {#if menu.isEditable}
           <DropdownMenu.Item
             class="menu-item"

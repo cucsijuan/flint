@@ -921,8 +921,10 @@ class Workspace {
   }
 
   /** Opens a web or mail link in the system's default app. */
-  openUrl(url: string) {
-    void this.#run(() => openUrl(url))
+  /** Opens a web address in Flint's web viewer, or in the browser when that's turned off. */
+  openUrl(url: string, { inBrowser = false } = {}) {
+    const useViewer = this.settings.value.webViewer && !inBrowser && /^https?:/i.test(url)
+    void this.#run(() => (useViewer ? vault.openWebViewer(url) : openUrl(url)))
   }
 
   /** Copies a note or attachment next to itself as "Name 1", "Name 2"… */

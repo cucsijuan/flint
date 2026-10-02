@@ -51,6 +51,8 @@ Right-click a tab for:
 - **Close** and **Close others**.
 - **Reveal in navigation** and **Show in system explorer**.
 - **Split right** and **Split down**.
+- **Open in new window**, which moves the tab to a window of its own.
+- **Stack tabs** or **Unstack tabs** for the pane.
 
 Each tab has its own history, so back and forward move through the notes you opened in that tab.
 
@@ -74,6 +76,12 @@ Split the editor to see several things at once:
 The same note can be open in several panes. Edits in one show up in the others instantly, and each pane can have its own mode (for example, reading view on the left and editing on the right).
 
 The pane you last clicked is the **active** one. The right sidebar, the note commands and plugins follow the active tab.
+
+## Windows
+
+**Open in new window** (a tab's context menu) or **Move current tab to new window** moves a tab to a separate window, for a second monitor for example. The new window works on the same vault, with its own tabs and splits but without the sidebars.
+
+A note open in two windows stays in sync: what you type in one appears in the other a moment after it's saved. Extra windows close when you close the main one, and their layout isn't saved with the vault's.
 
 ## Workspaces
 

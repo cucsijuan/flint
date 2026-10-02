@@ -32,6 +32,12 @@ When you pick a note from autocomplete, Flint writes the shortest link that stil
 
 Links to headings scroll to the heading and links to blocks scroll to the block, highlighting it for a moment. Web links open in your browser.
 
+## The web viewer
+
+Web links open in Flint's web viewer: a window of its own that shows the page without leaving Flint. A small toolbar in its bottom-right corner (clearer when you hover it) has **Back**, **Forward**, **Reload**, **Go to…** another address, **Copy link** and **Open in browser**.
+
+Right-click a web link for **Open in web viewer**, **Open in browser** or **Copy link**. To always use your browser, turn off **Settings → Editor → Web viewer**.
+
 ## Page previews
 
 Hover a link to see the note it points to in a small popup, without leaving the one you're on. The popup scrolls, its links work, and clicking its title opens the note (**Ctrl+click** for a new tab).

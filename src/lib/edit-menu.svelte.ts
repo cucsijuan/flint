@@ -13,6 +13,8 @@ export interface EditMenuState {
   x: number
   y: number
   isLink: boolean
+  /** The web address under the pointer, if any. */
+  url: string | null
   isEditable: boolean
   /** What was selected when the menu opened. */
   selection: string
@@ -55,7 +57,11 @@ class EditMenu {
     this.state = {
       x: event.clientX,
       y: event.clientY,
-      isLink: target.closest('a, [data-link], [data-url]') !== null,
+      isLink: target.closest('[data-link]') !== null,
+      url:
+        target.closest<HTMLElement>('[data-url]')?.dataset.url ??
+        target.closest<HTMLAnchorElement>('a[href^="http"]')?.href ??
+        null,
       isEditable: field !== null || target.closest('.cm-content') !== null,
       selection,
       editor,

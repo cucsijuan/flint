@@ -15,6 +15,7 @@ export interface VaultInfo {
 
 export const launchVault = () => invoke<string | null>('launch_vault')
 export const currentVault = () => invoke<VaultInfo | null>('current_vault')
+export const openWebViewer = (url: string) => invoke('open_web_viewer', { url })
 export const openVault = (path: string) => invoke<VaultInfo>('open_vault', { path })
 export const listEntries = () => invoke<Entry[]>('list_entries')
 export const readNote = (path: string) => invoke<string>('read_note', { path })

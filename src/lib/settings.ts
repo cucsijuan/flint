@@ -20,6 +20,8 @@ export interface VaultSettings {
   vimMode: boolean
   spellcheck: boolean
   pagePreview: boolean
+  /** Opens web links in Flint's web viewer instead of the browser. */
+  webViewer: boolean
   /** What replaces a selection extracted into a new note. */
   extractedText: 'link' | 'embed' | 'none'
   /** Dictionary codes like `en` or `es-ar`; empty checks the system's language. */
@@ -44,6 +46,7 @@ export const DEFAULT_VAULT_SETTINGS: VaultSettings = {
   vimMode: false,
   spellcheck: true,
   pagePreview: true,
+  webViewer: true,
   extractedText: 'link',
   spellcheckLanguages: [],
   searchSort: 'name-ascending',

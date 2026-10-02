@@ -19,6 +19,7 @@ mod secrets;
 mod spelling;
 mod vault;
 mod watcher;
+mod web_viewer;
 
 use commands::AppState;
 use std::{thread, time::Duration};
@@ -45,6 +46,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::launch_vault,
             commands::current_vault,
+            web_viewer::open_web_viewer,
             commands::open_vault,
             commands::list_entries,
             commands::read_note,

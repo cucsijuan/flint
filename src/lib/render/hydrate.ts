@@ -61,6 +61,19 @@ async function playable(url: string, extension: string) {
   }
 }
 
+/** Recordings from browsers don't store their length, so the player only learns it by reaching
+ * the end. Seeking far ahead once makes it work it out before anyone presses play. */
+function findDuration(audio: HTMLAudioElement) {
+  if (Number.isFinite(audio.duration)) return
+  const rewind = () => {
+    if (!Number.isFinite(audio.duration)) return
+    audio.removeEventListener('durationchange', rewind)
+    audio.currentTime = 0
+  }
+  audio.addEventListener('durationchange', rewind)
+  audio.currentTime = Number.MAX_SAFE_INTEGER
+}
+
 function mediaElement(path: string, url: string, embed: HTMLElement) {
   const size = embed.title
   const extension = extensionOf(path)
@@ -71,6 +84,7 @@ function mediaElement(path: string, url: string, embed: HTMLElement) {
   }
   if (AUDIO_EXTENSIONS.has(extension)) {
     const audio = Object.assign(document.createElement('audio'), { controls: true })
+    audio.addEventListener('loadedmetadata', () => findDuration(audio), { once: true })
     void playable(url, extension).then((src) => (audio.src = src))
     return audio
   }

@@ -161,6 +161,8 @@ jobs:
           workspaces: src-tauri
       - run: pnpm install --frozen-lockfile
       - run: pnpm tauri ios init --ci
+      # The generated project starts with Tauri's default icon.
+      - run: cp src-tauri/icons/ios/*.png src-tauri/gen/apple/Assets.xcassets/AppIcon.appiconset/
       # Unsigned, for sideloading: Sideloadly or AltStore sign it with the user's Apple ID.
       - run: pnpm tauri ios build --ci --no-sign
       - run: find src-tauri/gen/apple/build -name '*.ipa'

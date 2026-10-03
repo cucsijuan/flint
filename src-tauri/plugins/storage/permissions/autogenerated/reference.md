@@ -1,12 +1,13 @@
 ## Default Permission
 
-Everything Flint needs to open vault folders on mobile.
+Everything Flint needs on mobile: opening vault folders and theming the system bars.
 
 #### This default permission set includes the following:
 
 - `allow-has-all-files-access`
 - `allow-request-all-files-access`
 - `allow-pick-folder`
+- `allow-set-system-bars`
 
 ## Permission Table
 
@@ -91,6 +92,32 @@ Enables the request_all_files_access command without any pre-configured scope.
 <td>
 
 Denies the request_all_files_access command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`storage:allow-set-system-bars`
+
+</td>
+<td>
+
+Enables the set_system_bars command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`storage:deny-set-system-bars`
+
+</td>
+<td>
+
+Denies the set_system_bars command without any pre-configured scope.
 
 </td>
 </tr>

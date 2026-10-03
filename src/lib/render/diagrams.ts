@@ -3,7 +3,7 @@ let queue: Promise<unknown> = Promise.resolve()
 let isWatchingTheme = false
 
 const isDark = () => {
-  const forced = document.documentElement.style.colorScheme
+  const forced = document.documentElement.dataset.theme
   return forced ? forced === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches
 }
 

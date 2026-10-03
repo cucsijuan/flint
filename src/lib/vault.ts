@@ -23,6 +23,8 @@ export const hasAllFilesAccess = () =>
 export const requestAllFilesAccess = () =>
   invoke<{ granted: boolean }>('plugin:storage|request_all_files_access')
 export const pickFolder = () => invoke<{ path: string | null }>('plugin:storage|pick_folder')
+export const setSystemBars = (color: string, isDark: boolean) =>
+  invoke('plugin:storage|set_system_bars', { bars: { color, isDark } })
 export const openWebViewer = (url: string) => invoke('open_web_viewer', { url })
 export const openVault = (path: string) => invoke<VaultInfo>('open_vault', { path })
 export const listEntries = () => invoke<Entry[]>('list_entries')

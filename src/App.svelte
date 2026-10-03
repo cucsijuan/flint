@@ -30,7 +30,7 @@
   import { commands } from './lib/commands.svelte'
   import { pluginHost } from './lib/plugins/host.svelte'
   import { editMenu } from './lib/edit-menu.svelte'
-  import { isIos, isMobile } from './lib/platform'
+  import { isAndroid, isIos, isMobile } from './lib/platform'
   import { isPopout } from './lib/popout'
   import { dropOnReadingView } from './lib/reading-drop'
   import { dictionaryFor, spelling } from './lib/spelling.svelte'
@@ -93,6 +93,12 @@
     syncWindowBackground()
   })
 
+  $effect(() => {
+    const scheme = matchMedia('(prefers-color-scheme: dark)')
+    scheme.addEventListener('change', syncWindowBackground)
+    return () => scheme.removeEventListener('change', syncWindowBackground)
+  })
+
   $effect(() => applySnippets(workspace.enabledSnippetCss))
 
   $effect(() => {
@@ -123,6 +129,11 @@
     getCurrentWebviewWindow()
       .setBackgroundColor([red, green, blue])
       .catch(() => {})
+    if (isAndroid) {
+      const hex = `#${[red, green, blue].map((part) => part.toString(16).padStart(2, '0')).join('')}`
+      const isDark = red * 0.299 + green * 0.587 + blue * 0.114 < 128
+      void vault.setSystemBars(hex, isDark).catch(() => {})
+    }
   }
 
   function onContextMenu(event: MouseEvent) {

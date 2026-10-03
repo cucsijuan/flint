@@ -16,6 +16,7 @@
 <style>
   .setting {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
@@ -25,6 +26,7 @@
 
   .text {
     display: grid;
+    flex: 1 1 200px;
     gap: 4px;
   }
 

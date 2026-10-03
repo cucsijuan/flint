@@ -28,7 +28,8 @@ export function applyAppearance(
 ) {
   const set = (name: string, value: string) =>
     value ? root.style.setProperty(name, value) : root.style.removeProperty(name)
-  root.style.colorScheme = settings.theme === 'system' ? '' : settings.theme
+  if (settings.theme === 'system') delete root.dataset.theme
+  else root.dataset.theme = settings.theme
   set('--accent', settings.accentColor)
   set('--font-text', settings.textFontFamily && `${settings.textFontFamily}, system-ui, sans-serif`)
   set('--font-mono', settings.monospaceFontFamily && `${settings.monospaceFontFamily}, monospace`)

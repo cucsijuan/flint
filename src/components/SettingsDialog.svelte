@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { isMobile } from '../lib/platform'
+  import { ChevronLeft, X } from '@lucide/svelte'
   import { Dialog } from 'bits-ui'
+  import { isMobile } from '../lib/platform'
   import type { Component } from 'svelte'
   import { pluginHost } from '../lib/plugins/host.svelte'
   import { workspace } from '../lib/workspace.svelte'
@@ -29,21 +30,33 @@
   ]
 
   let current = $state('Editor')
+  /** Phones show the section list and a section's page one at a time. */
+  let isShowingPage = $state(!isMobile)
   const available = $derived(sections.filter((section) => workspace.info || !section.needsVault))
   const pluginTab = $derived(pluginHost.settingsTabs.find((tab) => tab.pluginId === current))
   const shown = $derived(available.find((section) => section.name === current) ?? available[0])
+
+  function open(name: string) {
+    current = name
+    isShowingPage = true
+  }
 </script>
 
 <Dialog.Root bind:open={workspace.isSettingsOpen}>
   <Dialog.Portal>
     <Dialog.Overlay class="overlay" />
     <Dialog.Content class="dialog settings">
-      <nav>
-        <Dialog.Title class="dialog-title">Settings</Dialog.Title>
+      <nav class:hidden={isMobile && isShowingPage}>
+        <div class="title">
+          <Dialog.Title class="dialog-title">Settings</Dialog.Title>
+          {#if isMobile}
+            <Dialog.Close class="icon-button" aria-label="Close"><X size={22} /></Dialog.Close>
+          {/if}
+        </div>
         {#each available as section (section.name)}
           <button
             class:current={!pluginTab && section === shown}
-            onclick={() => (current = section.name)}
+            onclick={() => open(section.name)}
           >
             {section.name}
           </button>
@@ -51,13 +64,18 @@
         {#if pluginHost.settingsTabs.length}
           <p class="group">Plugin options</p>
           {#each pluginHost.settingsTabs as tab (tab.pluginId)}
-            <button class:current={tab === pluginTab} onclick={() => (current = tab.pluginId)}>
+            <button class:current={tab === pluginTab} onclick={() => open(tab.pluginId)}>
               {tab.name}
             </button>
           {/each}
         {/if}
       </nav>
-      <div class="content">
+      <div class="content" class:hidden={!isShowingPage}>
+        {#if isMobile}
+          <button class="back" onclick={() => (isShowingPage = false)}>
+            <ChevronLeft size={22} /> Settings
+          </button>
+        {/if}
         {#if pluginTab}
           <h2>{pluginTab.name}</h2>
           {#key pluginTab}<PluginView render={pluginTab.render} />{/key}
@@ -157,5 +175,62 @@
   h2 {
     margin: 0 0 8px;
     font-size: 16px;
+  }
+
+  .title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .back {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0 0 12px -6px;
+    padding: 6px 0;
+    border: none;
+    background: none;
+    color: var(--accent);
+    font: inherit;
+  }
+
+  .hidden {
+    display: none;
+  }
+
+  :global(.mobile .dialog.settings) {
+    inset: 0;
+    width: 100%;
+    max-height: none;
+    height: 100%;
+    border: none;
+    border-radius: 0;
+    transform: none;
+  }
+
+  :global(.mobile) nav {
+    width: 100%;
+    border-right: none;
+  }
+
+  :global(.mobile) nav button {
+    padding: 12px 10px;
+    font-size: 16px;
+  }
+
+  :global(.mobile) .content {
+    padding: 12px 16px;
+    font-size: 15px;
+  }
+
+  :global(.mobile) .title :global(.icon-button) {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    border: none;
+    background: none;
+    color: var(--text-muted);
   }
 </style>

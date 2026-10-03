@@ -3,7 +3,7 @@ name = "tauri-plugin-storage"
 version = "0.1.0"
 edition = "2024"
 license = "AGPL-3.0-or-later"
-description = "Folder access for Flint on mobile: Android's all-files permission and folder picker."
+description = "Native Android pieces for Flint: folder access (all-files permission, folder picker) and system bar colors."
 links = "tauri-plugin-storage"
 
 [dependencies]

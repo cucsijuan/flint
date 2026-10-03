@@ -19,6 +19,15 @@
   color-scheme: light dark;
 }
 
+/* A class-based rule rather than an inline style, so the build's light-dark() fallback follows it. */
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+
 * {
   box-sizing: border-box;
 }

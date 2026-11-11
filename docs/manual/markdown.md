@@ -204,6 +204,18 @@ graph LR
 
 Flowcharts, sequence diagrams, Gantt charts, class diagrams and every other diagram type Mermaid supports. Diagrams follow the light or dark theme.
 
+Hover a diagram, in live preview or the reading view, for its buttons:
+
+| Button             | What it does                                                                                         |
+| ------------------ | ---------------------------------------------------------------------------------------------------- |
+| **Open full size** | shows the diagram over the whole window                                                              |
+| **Copy as image**  | copies it as a PNG image, to paste in other apps                                                     |
+| **SVG**, **PNG**   | saves it as an image in the attachment folder (Settings → Attachment location), named after the note |
+
+Copied and saved images look as the diagram does on screen: in the current theme, on the note's background.
+
+Full size, **scroll** to zoom, **drag** to move around, and use the buttons at the bottom to zoom, fit, copy or save. **+** and **−** zoom in and out, **0** fits the diagram in the window, **1** shows it at its actual size, and **Escape** closes it.
+
 ## Horizontal rules and line breaks
 
 `---` on a line of its own draws a horizontal rule.

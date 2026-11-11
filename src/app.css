@@ -347,14 +347,33 @@ button.primary {
 }
 
 .markdown .math-block,
-.markdown .diagram {
+.markdown .diagram-image {
   overflow-x: auto;
   text-align: center;
 }
 
-.markdown .diagram svg {
+/* The toolbar may stick out of short diagrams: it's only the image that scrolls. */
+.markdown .diagram {
+  position: relative;
+}
+
+.markdown .diagram-image svg {
   max-width: 100%;
   height: auto;
+}
+
+.diagram-toolbar {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+}
+
+.diagram:hover .diagram-toolbar,
+.diagram-toolbar:focus-within {
+  opacity: 1;
 }
 
 .markdown .diagram-error {
@@ -567,7 +586,8 @@ button.primary {
   cursor: pointer;
 }
 
-.copy-code {
+.copy-code,
+.diagram-toolbar button {
   padding: 2px 8px;
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -576,6 +596,17 @@ button.primary {
   font-family: var(--font-text);
   font-size: 12px;
   cursor: pointer;
+}
+
+.diagram-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 6px;
+}
+
+.diagram-toolbar button:hover {
+  color: var(--text);
 }
 
 .markdown pre .copy-code {
@@ -815,6 +846,7 @@ summary.callout-title {
   }
 
   #print-root .copy-code,
+  #print-root .diagram-toolbar,
   #print-root .base .toolbar {
     display: none !important;
   }

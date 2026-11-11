@@ -50,7 +50,7 @@ ${body}
 /** Drops what only makes sense inside Flint: buttons, toolbars, fold toggles. */
 function makeStatic(article: HTMLElement) {
   for (const element of article.querySelectorAll(
-    '.copy-code, .fold-toggle, .base .toolbar, script',
+    '.copy-code, .diagram-toolbar, .fold-toggle, .base .toolbar, script',
   )) {
     element.remove()
   }

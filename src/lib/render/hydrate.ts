@@ -12,7 +12,7 @@ import {
   VIDEO_EXTENSIONS,
 } from '../paths'
 import type { MarkdownContext } from '../../../plugin-api'
-import { renderMermaid } from './diagrams'
+import { diagramElement, diagramToolbar, renderMermaid } from './diagrams'
 import { codeLanguage, highlightBlock } from './highlight'
 import { renderMath } from './math'
 import { mountBase } from '../bases/mount.svelte'
@@ -206,17 +206,17 @@ export const rendersCodeBlock = (language: string) =>
   ['mermaid', 'base'].includes(language.toLowerCase()) ||
   processors.codeBlock(language) !== undefined
 
-async function renderDiagram(pre: HTMLElement, source: string) {
-  const figure = document.createElement('div')
-  figure.className = 'diagram'
+async function renderDiagram(pre: HTMLElement, source: string, note: string) {
   try {
-    figure.innerHTML = await renderMermaid(source)
-    figure.dataset.source = source
-    pre.replaceWith(figure)
+    const diagram = diagramElement(await renderMermaid(source), source, note)
+    diagram.append(diagramToolbar())
+    pre.replaceWith(diagram)
   } catch (error) {
-    figure.className = 'diagram-error'
-    figure.textContent = String(error)
-    pre.after(figure)
+    const message = Object.assign(document.createElement('div'), {
+      className: 'diagram-error',
+      textContent: String(error),
+    })
+    pre.after(message)
   }
 }
 
@@ -255,7 +255,9 @@ async function renderMathIn(element: HTMLElement) {
 async function renderCode(code: HTMLElement, markdown: MarkdownContext, context: HydrateContext) {
   const pre = code.parentElement
   const language = codeLanguage(code)
-  if (pre && language.toLowerCase() === 'mermaid') return renderDiagram(pre, code.textContent ?? '')
+  if (pre && language.toLowerCase() === 'mermaid') {
+    return renderDiagram(pre, code.textContent ?? '', context.source)
+  }
   if (pre && language.toLowerCase() === 'base') return renderBase(pre, code, markdown, context)
   const processor = processors.codeBlock(language)
   if (!pre) return

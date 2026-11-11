@@ -5,6 +5,7 @@
   import { Pane, PaneGroup, PaneResizer } from 'paneforge'
   import { onMount, tick } from 'svelte'
   import CommandPalette from './components/CommandPalette.svelte'
+  import DiagramViewer from './components/DiagramViewer.svelte'
   import LayoutView from './components/LayoutView.svelte'
   import EditMenu from './components/EditMenu.svelte'
   import HoverPreview from './components/HoverPreview.svelte'
@@ -26,6 +27,7 @@
   import { registerAppCommands, rememberContextTarget } from './lib/app-commands'
   import { checkForUpdates } from './lib/updates'
   import { commands } from './lib/commands.svelte'
+  import { diagrams } from './lib/diagrams.svelte'
   import { pluginHost } from './lib/plugins/host.svelte'
   import { editMenu } from './lib/edit-menu.svelte'
   import { isPopout } from './lib/popout'
@@ -140,6 +142,7 @@
 
 <svelte:window
   onkeydown={(event) => commands.handleKeydown(event)}
+  onclick={diagrams.onClick}
   oncontextmenu={onContextMenu}
   ondragover={preventFileDrop}
   ondrop={preventFileDrop}
@@ -186,6 +189,7 @@
 <HoverPreview />
 <WorkspacePicker />
 <SlidesView />
+<DiagramViewer />
 
 {#if workspace.notice}
   <div class="notice" role="alert">{workspace.notice}</div>

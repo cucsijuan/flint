@@ -1,6 +1,7 @@
 <script lang="ts">
   import { getCurrentWindow } from '@tauri-apps/api/window'
   import { ChevronLeft, ChevronRight, X } from '@lucide/svelte'
+  import { diagrams } from '../lib/diagrams.svelte'
   import { documents } from '../lib/documents'
   import { noteContent } from '../lib/render/source'
   import { splitSlides } from '../lib/slides'
@@ -28,7 +29,8 @@
   const close = () => (workspace.slidesNote = null)
 
   function onKeydown(event: KeyboardEvent) {
-    if (!path) return
+    // A diagram opened full size from a slide takes the keys until it's closed.
+    if (!path || diagrams.viewing) return
     const steps: Record<string, number> = {
       ArrowRight: 1,
       ArrowDown: 1,

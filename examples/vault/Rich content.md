@@ -45,6 +45,32 @@ def greet(name):
     return f"Hello {name}"  # hover to copy
 ```
 
+## Diagrams
+
+Mermaid code blocks render as diagrams. Hover one for its buttons: open it full size (scroll to zoom, drag to move around), copy it as an image, or save it as SVG or PNG in the attachment folder.
+
+```mermaid
+graph LR
+  Idea --> Draft --> Review{Ready?}
+  Review -- Yes --> Published
+  Review -- No --> Draft
+```
+
+```mermaid
+sequenceDiagram
+  participant You
+  participant Flint
+  You->>Flint: Edit a note
+  Flint-->>You: Saved to disk
+```
+
+A wide one reads better full size:
+
+```mermaid
+graph LR
+  Collect --> Sort --> Outline --> Draft --> Edit --> Review --> Publish --> Share --> Archive
+```
+
 ## Headings fold in the reading view
 
 Hover a heading in the reading view and click the arrow.

@@ -1,4 +1,5 @@
 import { Copy, createElement, type IconNode, Maximize2 } from 'lucide'
+import { readPalette, themeVariables } from './diagram-theme'
 
 let nextId = 0
 let queue: Promise<unknown> = Promise.resolve()
@@ -13,17 +14,15 @@ const ACTIONS: { action: DiagramAction; title: string; icon?: IconNode; label?: 
   { action: 'png', title: 'Save as PNG', label: 'PNG' },
 ]
 
-const isDark = () => {
-  const forced = document.documentElement.style.colorScheme
-  return forced ? forced === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches
-}
+/** Mermaid's theme for the app's colors and font as they are now. */
+const currentTheme = () => themeVariables(readPalette())
 
 async function draw(source: string) {
   const { default: mermaid } = await import('mermaid')
   mermaid.initialize({
     startOnLoad: false,
-    theme: isDark() ? 'dark' : 'default',
-    themeVariables: { useGradient: false },
+    theme: 'base',
+    themeVariables: currentTheme(),
     // Without it, Mermaid leaves its scratch elements in the page when a diagram doesn't parse.
     suppressErrorRendering: true,
   })
@@ -31,12 +30,14 @@ async function draw(source: string) {
   return svg
 }
 
-/** Diagrams take their colors from the theme, so redraw every one when it changes. */
+/** Diagrams take the app's colors and font, so redraw every one when the theme, the accent color
+ * or the font changes. */
 function redrawOnThemeChange() {
-  let wasDark = isDark()
+  let drawnWith = JSON.stringify(currentTheme())
   const redraw = () => {
-    if (isDark() === wasDark) return
-    wasDark = isDark()
+    const theme = JSON.stringify(currentTheme())
+    if (theme === drawnWith) return
+    drawnWith = theme
     for (const image of document.querySelectorAll<HTMLElement>(
       '.diagram[data-source] > .diagram-image',
     )) {

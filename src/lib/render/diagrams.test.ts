@@ -1,25 +1,43 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest'
 
-let theme = ''
+/** The SVG says which colors it was drawn in. */
+let drawnIn = ''
 vi.mock('mermaid', () => ({
   default: {
-    initialize: (config: { theme: string }) => (theme = config.theme),
+    initialize: (config: { theme: string; themeVariables: Record<string, unknown> }) => {
+      const { darkMode, primaryBorderColor } = config.themeVariables
+      drawnIn = `${config.theme} ${darkMode ? 'dark' : 'light'} ${String(primaryBorderColor)}`
+    },
     render: async (id: string, source: string) => {
       if (source.includes('oops')) throw new Error('Parse error on line 1')
       return {
-        svg: `<svg id="${id}" data-theme="${theme}" viewBox="0 0 120 40"><text>${source.trim()}</text></svg>`,
+        svg: `<svg id="${id}" data-drawn-in="${drawnIn}" viewBox="0 0 120 40"><text>${source.trim()}</text></svg>`,
       }
     },
   },
 }))
 
-let prefersDark = false
+const LIGHT = {
+  background: '#ffffff',
+  backgroundSecondary: '#f6f6f7',
+  text: '#222222',
+  textMuted: '#6b6b75',
+  textFaint: '#a0a0a8',
+  border: '#e3e3e6',
+  accent: '#6d5dd3',
+  fontFamily: 'system-ui',
+  fontSize: '16px',
+}
+let palette = LIGHT
+vi.mock('./diagram-theme', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./diagram-theme')>()),
+  readPalette: () => palette,
+}))
+
 const themeListeners: (() => void)[] = []
 vi.stubGlobal('matchMedia', () => ({
-  get matches() {
-    return prefersDark
-  },
+  matches: false,
   addEventListener: (_type: string, listener: () => void) => themeListeners.push(listener),
 }))
 
@@ -68,15 +86,19 @@ describe('Mermaid diagrams', () => {
     expect(root.querySelector('.diagram-error')?.textContent).toContain('Parse error on line 1')
   })
 
-  it('redraw in the new theme, keeping their toolbar', async () => {
+  it('redraw in the new colors when the theme or the accent color changes, keeping their toolbar', async () => {
     const root = await hydrated('```mermaid\ngraph TD\n  C --> D\n```')
-    const svg = () => root.querySelector('.diagram-image > svg')
-    expect(svg()?.getAttribute('data-theme')).toBe('default')
+    const drawn = () => root.querySelector('.diagram-image > svg')?.getAttribute('data-drawn-in')
+    expect(drawn()).toBe('base light #6d5dd3')
 
-    prefersDark = true
+    palette = { ...LIGHT, background: '#1e1e1e', text: '#dcdcdc', accent: '#8b7cf0' }
     for (const listener of themeListeners) listener()
+    await vi.waitFor(() => expect(drawn()).toBe('base dark #8b7cf0'))
 
-    await vi.waitFor(() => expect(svg()?.getAttribute('data-theme')).toBe('dark'))
+    // Settings → Appearance sets the accent color as a style on the page's root.
+    palette = { ...palette, accent: '#2a9d8f' }
+    document.documentElement.style.setProperty('--accent', '#2a9d8f')
+    await vi.waitFor(() => expect(drawn()).toBe('base dark #2a9d8f'))
     expect(root.querySelectorAll('.diagram-toolbar button')).toHaveLength(4)
   })
 })

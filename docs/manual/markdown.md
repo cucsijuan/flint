@@ -202,7 +202,7 @@ graph LR
 ```
 ````
 
-Flowcharts, sequence diagrams, Gantt charts, class diagrams and every other diagram type Mermaid supports. Diagrams follow the light or dark theme.
+Flowcharts, sequence diagrams, Gantt charts, class diagrams and every other diagram type Mermaid supports. Diagrams are drawn in Flint's colors and text font: shapes are tinted with the accent color, and lines and labels look like the note's text. They follow the light or dark theme, and change with the accent color and font in Settings → Appearance.
 
 Hover a diagram, in live preview or the reading view, for its buttons:
 

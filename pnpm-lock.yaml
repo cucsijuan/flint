@@ -278,8 +278,8 @@ importers:
         specifier: ^3.4.16
         version: 3.4.16
       force-graph:
-        specifier: ^1.51.4
-        version: 1.51.4
+        specifier: ^1.51.5
+        version: 1.51.5
       fuzzysort:
         specifier: ^4.0.2
         version: 4.0.2
@@ -3192,8 +3192,8 @@ packages:
   focus-trap@7.8.0:
     resolution: {integrity: sha512-/yNdlIkpWbM0ptxno3ONTuf+2g318kh2ez3KSeZN5dZ8YC6AAmgeWz+GasYYiBJPFaYcSAPeu4GfhUaChzIJXA==}
 
-  force-graph@1.51.4:
-    resolution: {integrity: sha512-TdJ2KbkoiDQ7NIRx8IPGD0mAXXpLhamS7c+b7W98b0MHG7lphnda1VOQX/98UDTsttIAdH4TcP0l0MauSnLK8w==}
+  force-graph@1.51.5:
+    resolution: {integrity: sha512-MvpxTSIOKyTYZz7XPVGGCSb9VePhyIvmCiDyPswjsiTZKlWDfFL0FDqyduWTLPk/UdOnulQESNGxTbWH0yM2cA==}
     engines: {node: '>=12'}
 
   foreground-child@3.3.1:
@@ -7968,7 +7968,7 @@ snapshots:
     dependencies:
       tabbable: 6.5.0
 
-  force-graph@1.51.4:
+  force-graph@1.51.5:
     dependencies:
       '@tweenjs/tween.js': 25.0.0
       accessor-fn: 1.5.3

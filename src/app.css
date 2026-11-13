@@ -376,6 +376,16 @@ button.primary {
   opacity: 1;
 }
 
+/* While a block is edited, its last diagram that worked waits under the error. */
+.markdown .diagram.stale {
+  opacity: 0.4;
+}
+
+.cm-live-diagram-preview {
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+
 .markdown .diagram-error {
   color: #d04545;
   font-family: var(--font-mono);

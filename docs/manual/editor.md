@@ -121,6 +121,7 @@ Live preview renders Markdown in place:
 
 - Headings, emphasis, links, tags, `==highlights==`, inline code and math look as they do in the reading view.
 - Images, embedded notes, bases, canvases, tables, callouts, code blocks, math blocks and Mermaid diagrams show as blocks. When the cursor enters one, its Markdown source appears above it.
+- While you edit a Mermaid diagram, it stays under its source and is redrawn as you type. When the source has an error, the last diagram that worked stays, faded, above the message.
 - Links open with a plain click. In source mode, **Ctrl+click** a link to open it in a new tab.
 - Footnote references show as numbers. `%%comments%%` are hidden unless the cursor is on them.
 

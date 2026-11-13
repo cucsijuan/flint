@@ -24,6 +24,8 @@ async function draw(source: string) {
     startOnLoad: false,
     theme: isDark() ? 'dark' : 'default',
     themeVariables: { useGradient: false },
+    // Without it, Mermaid leaves its scratch elements in the page when a diagram doesn't parse.
+    suppressErrorRendering: true,
   })
   const { svg } = await mermaid.render(`mermaid-${nextId++}`, source)
   return svg
@@ -71,6 +73,35 @@ export function diagramElement(svg: string, source: string, note: string) {
   image.innerHTML = svg
   diagram.append(image)
   return diagram
+}
+
+const previewDraws = new WeakMap<HTMLElement, number>()
+
+/** Draws the diagram of a block being edited into `element`. When the source stops parsing, the
+ * last diagram that worked stays, faded, above the error. */
+export async function drawDiagramPreview(element: HTMLElement, source: string, note: string) {
+  const draw = (previewDraws.get(element) ?? 0) + 1
+  previewDraws.set(element, draw)
+  if (!source.trim()) {
+    element.replaceChildren()
+    return
+  }
+  try {
+    const svg = await renderMermaid(source)
+    if (previewDraws.get(element) !== draw) return
+    const diagram = diagramElement(svg, source, note)
+    diagram.append(diagramToolbar())
+    element.replaceChildren(diagram)
+  } catch (error) {
+    if (previewDraws.get(element) !== draw) return
+    let message = element.querySelector<HTMLElement>(':scope > .diagram-error')
+    if (!message) {
+      message = Object.assign(document.createElement('div'), { className: 'diagram-error' })
+      element.append(message)
+    }
+    message.textContent = String(error)
+    element.querySelector(':scope > .diagram')?.classList.add('stale')
+  }
 }
 
 /** Buttons shown over a diagram on hover; the app runs them by their `data-diagram-action`. */

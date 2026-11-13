@@ -25,6 +25,7 @@ vi.stubGlobal('matchMedia', () => ({
 
 const { hydrate } = await import('./hydrate')
 const { renderMarkdown } = await import('./markdown')
+const { drawDiagramPreview } = await import('./diagrams')
 
 async function hydrated(text: string) {
   const root = document.createElement('div')
@@ -77,5 +78,48 @@ describe('Mermaid diagrams', () => {
 
     await vi.waitFor(() => expect(svg()?.getAttribute('data-theme')).toBe('dark'))
     expect(root.querySelectorAll('.diagram-toolbar button')).toHaveLength(4)
+  })
+})
+
+describe('the diagram of a block being edited', () => {
+  const shown = (element: HTMLElement) => ({
+    text: element.querySelector('.diagram-image text')?.textContent ?? null,
+    isStale: element.querySelector('.diagram')?.classList.contains('stale') ?? null,
+    error: element.querySelector('.diagram-error')?.textContent ?? null,
+    toolbar: element.querySelectorAll('.diagram-toolbar button').length,
+  })
+
+  it('keeps the last diagram that worked, faded, while the source has an error', async () => {
+    const element = document.createElement('div')
+    await drawDiagramPreview(element, 'graph LR\n  A --> B', 'Flow.md')
+    expect(shown(element)).toEqual({
+      text: 'graph LR\n  A --> B',
+      isStale: false,
+      error: null,
+      toolbar: 4,
+    })
+
+    await drawDiagramPreview(element, 'graph LR\n  A --> oops', 'Flow.md')
+    expect(shown(element)).toEqual({
+      text: 'graph LR\n  A --> B',
+      isStale: true,
+      error: 'Error: Parse error on line 1',
+      toolbar: 4,
+    })
+
+    await drawDiagramPreview(element, 'graph LR\n  A --> C', 'Flow.md')
+    expect(shown(element)).toEqual({
+      text: 'graph LR\n  A --> C',
+      isStale: false,
+      error: null,
+      toolbar: 4,
+    })
+  })
+
+  it('shows nothing for an empty block', async () => {
+    const element = document.createElement('div')
+    await drawDiagramPreview(element, 'graph LR\n  A --> B', 'Flow.md')
+    await drawDiagramPreview(element, '  \n', 'Flow.md')
+    expect(element.childElementCount).toBe(0)
   })
 })

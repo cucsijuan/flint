@@ -18,6 +18,7 @@ import {
   linkTargetOfUrl,
   NOTE_EXTENSION,
 } from '../paths'
+import { drawDiagramPreview } from '../render/diagrams'
 import { hydrate, rendersCodeBlock } from '../render/hydrate'
 import { renderMarkdown } from '../render/markdown'
 import { readProperties } from '../properties'
@@ -198,6 +199,45 @@ class TableWidget extends BlockWidget {
   }
 }
 
+/** How long typing pauses before the diagram being edited is redrawn. */
+const DIAGRAM_PREVIEW_DELAY_MS = 300
+const previewTimers = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>()
+
+/** The diagram of the Mermaid block the cursor is in, under its source, redrawn as it's typed. */
+export class DiagramPreviewWidget extends BlockWidget {
+  constructor(
+    readonly source: string,
+    readonly note: string,
+  ) {
+    super()
+  }
+
+  eq(other: DiagramPreviewWidget) {
+    return other.source === this.source
+  }
+
+  toDOM(view: EditorView) {
+    const element = this.container(view, 'cm-live-diagram-preview')
+    void drawDiagramPreview(element, this.source, this.note)
+    return element
+  }
+
+  updateDOM(element: HTMLElement) {
+    const { source, note } = this
+    clearTimeout(previewTimers.get(element))
+    previewTimers.set(
+      element,
+      setTimeout(() => void drawDiagramPreview(element, source, note), DIAGRAM_PREVIEW_DELAY_MS),
+    )
+    return true
+  }
+
+  destroy(element: HTMLElement) {
+    super.destroy(element)
+    clearTimeout(previewTimers.get(element))
+  }
+}
+
 class ImageBlockWidget extends BlockWidget {
   constructor(readonly image: ImageWidget) {
     super()
@@ -280,8 +320,15 @@ function blockDecorations(state: EditorState): DecorationSet {
       }
       if (name === 'FencedCode') {
         const info = node.getChild('CodeInfo')
-        if (info && rendersCodeBlock(doc.sliceString(info.from, info.to))) {
-          rendered(node, 'cm-live-code-block')
+        const language = info ? doc.sliceString(info.from, info.to) : ''
+        if (!info || !rendersCodeBlock(language)) return false
+        rendered(node, 'cm-live-code-block')
+        const end = doc.lineAt(node.to).to
+        const isDiagram = language.toLowerCase() === 'mermaid'
+        if (context && isDiagram && isEditing(doc.lineAt(node.from).from, end)) {
+          const code = node.getChild('CodeText')
+          const source = code ? doc.sliceString(code.from, code.to) : ''
+          below(end, new DiagramPreviewWidget(source, context.source))
         }
         return false
       }

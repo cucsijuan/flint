@@ -133,8 +133,8 @@ fn print_to_pdf(
             settings.SetMarginLeft(margin)?;
             settings.SetMarginRight(margin)?;
             settings.SetScaleFactor(options.scale)?;
-            settings.SetShouldPrintBackgrounds(true.into())?;
-            settings.SetShouldPrintHeaderAndFooter(false.into())?;
+            settings.SetShouldPrintBackgrounds(true)?;
+            settings.SetShouldPrintHeaderAndFooter(false)?;
             core.PrintToPdf(
                 &HSTRING::from(path.as_str()),
                 &settings,

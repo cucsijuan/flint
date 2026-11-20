@@ -47,7 +47,7 @@ With M5, the MVP is complete. [v0.1.0](https://github.com/cucsijuan/flint/releas
 
 ### M6: UI tests and updates ✅
 
-- End-to-end tests that drive the real app with `tauri-driver` and WebdriverIO, run in CI on Linux.
+- End-to-end tests that drive the real app with WebdriverIO, run in CI on Linux (through `tauri-driver`) and Windows (attached to the app's WebView2).
 - Open a vault from the command line: `flint /path/to/vault`.
 - Automatic updates: Flint checks for a new version on startup (can be turned off) or with "Check for updates", then installs it and restarts. Supported for the AppImage and the Windows installers.
 
@@ -175,6 +175,5 @@ Features that are not scheduled in a milestone yet.
 
 - **Export:** a native PDF engine on macOS (WKWebView printing) instead of the print dialog, with M10.
 - **Distribution:** Windows code signing.
-- **Testing:** end-to-end tests on Windows: `msedgedriver` still can't attach to the app's WebView2 in CI ("DevToolsActivePort file doesn't exist"), even with a driver matching the WebView2 runtime.
 - **Web viewer:** show pages inside a tab once Tauri places child webviews reliably on Linux (today they open in a window of their own).
 - **Later:** mobile (iOS and Android), sync between devices.

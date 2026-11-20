@@ -32,6 +32,13 @@ On distributions with a recent toolchain (e.g. Fedora), AppImage bundling needs 
 
 `examples/vault` is a demo vault with a note for each feature; open it from the app with "Open another vault". `examples/word-count` and `examples/counter` are sample plugins.
 
+### End-to-end tests
+
+`pnpm test:e2e` builds the app and drives it with WebdriverIO through the specs in `e2e/specs`, each one in a fresh copy of `e2e/fixtures/vault`.
+
+- **Linux:** needs `tauri-driver` (`cargo install tauri-driver --locked`) and WebKitWebDriver (`webkit2gtk-driver` on Debian and Ubuntu). Without a display, run it under `xvfb-run`.
+- **Windows:** the first run downloads the `msedgedriver` that matches the installed WebView2 runtime. Flint's settings can't be moved elsewhere on Windows, so the tests start from the default settings and put yours back when they finish.
+
 Rust checks run from `src-tauri/`:
 
 ```sh

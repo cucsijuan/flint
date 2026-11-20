@@ -174,6 +174,6 @@ Obsidian's everyday core plugins that Flint still lacked:
 Features that are not scheduled in a milestone yet.
 
 - **Export:** a native PDF engine on macOS (WKWebView printing) instead of the print dialog, with M10.
-- **Distribution:** Windows code signing.
+- **Distribution:** free Windows code signing, through an open-source program such as SignPath Foundation, or the Microsoft Store with an MSIX package.
 - **Web viewer:** show pages inside a tab once Tauri places child webviews reliably on Linux (today they open in a window of their own).
 - **Later:** mobile (iOS and Android), sync between devices.

@@ -13,7 +13,8 @@ const OPEN_IN_BROWSER: &str = "flint-open-in-browser";
 const TOOLBAR: &str = include_str!("web_viewer_toolbar.js");
 
 /// Opens `url` in a new web viewer window.
-#[tauri::command]
+/// Async because building a window from a synchronous command deadlocks on Windows.
+#[tauri::command(async)]
 pub fn open_web_viewer(app: AppHandle, url: String) -> Result<()> {
     let url = Url::parse(&url).map_err(|error| Error::Plugin(error.to_string()))?;
     if !matches!(url.scheme(), "http" | "https") {
